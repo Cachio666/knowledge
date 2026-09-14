@@ -154,7 +154,7 @@ done
 | `140-papers` | 论文精读 |
 | `150-playground` | 实验场 |
 
-`00-meta/` 存放知识库自身的元信息：[术语表](00-meta/glossary.md)、[索引](00-meta/index.md)、[进度表](00-meta/roadmap.md)。
+`00-meta/` 下有三个文件：[术语表](00-meta/glossary.md)、[索引](00-meta/index.md)、[进度表](00-meta/roadmap.md)。
 
 ## 学习路径图
 
@@ -444,14 +444,24 @@ updated: 2026-09-14
 Run:
 ```bash
 test -f CONTRIBUTING.md && echo "OK 文件存在"
-grep -cE '^## [0-9]+\. ' CONTRIBUTING.md
+
+echo "--- 10 个编号章节 ---"
+n=0
+for h in "## 1. 命名规范" "## 2. 文档与代码的对应关系" "## 3. frontmatter 规范" \
+         "## 4. 文档模板" "## 5. 深度标准与自查清单" "## 6. 篇幅指引" \
+         "## 7. 横切内容的处理" "## 8. 新增文档核对清单" "## 9. 提交规范" \
+         "## 10. 进度表维护"; do
+  grep -qF "$h" CONTRIBUTING.md && n=$((n+1)) || echo "MISS $h"
+done
+echo "命中章节数：$n"
+
 grep -q '编号即外键' CONTRIBUTING.md && echo "OK 含编号即外键"
 grep -q '有向无环图' CONTRIBUTING.md && echo "OK 含无环约定"
 grep -q '正文在 X，此处回链' CONTRIBUTING.md && echo "OK 含引用注记模板"
 ```
-Expected: `OK 文件存在`；编号章节数为 `10`；三个 `OK` 全部输出。
+Expected: `OK 文件存在`；命中章节数 `10`，无 `MISS`；三个 `OK` 全部输出。
 
-**注意**：这里必须用 `^## [0-9]+\. ` 而不是 `^## `。第 4 节「文档模板」内嵌了一个 markdown 代码块，块内有 8 个 `## ` 开头的章节标题，grep 不区分代码围栏会一并计入（`^## ` 会得到 18）。
+**为什么用逐个 `grep -qF` 而不是 `grep -c`**：第 4 节「文档模板」内嵌了一个 markdown 代码块，块内是文档模板的章节标题 `## 0. 背景与动机` … `## 6. 小结与延伸`，它们**同样是编号标题**，会被 `grep -cE '^## [0-9]+\. '` 一并计入（实测得 17 而非 10）。grep 不区分代码围栏，逐个精确匹配标题文本可以完全避开这个问题。
 
 - [ ] **Step 3: 提交**
 
@@ -1407,14 +1417,17 @@ echo "--- 实际存在的目录（排除 .git 与 docs）---"
 find . -type d -not -path './.git*' -not -path './docs*' -not -name '.' | sort
 
 echo "--- 一级域目录数（应为 16）---"
-find . -maxdepth 1 -type d -regex '\./[0-9]+-.*' | wc -l
+find . -maxdepth 1 -type d -name '[0-9]*-*' | wc -l
 
 echo "--- 二级目录数（应为 0，Chunk 3/4 之前）---"
 find . -mindepth 2 -maxdepth 2 -type d -not -path './.git*' -not -path './docs*' | wc -l
 ```
 Expected: 一级域目录数为 `16`；二级目录数为 `0`。
 
-**注意**：正则必须是 `\./[0-9]+-.*`，不能用 `\./[0-9][0-9]-.*` —— 后者只匹配两位数字前缀，会漏掉 `100-parallelism` 到 `150-playground` 六个三位数域（实测只会输出 10）。
+**注意**：这里用 `-name '[0-9]*-*'` 而不是 `-regex`。两个原因：
+
+1. `-regex '\./[0-9][0-9]-.*'` 只匹配两位数字前缀，会漏掉 `100-parallelism` 到 `150-playground` 六个三位数域（实测只输出 10）。
+2. 即使写成正确的 `-regex '\./[0-9]+-.*'`，BSD `find` 与 GNU `find` 的 `-regex` 语义也不一致（BSD 用的是基本正则）。`-name` 在两个实现下行为相同，实测均得 16。
 
 **关于「二级目录数为 0」**：这是 Chunk 3/4 **之前**的中途快照。首期骨架最终**必须包含** `20-gpu-architecture/execution-model/` 与 `memory-system/` 两个二级目录（spec §10.1 A5），它们由 Chunk 3/4 创建，并在 Chunk 5 核验。
 
@@ -1423,7 +1436,7 @@ Expected: 一级域目录数为 `16`；二级目录数为 `0`。
 Run:
 ```bash
 n=0
-for d in $(find . -maxdepth 1 -type d -regex '\./[0-9]+-.*' | sort); do
+for d in $(find . -maxdepth 1 -type d -name '[0-9]*-*' | sort); do
   test -f "$d/README.md" && n=$((n+1)) || echo "MISS $d/README.md"
 done
 echo "有 README 的域数：$n"
@@ -3295,7 +3308,7 @@ find . -mindepth 2 -maxdepth 2 -type d -not -path './.git*' -not -path './docs*'
 
 echo "=== 2. 16 个一级域均有 README ==="
 n=0
-for d in $(find . -maxdepth 1 -type d -regex '\./[0-9]+-.*' | sort); do
+for d in $(find . -maxdepth 1 -type d -name '[0-9]*-*' | sort); do
   test -f "$d/README.md" && n=$((n+1)) || echo "MISS $d/README.md"
 done
 echo "计数：$n"
@@ -3306,7 +3319,7 @@ grep -cE '^- \[ \] [a-z]' 00-meta/roadmap.md
 echo "=== 4. glossary 条数 ==="
 grep -cE '^\| [A-Za-z]' 00-meta/glossary.md
 ```
-Expected: 步骤 1b 两个 `OK`；步骤 1c 只列出 `20-gpu-architecture/execution-model`、`20-gpu-architecture/memory-system` 及其各自的 `code/` 子目录；一级域计数 `16`；主题数 `61`；术语条数 ≥ 30。
+Expected: 步骤 1b 两个 `OK`；步骤 1c 只输出两行 —— `./20-gpu-architecture/execution-model` 与 `./20-gpu-architecture/memory-system`（`-maxdepth 2` 不含 depth 3 的 `code/` 子目录，后者由 Step 2 的 `ls "$d"/code/*.cu` 覆盖）；一级域计数 `16`；主题数 `61`；术语条数 ≥ 30。
 
 - [ ] **Step 2: 核验第二组验收标准（spec §10.2）**
 
@@ -3462,7 +3475,7 @@ Run:
 echo "=== 文件总数 ==="
 git ls-files | grep -v '^docs/' | wc -l
 echo "=== 一级域 ==="
-ls -d [0-9]*-/ | tr '\n' ' '
+ls -d [0-9]*/ | tr '\n' ' '
 echo
 echo "=== 样板文档 ==="
 ls 20-gpu-architecture/*/[0-9][0-9]-*.md
