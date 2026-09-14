@@ -1684,7 +1684,7 @@ updated: 2026-09-14
    有效并行度 = 32 / N
    ```
 3. 特例校验：`N = 1`（全 warp 同路径）→ 有效并行度 32，无损失；`N = 2`（对半分裂）→ 有效并行度 16，理论耗时翻倍；`N = 32`（每条路径 1 个线程）→ 有效并行度 1，退化为串行。
-4. 说明该模型的适用边界：它给出**最坏情形**上界，实际耗时还取决于各路径各自的指令数（若分裂出的两条路径长度悬殊，代价由短路径决定）。
+4. 说明该模型的适用边界：`32 / N` 假设 N 条路径**长度相当**，给出的是最坏情形上界。两条路径长度悬殊时，实际耗时由**长的那条**决定——短路径的算量差可忽略，代价不会因它而减小。同时说明该模型的下限：若 warp 的耗时本来就被一次全局访存主导，分裂出的轻路径几乎不额外增加时间，此时实测差异会小于模型预测。
 
 - [ ] **Step 4: 写第 2 节「执行映射」**
 
@@ -1737,7 +1737,7 @@ grep -q '__syncwarp' "$f" && echo "OK 含 syncwarp" || echo "MISS syncwarp"
 echo "--- 三段式 ---"
 grep -c '成因' "$f"
 ```
-Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: 12 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -1863,7 +1863,7 @@ grep -q '__launch_bounds__' "$f" && echo "OK 含 launch_bounds" || echo "MISS la
 echo "--- 三段式 ---"
 grep -c '成因' "$f"
 ```
-Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: 12 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -1978,8 +1978,8 @@ int main() {
 //
 // 观测要点：
 //   1. active = 0 或 32 时全 warp 走同一条路径，最快
-//   2. active 在 1..31 之间时 warp 分裂为 2 条路径，硬件逐条串行执行，
-//      耗时接近「重路径 + 轻路径」之和，而非两者中的较大者
+//   2. active 在 1..31 之间时 warp 分裂为 2 条路径，硬件把两条路径的指令
+//      都发射一遍，耗时落到接近重路径的那一档
 //   3. branchless 版本必须把两条路径都算一遍，故耗时恒定且不低于 divergent
 //
 // 构建：make 02_divergence_demo
@@ -2123,11 +2123,15 @@ int main() {
 
   std::printf("\n--- 解读 ---\n");
   std::printf("1. active = 0 或 32 时全 warp 走同一条路径，路径数为 1，divergent 最快。\n");
-  std::printf("   纯轻路径 %.4f ms，纯重路径 %.4f ms。\n", t_light, t_heavy);
-  std::printf("2. active 在 1..31 之间时 warp 分裂为两条路径，硬件逐条串行执行，\n");
-  std::printf("   故 divergent 的耗时上升到接近「重路径 + 轻路径」之和 %.4f ms，\n",
-              t_heavy + t_light);
-  std::printf("   而不是两者中的较大者。这就是有效并行度 32/N 的实际含义。\n");
+  std::printf("   纯轻路径 %.4f ms，纯重路径 %.4f ms（下一条解读会引用它）。\n",
+              t_light, t_heavy);
+  std::printf("2. active 在 1..31 之间时 warp 分裂为两条路径，硬件把两条路径的指令\n");
+  std::printf("   都发射一遍。轻路径只多一两条指令，省下的算量换不回重路径的开销，\n");
+  std::printf("   因此 divergent 的耗时会落到接近**重路径**那一档（%.4f ms）。\n",
+              t_heavy);
+  std::printf("   这正是有效并行度 32/N 的含义：warp 分裂后按最重的那条路径计时。\n");
+  std::printf("   注意本 kernel 的耗时下限由那次全局访存决定，所以分裂出的轻路径\n");
+  std::printf("   几乎不额外增加时间 —— 若两条路径的算量相当，耗时会接近两者之和。\n");
   std::printf("3. branchless 版本无论 active 取何值，都必须把两条路径都算一遍，\n");
   std::printf("   因此耗时基本恒定，且不低于 divergent —— 即便在 active = 0 时也是如此。\n");
   std::printf("   这说明「用算术选择消除分支」对**长**分支并不免费：它把控制流分歧\n");
@@ -2300,9 +2304,11 @@ int main() {
   }
 
   std::printf("\n--- 解读 ---\n");
-  std::printf("共享内存用量从 1 KB 加到 48 KB，「每 SM 常驻 block」与「占用率」\n");
-  std::printf("逐级下降。注意寄存器那一项自始至终不变 —— 它不是本 kernel 的限制项，\n");
-  std::printf("真正起作用的是共享内存。四项约束取最小，谁先卡住谁决定占用率。\n\n");
+  std::printf("前几档的「每 SM 常驻 block」可能不变 —— 此时限制项是线程数\n");
+  std::printf("（每 SM 最大常驻线程 ÷ 每 block 线程数），共享内存还没用满。\n");
+  std::printf("用量继续增大后，共享内存取代线程数成为限制项，占用率随之下台阶。\n");
+  std::printf("注意「寄存器/线程」自始至终不变 —— 它不是本 kernel 的限制项。\n");
+  std::printf("四项约束取最小：谁先卡住，谁就决定占用率。\n\n");
   std::printf("再对比「占用率」与「带宽」两列：\n");
   std::printf("  · 若带宽基本不随占用率下降而变，说明该 kernel 的瓶颈是访存带宽\n");
   std::printf("    而非延迟 —— 硬件带宽已被打满，再多 warp 也只能排队等内存。\n");
@@ -2346,7 +2352,7 @@ all: $(TARGETS)
 %: %.cu
 	$(NVCC) $(NVCCFLAGS) $(ARCH) $(LDFLAGS) -o $@ $<
 
-# 查看每线程寄存器用量与 spill 情况
+# 查看每线程寄存器用量与 spill 情况（只打印 ptxas 报告，不产出目标文件）（仅打印 ptxas 报告，不产出目标文件）
 .PHONY: regs
 regs:
 	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xptxas -v -c $(word 1,$(TARGETS)).cu -o /dev/null
@@ -2377,9 +2383,10 @@ Expected: 四个 `OK 文件存在`；三个 `.cu` 各有 1 处 `define CUDA_CHEC
 1. 每个 `.cu` 都包含 `#include <cuda_runtime.h>`，且错误检查宏在每次 CUDA API 调用后使用。
 2. 每个 `<<<>>>` 启动序列后至少检查一次 `CUDA_CHECK_LAST()`（计时循环内不必逐次检查，但预热后与循环结束后各须检查一次）。
 3. 所有 `cudaMalloc` 都有配对的 `cudaFree`，`cudaMallocHost` 有配对的 `cudaFreeHost`。
-4. `03_occupancy_probe.cu` 中 `__launch_bounds__` 的第二个参数最大取 6，`6 × 256 = 1536` 不超过常见架构的每 SM 最大线程数。
-5. `02_divergence_demo.cu` 的 `path_heavy` 循环次数为 32 且带 `#pragma unroll` —— 循环太短会被编译器 if-convert 成谓词执行，导致观测不到发散。
-6. `Makefile` 使用 Tab 缩进（不是空格），否则 `make` 会报 "missing separator"。
+4. `03_occupancy_probe.cu` 的共享内存扫描范围正确：下限 1 KB —— 内核要用 `tile[0 .. kThreads-1]`，即 `kThreads × 4 = 1024` 字节，低于此值会越界；上限 48 KB —— 49152 字节恰好是**动态共享内存的默认上限**，再往上必须调用 `cudaFuncSetAttribute(cudaFuncAttributeMaxDynamicSharedMemorySize, ...)`，本程序刻意不越过这条线。
+5. `03_occupancy_probe.cu` 传给 `cudaOccupancyMaxActiveBlocksPerMultiprocessor` 的第 4 个参数（动态共享内存字节数）与 `<<<blocks, kThreads, smem_bytes>>>` 中启动时传的值**必须是同一个变量**，否则报告的理论占用率与实际不符。
+6. `02_divergence_demo.cu` 的 `path_heavy` 循环次数为 32 且带 `#pragma unroll` —— 循环太短会被编译器 if-convert 成谓词执行，导致观测不到发散。
+7. `Makefile` 使用 Tab 缩进（不是空格），否则 `make` 会报 "missing separator"。
 
 - [ ] **Step 6: 提交**
 
@@ -2516,7 +2523,7 @@ grep -q '软件管理的缓存' "$f" && echo "OK 含核心论断" || echo "MISS 
 grep -q 'local memory' "$f" && echo "OK 含 local memory" || echo "MISS local memory"
 grep -c '成因' "$f"
 ```
-Expected: J 个字段全部 `OK`；两个关键项 `OK`；`成因` ≥ 3。
+Expected: 12 个字段全部 `OK`；两个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -2582,13 +2589,14 @@ updated: 2026-09-14
    有用字节 = 32 × 4 = 128
    有效利用率 = 128 / (S × 128) = 1 / S
    ```
-4. 验算：`S = 1` → 利用率 100%；`S = 2` → 50%；`S = 32` → 3.125%。有效带宽按同样比例下降。
-5. 推导出**有效带宽公式**：
+4. 验算：`S = 1` → 利用率 100%；`S = 2` → 50%；`S = 4` → 25%；`S = 8` → 12.5%。有效带宽按同样比例下降。
+5. 说明该公式的适用边界：`1/S` 只在 **S 能整除一条 cache line 所含的 32 个 float** 时，与按 sector 粒度算出的利用率一致。S 取 16 或 32 时，warp 一次访问只用到部分 sector（32 字节），按 sector 算与按整行算会给出不同结果（S = 32 时前者 1/8、后者 1/32），此时 `1/S` 只是上界。`code/02_coalescing_demo.cu` 刻意只演示 1/2/4/8 四档，就是为了避开这个含糊。
+6. 推导出**有效带宽公式**：
    ```
    有效带宽 = 峰值带宽 × 有效利用率
    有效利用率 = 有用字节 ÷ 传输字节
    ```
-6. 说明该模型的边界：若 warp 的访问跨越 cache line 边界（如起始地址未对齐），事务数会再多 1；若访问模式不规则（如按索引间接寻址），事务数需逐个判断。
+7. 说明该模型的其他边界：若 warp 的访问跨越 cache line 边界（如起始地址未对齐），事务数会再多 1；若访问模式不规则（如按索引间接寻址），事务数需逐个判断。
 
 - [ ] **Step 4: 写第 2 节「执行映射」**
 
@@ -2639,7 +2647,7 @@ grep -q 'sector' "$f" && echo "OK 含 sector" || echo "MISS sector"
 grep -q 'AoS' "$f" && echo "OK 含 AoS/SoA" || echo "MISS AoS"
 grep -c '成因' "$f"
 ```
-Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: 12 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -2764,7 +2772,7 @@ grep -q '32 路冲突' "$f" && echo "OK 含冲突推导" || echo "MISS 冲突推
 grep -q 'swizzle' "$f" && echo "OK 含 swizzle" || echo "MISS swizzle"
 grep -c '成因' "$f"
 ```
-Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: 12 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -2970,6 +2978,11 @@ int main() {
 // 运行：./02_coalescing_demo
 //
 // 显存占用：kStride = 8 时数组为 512 MB，是本程序的最大分配。
+//
+// 工作集提示：stride = 1 时数组为 64 MB。目标环境（sm_80 的 L2 为 40 MB、
+// sm_90 为 50 MB）装不下，会真正落到 HBM。若换到 L2 达 126 MB 的新架构
+// （如 B100/B200），stride = 1 那一档可能整块驻留 L2，该行数值会偏高、
+// 与 1/stride 的拟合变差 —— 这是预期的，不是 bug。
 
 #include <cstdio>
 #include <cstdlib>
@@ -3323,7 +3336,7 @@ all: $(TARGETS)
 %: %.cu
 	$(NVCC) $(NVCCFLAGS) $(ARCH) $(LDFLAGS) -o $@ $<
 
-# 查看每线程寄存器用量、共享内存用量与 spill 情况
+# 查看每线程寄存器用量、共享内存用量与 spill 情况（只打印 ptxas 报告，不产出目标文件）
 regs:
 	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xptxas -v -c $(word 1,$(TARGETS)).cu -o /dev/null
 
@@ -3351,10 +3364,10 @@ Expected: 四个 `OK 文件存在`；三个编号 `OK`；Makefile 使用 Tab；�
 人工审查清单：
 
 1. 每个 `.cu` 都包含 `#include <cuda_runtime.h>`，错误检查宏在每次 CUDA API 调用后使用。
-2. 每次 `<<<>>>` 启动后都有 `CUDA_CHECK_LAST()`。
+2. 每个 `<<<>>>` 启动序列后至少检查一次 `CUDA_CHECK_LAST()`（计时循环内不必逐次检查，但预热后与循环结束后各须检查一次）。
 3. 所有 `cudaMalloc` 都有配对的 `cudaFree`。
-4. `02_coalescing_demo.cu` 中 `n = 1LL << 26` 是 32 的倍数，保证取模回绕点落在 warp 边界上；若改为其它值，需重新验证这一性质。
-5. `02_coalescing_demo.cu` 在 256 MB 显存分配失败时应有清晰报错 —— `CUDA_CHECK` 宏已覆盖 `cudaMalloc` 的返回码。
+4. `02_coalescing_demo.cu` 的数组长度由 `array_len<kStride>() = kTotalThreads × kStride × kIters` 给出，四种 stride 下分别是 64 / 128 / 256 / 512 MB。最大一次分配是 **512 MB**（`array_len<8>()`），需要 GPU 有足够空闲显存；分配失败时 `CUDA_CHECK(cudaMalloc(...))` 会报错退出。
+5. `02_coalescing_demo.cu` 的读取次数 `kReads = kTotalThreads × kIters` 与 `kStride` **无关** —— 这是该演示成立的前提。若改动 `array_len` 的定义，必须重新确认这一性质仍然成立。
 6. `03_bank_conflict_demo.cu` 中 `kWarps × kRows × 33 × 4 = 33792` 字节，小于默认的 48 KB 静态共享内存上限。
 7. `Makefile` 用 Tab 缩进，不是空格。
 
@@ -3454,20 +3467,28 @@ for f in 20-gpu-architecture/*/[0-9][0-9]-*.md; do
 done
 
 echo "=== 5. 实测数字须有来源或标注为推导值（spec §10.2 验收标准 5）==="
-grep -rn '推导值\|CUDA [0-9]' 20-gpu-architecture/*/[0-9][0-9]-*.md || echo "无实测数字，无需标注"
+for f in 20-gpu-architecture/*/[0-9][0-9]-*.md; do
+  if grep -qE '推导值|CUDA [0-9]|GPU 型号' "$f"; then
+    echo "OK   $f"
+  else
+    echo "人工确认 $f：正文若无任何实测性能数字则通过；若有，须补 GPU 型号 + CUDA 版本标注，或改写为「推导值」"
+  fi
+done
 ```
 Expected: 两组编号均 `OK 一致`；六篇文档全部 `OK`，无 `MISS`；`.cu` 计数为 `6`；`Makefile` 计数为 `2`；六篇文档的「编译与运行」检查全部 `OK`。
 
-**关于检查 5**：六篇文档**可以整体省略第 5 节「实测数据」**（spec §7.1 规定为可选，§6 规定 `status` 与第 5 节无关）。若确实未写实测数字，该检查应输出「无实测数字，无需标注」——这是**通过**，不是失败。只有当文档里出现了具体性能数字时，才必须有对应的 GPU 型号 + CUDA 版本标注，或明确写成「推导值」。
+**关于检查 5**：六篇文档**可以整体省略第 5 节「实测数据」**（spec §7.1 规定为可选，§6 规定 `status` 与第 5 节无关）。若某篇确实未写任何实测性能数字，该行的「人工确认」提示即为**通过**，不需改动。只有当文档里出现了具体性能数字时，才必须有对应的 GPU 型号 + CUDA 版本标注，或明确写成「推导值」。
 
 **若任一文档缺「编译与运行」小节**，按通用约定中的格式补上（放在「小结与延伸」之前）。**若缺 `status: stable`**，用通用约定中给出的 `sed` 命令修正后重新提交。
 
-**人工通读（spec §7.2 自查第 5 条）**
+**人工通读**
 
-七条验收标准中，第 1、2、3、4 条与 §7.2 的前四条已由上面的 `grep` 覆盖。剩下两条**无法机械核验，须人工完成**：
+机械核验的覆盖情况：spec §10.2 的六条验收标准中，1（目录结构）、4（编译运行小节）、6（roadmap 标记）由上面的检查覆盖，2（五节 + `status`）、3（编号对应）由检查 1、2、3 覆盖，5（实测数字来源）由检查 5 覆盖。§7.2 五条自查中，第 1（章节完整）、2（有推导过程）、4（有失败模式）由各文档任务的 Step 8 覆盖。
 
-1. **§7.2 第 5 条「可独立读懂」**：逐篇通读，确认不依赖未列在 `prerequisites` 中的文档即可理解。若发现某处理解需要额外前置，把对应路径补进该文档的 `prerequisites`，并回到 spec §8.3 的核对清单确认未引入环。
-2. **§7.2 第 3 条「≥2 个组件名 + ≥1 个数值量级」**：`grep` 只能检查是否出现关键字，无法判断是否讲清楚。通读第 2 节时确认组件名与数值是**用来说明机制**的，而不是罗列。
+**剩下两条无法机械核验，须人工完成**：
+
+1. **§7.2 第 3 条「≥2 个组件名 + ≥1 个数值量级」**：`grep` 只能检查关键字是否出现，无法判断是否讲清楚。通读每篇第 2 节时确认组件名与数值是**用来说明机制**的，而不是罗列。
+2. **§7.2 第 5 条「可独立读懂」**：逐篇通读，确认不依赖未列在 `prerequisites` 中的文档即可理解。若发现某处理解需要额外前置，把对应路径补进该文档的 `prerequisites`，并回到 spec §8.3 的核对清单确认未引入环。
 
 这两条通过后，才可在 Step 7 提交并把 roadmap 标记为完成。
 
