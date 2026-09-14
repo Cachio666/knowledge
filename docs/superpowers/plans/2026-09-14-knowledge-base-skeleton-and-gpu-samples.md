@@ -29,7 +29,7 @@
 | `00-meta/glossary.md` | 术语表中英对照，≥30 条 |
 | `00-meta/index.md` | 全库索引，按域组织 |
 | `00-meta/roadmap.md` | 全库进度表，61 个二级主题 |
-| `10-foundations/README.md` | 域说明（以下 14 个域 README 结构相同） |
+| `10-foundations/README.md` | 域说明（`30`~`130` 共 11 个域 README 结构相同；`140`/`150` 结构不同，见 Task 6） |
 | `30-gpu-programming/README.md` | 〃 |
 | `40-kernels/README.md` | 〃 |
 | `50-performance/README.md` | 〃 |
@@ -137,6 +137,7 @@ done
 
 | 域 | 覆盖内容 |
 |---|---|
+| `00-meta` | 知识库自身：术语表、索引、进度表 |
 | `10-foundations` | 浮点与数值、数值线性代数、性能模型（roofline、Amdahl） |
 | `20-gpu-architecture` | SM 与执行模型、存储层次、Tensor Core、互联、架构演进 |
 | `30-gpu-programming` | CUDA、Triton、PTX/SASS、CUTLASS |
@@ -154,6 +155,47 @@ done
 | `150-playground` | 实验场 |
 
 `00-meta/` 存放知识库自身的元信息：[术语表](00-meta/glossary.md)、[索引](00-meta/index.md)、[进度表](00-meta/roadmap.md)。
+
+## 学习路径图
+
+自下而上，每一层都是下一层的前提。箭头表示「读懂了左边再读右边」。
+
+```
+10-foundations  浮点与数值 / 性能模型
+      │
+      ▼
+20-gpu-architecture   SM 与执行模型 → 存储层次 → Tensor Core → 互联
+      │
+      ▼
+30-gpu-programming    CUDA → Triton → PTX/SASS → CUTLASS
+      │
+      ▼
+40-kernels            GEMM → attention → reduce / softmax / 融合算子
+      │
+      ├──────────────► 50-performance   瓶颈定位与调优（横切，随时可读）
+      │
+      ▼
+60-compilers          MLIR → TVM → Inductor → XLA
+      │
+      ▼
+70-frameworks         PyTorch / TensorFlow / JAX
+      │
+      ├──────────────► 80-model-architectures   要优化的对象
+      │
+      ▼
+90-training           反向传播 → 混合精度 → 优化器 → 训练稳定性
+      │
+      ├──────────────► 100-parallelism   DP / TP / PP / EP / ZeRO
+      ├──────────────► 110-communication 集合通信 / NCCL / 拓扑
+      │
+      ▼
+120-inference         KV cache → 调度 → 解码 → 推理引擎
+      │
+      └──────────────► 130-quantization  量化与压缩（横切训练与推理）
+
+140-papers      论文精读（随时可读）
+150-playground  实验场（随时可写）
+```
 
 ## 怎么用
 
@@ -402,12 +444,14 @@ updated: 2026-09-14
 Run:
 ```bash
 test -f CONTRIBUTING.md && echo "OK 文件存在"
-grep -c '^## ' CONTRIBUTING.md
+grep -cE '^## [0-9]+\. ' CONTRIBUTING.md
 grep -q '编号即外键' CONTRIBUTING.md && echo "OK 含编号即外键"
 grep -q '有向无环图' CONTRIBUTING.md && echo "OK 含无环约定"
 grep -q '正文在 X，此处回链' CONTRIBUTING.md && echo "OK 含引用注记模板"
 ```
-Expected: `OK 文件存在`；章节数为 `10`；三个 `OK` 全部输出。
+Expected: `OK 文件存在`；编号章节数为 `10`；三个 `OK` 全部输出。
+
+**注意**：这里必须用 `^## [0-9]+\. ` 而不是 `^## `。第 4 节「文档模板」内嵌了一个 markdown 代码块，块内有 8 个 `## ` 开头的章节标题，grep 不区分代码围栏会一并计入（`^## ` 会得到 18）。
 
 - [ ] **Step 3: 提交**
 
@@ -548,7 +592,7 @@ mkdir -p 00-meta
 
 - [ ] **Step 2: 写 `00-meta/glossary.md`**
 
-术语表按域分组，**不少于 30 条**。每条格式为 `| 英文 | 中文 | 说明 |`。首批收录以下 32 条（完整内容如下）：
+术语表按域分组，**不少于 30 条**。每条格式为 `| 英文 | 中文 | 说明 |`。首批收录以下 **49 条**（完整内容如下，分组为 15 + 15 + 3 + 8 + 8）：
 
 ````markdown
 # 术语表
@@ -648,6 +692,7 @@ mkdir -p 00-meta
 尚未开始。
 
 ## 20-gpu-architecture
+<!-- 以下两行是前向声明：目录由 Chunk 3/4 创建。全部创建完成后可删除本注释。 -->
 - [execution-model](../20-gpu-architecture/execution-model/) —— SM 结构 / SIMT 与发散 / 占用率与延迟隐藏
 - [memory-system](../20-gpu-architecture/memory-system/) —— 存储层次 / 访存合并 / 共享内存 bank 冲突
 
@@ -808,13 +853,13 @@ for f in 00-meta/README.md 00-meta/glossary.md 00-meta/index.md 00-meta/roadmap.
   test -f "$f" && echo "OK   $f" || echo "MISS $f"
 done
 
-echo "--- 术语条数（应 >= 30）---"
+echo "--- 术语条数（应为 49）---"
 grep -cE '^\| [A-Za-z]' 00-meta/glossary.md
 
 echo "--- 进度表主题数（应为 61）---"
 grep -cE '^- \[ \] [a-z]' 00-meta/roadmap.md
 ```
-Expected: 四个 `OK`；术语条数 ≥ 30；主题数恰好 `61`。
+Expected: 四个 `OK`；术语条数 `49`（照抄则为 49，若自行增删应 ≥ 30）；主题数恰好 `61`。
 
 - [ ] **Step 6: 提交**
 
@@ -884,7 +929,7 @@ mkdir -p 10-foundations 30-gpu-programming 40-kernels 50-performance \
 
 - **上游**：无。本域是全库最底层，`prerequisites` 为空。
 - **下游**：`20-gpu-architecture`（延迟-带宽模型）、`40-kernels`（roofline 判断算子性质）、`90-training`（混合精度与数值稳定性）、`130-quantization`（误差分析）。
-- **横切**：`performance-models` 中的 roofline 被所有 kernel 文档引用，正文在本域，其他位置回链。
+- **横切**：`performance-models` 中的 roofline 模型（正文在本域，回链 `40-kernels`）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -936,7 +981,7 @@ mkdir -p 10-foundations 30-gpu-programming 40-kernels 50-performance \
 
 - **上游**：`20-gpu-architecture`（硬件行为）、`30-gpu-programming`（编程工具）、`10-foundations`（roofline 与数值）。
 - **下游**：`60-compilers`（编译器要生成的正是这些 kernel）、`120-inference`（引擎的算力上限由这些 kernel 决定）。
-- **横切**：`130-quantization/quantized-kernels` 的正文在量化域，本域中的 GEMM 等文档只放回链。
+- **横切**：量化算子实现（正文在 `130-quantization`，此处回链）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -986,7 +1031,7 @@ mkdir -p 10-foundations 30-gpu-programming 40-kernels 50-performance \
 
 - **上游**：`70-frameworks`（编译器是框架的一部分）、`30-gpu-programming`（生成的代码是 Triton 或 CUDA）。
 - **下游**：`120-inference`（引擎大量依赖编译期优化）。
-- **横切**：`inductor` 与 `70-frameworks/pytorch` 强耦合，正文在本域，PyTorch 域回链。
+- **横切**：`inductor`（正文在本域，回链 `70-frameworks/pytorch`）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -1010,7 +1055,7 @@ mkdir -p 10-foundations 30-gpu-programming 40-kernels 50-performance \
 
 - **上游**：`30-gpu-programming`（自定义算子要写 CUDA）。
 - **下游**：`80-model-architectures`（模型用框架写）、`90-training`、`100-parallelism`、`120-inference`。
-- **横切**：编译器部分（torch.compile / XLA）的正文在 `60-compilers`，本域回链。
+- **横切**：torch.compile 与 XLA 的编译器实现（正文在 `60-compilers`，此处回链）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -1135,7 +1180,7 @@ mkdir -p 90-training 100-parallelism 110-communication 120-inference \
 
 - **上游**：`90-training`、`110-communication`（并行策略的通信开销由通信域定性）。
 - **下游**：`120-inference`（推理的并行形态与训练不同，但共享概念）。
-- **横切**：梯度规约算法（ring allreduce 等）的正文在 `110-communication/collectives`，本域只放回链。
+- **横切**：梯度规约算法（ring allreduce 等）（正文在 `110-communication`，此处回链）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -1160,7 +1205,7 @@ mkdir -p 90-training 100-parallelism 110-communication 120-inference \
 
 - **上游**：`20-gpu-architecture/interconnect`（NVLink 的物理带宽与拓扑）。
 - **下游**：`100-parallelism`（并行策略的可行性由通信决定）。
-- **横切**：NVLink 与 NVSwitch 的硬件细节正文在 `20-gpu-architecture/interconnect`，本域回链。
+- **横切**：NVLink 与 NVSwitch 的硬件细节（正文在 `20-gpu-architecture/interconnect`，此处回链）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -1186,7 +1231,7 @@ mkdir -p 90-training 100-parallelism 110-communication 120-inference \
 
 - **上游**：`80-model-architectures`（KV cache 大小由架构决定）、`40-kernels`（算力上限由 kernel 决定）、`60-compilers`。
 - **下游**：无。这是栈的最上层。
-- **横切**：KV cache 量化的正文在 `130-quantization/kv-cache-quantization`，本域回链。
+- **横切**：KV cache 量化（正文在 `130-quantization`，此处回链）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -1214,7 +1259,7 @@ mkdir -p 90-training 100-parallelism 110-communication 120-inference \
 
 - **上游**：`10-foundations/floating-point`（数值格式的误差来源）、`20-gpu-architecture/tensor-core`（低精度算力）。
 - **下游**：`120-inference`（量化是推理加速的主要手段）。
-- **横切**：本域是横切域。量化 kernel 的实现细节归本域，`40-kernels` 只放回链；KV cache 量化归本域，`120-inference` 只放回链。
+- **横切**：量化算子实现（正文在本域，回链 `40-kernels`）；KV cache 量化（正文在本域，回链 `120-inference`）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -1269,11 +1314,19 @@ for d in 90-training 100-parallelism 110-communication 120-inference 130-quantiz
   test -f "$d/README.md" && echo "OK   $d" || echo "MISS $d"
 done
 
-echo "--- 回链注记（应有 3 处）---"
+echo "--- 三要素完整性（5 个常规域应各为 3）---"
+for d in 90-training 100-parallelism 110-communication 120-inference 130-quantization; do
+  n=$(grep -cE '^## (本域覆盖什么|与其他域的关系|计划主题清单)' "$d/README.md")
+  echo "$n  $d"
+done
+
+echo "--- 引用注记（应命中 4 个文件）---"
 grep -l '回链' 90-training/README.md 100-parallelism/README.md 110-communication/README.md \
-  120-inference/README.md 130-quantization/README.md 2>/dev/null | wc -l
+  120-inference/README.md 130-quantization/README.md 2>/dev/null | sort
 ```
-Expected: 七个 `OK`；回链注记出现在 `100-parallelism`、`110-communication`、`120-inference`、`130-quantization` 四个文件中。**注意**：Task 5 的 `40-kernels/README.md` 也含一处回链，全库合计 5 处——其中 `130-quantization` 含 2 处（`quantized-kernels` 与 `kv-cache-quantization`），故 grep 计数应为 `4` 个文件。
+Expected: 五个常规域的计数均为 `3`；`grep -l` 命中 `100-parallelism`、`110-communication`、`120-inference`、`130-quantization` 四个文件（`90-training` 不含引用注记）。
+
+**注**：`140-papers` 与 `150-playground` 两个域的「本域覆盖什么」一节按设计改为「收录规则」，收尾标题也从「计划主题清单见」改为「计划清单见」——这是有意为之，不参与上面的计数。
 
 - [ ] **Step 10: 提交**
 
@@ -1306,8 +1359,8 @@ mkdir -p 20-gpu-architecture
 
 | 主题 | 内容 | 状态 |
 |---|---|---|
-| [execution-model](execution-model/) | SM 内部结构 / warp 与 SIMT / 分支发散 / 占用率与延迟隐藏 | 已完成 |
-| [memory-system](memory-system/) | 存储层次 / 访存合并 / 共享内存 bank 冲突 | 已完成 |
+| [execution-model](execution-model/) | SM 内部结构 / warp 与 SIMT / 分支发散 / 占用率与延迟隐藏 | 未开始 |
+| [memory-system](memory-system/) | 存储层次 / 访存合并 / 共享内存 bank 冲突 | 未开始 |
 | tensor-core | MMA 指令族 / wmma / wgmma / tcgen05 / 稀疏 MMA | 未开始 |
 | interconnect | NVLink / NVSwitch / PCIe / 多卡拓扑与带宽 | 未开始 |
 | architecture-evolution | Volta→Ampere→Hopper→Blackwell 逐代规格差异 | 未开始 |
@@ -1316,7 +1369,7 @@ mkdir -p 20-gpu-architecture
 
 - **上游**：`10-foundations`（延迟-带宽模型是理解存储层次的工具）。
 - **下游**：`30-gpu-programming`、`40-kernels`、`50-performance`、`110-communication`。
-- **横切**：`interconnect` 是 `110-communication/nccl` 的上游，NVLink 带宽的正文在本域，通信域只放回链。
+- **横切**：NVLink 带宽与拓扑（正文在本域，回链 `110-communication`）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
 ```
@@ -1328,7 +1381,9 @@ Run:
 test -f 20-gpu-architecture/README.md && echo "OK 文件存在"
 grep -c '^| \[' 20-gpu-architecture/README.md
 ```
-Expected: `OK 文件存在`；输出 `2`（两个已完成的主题带链接）。
+Expected: `OK 文件存在`；输出 `2`（两个已建目录的主题带链接）。
+
+**关于「状态」列**：此时两行写「未开始」，因为 Chunk 3/4 尚未产出内容。**Chunk 5 的 Task 17 会把它们改为「已完成」**，与 `00-meta/roadmap.md` 同步。不要在 Task 7 就写成「已完成」——那会与同一时刻 roadmap 的 `- [ ]` 冲突，违反 CONTRIBUTING 第 10 节的三者一致性要求。
 
 - [ ] **Step 3: 提交**
 
@@ -1352,19 +1407,23 @@ echo "--- 实际存在的目录（排除 .git 与 docs）---"
 find . -type d -not -path './.git*' -not -path './docs*' -not -name '.' | sort
 
 echo "--- 一级域目录数（应为 16）---"
-find . -maxdepth 1 -type d -regex '\./[0-9][0-9]-.*' | wc -l
+find . -maxdepth 1 -type d -regex '\./[0-9]+-.*' | wc -l
 
 echo "--- 二级目录数（应为 0，Chunk 3/4 之前）---"
 find . -mindepth 2 -maxdepth 2 -type d -not -path './.git*' -not -path './docs*' | wc -l
 ```
 Expected: 一级域目录数为 `16`；二级目录数为 `0`。
 
+**注意**：正则必须是 `\./[0-9]+-.*`，不能用 `\./[0-9][0-9]-.*` —— 后者只匹配两位数字前缀，会漏掉 `100-parallelism` 到 `150-playground` 六个三位数域（实测只会输出 10）。
+
+**关于「二级目录数为 0」**：这是 Chunk 3/4 **之前**的中途快照。首期骨架最终**必须包含** `20-gpu-architecture/execution-model/` 与 `memory-system/` 两个二级目录（spec §10.1 A5），它们由 Chunk 3/4 创建，并在 Chunk 5 核验。
+
 - [ ] **Step 2: 核验 16 个域 README 齐全**
 
 Run:
 ```bash
 n=0
-for d in $(find . -maxdepth 1 -type d -regex '\./[0-9][0-9]-.*' | sort); do
+for d in $(find . -maxdepth 1 -type d -regex '\./[0-9]+-.*' | sort); do
   test -f "$d/README.md" && n=$((n+1)) || echo "MISS $d/README.md"
 done
 echo "有 README 的域数：$n"
@@ -1376,17 +1435,31 @@ Expected: `有 README 的域数：16`，无 `MISS` 输出。
 Run:
 ```bash
 echo "roadmap 主题数：$(grep -cE '^- \[ \] [a-z]' 00-meta/roadmap.md)"
-echo "roadmap 域数：$(grep -cE '^## [0-9]' 00-meta/roadmap.md)"
+echo "roadmap 域标题数：$(grep -cE '^## [0-9]' 00-meta/roadmap.md)"
 ```
-Expected: 主题数 `61`，域数 `13`（`00-meta`、`140-papers`、`150-playground` 三个标题不匹配 `^## [0-9]`，故为 13）。
+Expected: 主题数 `61`，域标题数 `15`。
 
-- [ ] **Step 4: 核验工作区干净**
+**关于 15**：16 个一级域中 `00-meta` 没有 roadmap 分节（它是元信息域，无二级主题），其余 15 个都有 `## <编号>-<名称>` 标题。`140-papers` 与 `150-playground` 的标题也以数字开头，同样计入这 15 个。
+
+- [ ] **Step 4: 核验 `.gitignore` 覆盖构建产物**
+
+Run:
+```bash
+test -s .gitignore && echo "OK .gitignore 非空"
+grep -q '\.out' .gitignore && echo "OK 忽略 .out"
+grep -q '\.o$' .gitignore && echo "OK 忽略 .o"
+```
+Expected: 三个 `OK`。
+
+- [ ] **Step 5: 核验工作区干净**
 
 Run:
 ```bash
 git status --short
 ```
-Expected: 无输出（所有文件已提交）。
+Expected: 除 `docs/` 下的文件外无输出。
+
+**注意**：`docs/` 存放的是设计与计划工件，不属于知识库交付物。若实施过程中动了 `docs/` 而未提交，这里会显示出来 —— 提交它即可，不影响本步的通过判定。
 
 ---
 
@@ -2821,15 +2894,14 @@ int main() {
 //
 // 观测要点：
 //   1. kStride = 1 时，一个 warp 的 32 次访问落在同一条 128B cache line，1 个事务
-//   2. kStride = S 时，相邻 lane 相隔 S 个 float，一个 warp 跨 S 条 cache line
-//   3. 有效利用率 = 有用字节 / 传输字节 = 1 / S
+//   2. kStride = S 时，一个 warp 的 32 次访问分散在 S 条 cache line 上，S 个事务
+//   3. 两种情形的「总内存流量相同」，差别只在有用字节 —— 有效利用率 = 1 / S
 //
 // 构建：make 02_coalescing_demo
 // 运行：./02_coalescing_demo
 
 #include <cstdio>
 #include <cstdlib>
-#include <initializer_list>
 
 #include <cuda_runtime.h>
 
@@ -2849,32 +2921,40 @@ namespace {
 
 constexpr int kThreads = 256;
 constexpr int kBlocks  = 2048;
-constexpr int kIters   = 128;  // 每线程读取次数
 constexpr int kReps    = 20;
 
-// 全部线程共读 kThreads × kBlocks × kIters 次，与 kStride 无关，
-// 因此「有用字节」恒定，可直接比较有效带宽。
-constexpr long long kReads =
-    static_cast<long long>(kBlocks) * kThreads * kIters;
-
-// kStride 决定相邻 lane 的地址间隔：
-//   kStride = 1  → 相邻 lane 地址相邻，一个 warp 落在 1 条 cache line
-//   kStride = S  → 相邻 lane 相隔 S 个 float，一个 warp 跨 S 条 cache line
+// kStride 决定 warp 内相邻 lane 的地址间隔。
 //
-// 取模回绕保证数组长度与 kStride 无关。数组长度取 2 的幂且为 32 的倍数，
-// 故回绕点一定落在 warp 边界上，不会让某个 warp 跨越回绕点。
+// 每个 warp 负责一段连续的 32×kStride 个元素，其中第 lane 个 lane
+// 读取本段内的第 lane×kStride 个元素：
+//   kStride = 1  → warp 读 32 个连续元素，落在同一条 128B cache line，1 个事务
+//   kStride = S  → warp 的 32 次读分散在 S 条 cache line 上，S 个事务
+//
+// 网格逐段推进覆盖整个数组，因此两种 kStride 下的**总内存流量完全相同**
+// （都是把整个数组的每条 cache line 取一遍），差别只在「有用字节」上：
+//   kStride = S 时，每条 cache line 只贡献 1 个有用元素，其余 S−1 个被浪费。
+//
+// 这一点很关键：若改成对数组取模的简单跳读（in[i * kStride % n]），
+// kStride = 32 时只会碰到数组 1/32 的内存行，工作集小到被 L2 装下，
+// 测出来的就不是合并损失而是 L2 带宽了。
 template <int kStride>
 __global__ void strided_sum_kernel(const float* __restrict__ in,
                                    float* __restrict__ out, long long n) {
-  const long long T =
+  const long long total_threads =
       static_cast<long long>(gridDim.x) * blockDim.x;
   const long long tid =
       static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
 
+  const long long warp_id = tid >> 5;
+  const int       lane    = threadIdx.x & 31;
+
+  // 全部 warp 推进一段，跨度为 total_threads × kStride 个元素
+  const long long span = total_threads * kStride;
+
   float acc = 0.0f;
-  for (int j = 0; j < kIters; ++j) {
-    const long long idx = ((static_cast<long long>(j) * T + tid) * kStride) % n;
-    acc += in[idx];
+  for (long long base = 0; base < n; base += span) {
+    const long long idx = base + warp_id * 32 * kStride + lane * kStride;
+    if (idx < n) acc += in[idx];
   }
   if (acc == -1234567.0f) out[0] = acc;
 }
@@ -3205,9 +3285,17 @@ Run:
 echo "=== 1. 目录集合与 §3.3 一致 ==="
 find . -type d -not -path './.git*' -not -path './docs*' -not -name '.' | sort
 
+echo "=== 1b. 两个首期二级目录必须存在（spec A5）==="
+for d in 20-gpu-architecture/execution-model 20-gpu-architecture/memory-system; do
+  test -d "$d" && echo "OK   $d" || echo "MISS $d"
+done
+
+echo "=== 1c. 除这两个外不应有其他二级目录 ==="
+find . -mindepth 2 -maxdepth 2 -type d -not -path './.git*' -not -path './docs*' | sort
+
 echo "=== 2. 16 个一级域均有 README ==="
 n=0
-for d in $(find . -maxdepth 1 -type d -regex '\./[0-9][0-9]-.*' | sort); do
+for d in $(find . -maxdepth 1 -type d -regex '\./[0-9]+-.*' | sort); do
   test -f "$d/README.md" && n=$((n+1)) || echo "MISS $d/README.md"
 done
 echo "计数：$n"
@@ -3218,7 +3306,7 @@ grep -cE '^- \[ \] [a-z]' 00-meta/roadmap.md
 echo "=== 4. glossary 条数 ==="
 grep -cE '^\| [A-Za-z]' 00-meta/glossary.md
 ```
-Expected: 目录仅含 16 个一级域 + `00-meta` 下的文件 + `20-gpu-architecture/` 下两个二级目录及其 `code/`；计数 `16`；主题数 `61`；术语条数 ≥ 30。
+Expected: 步骤 1b 两个 `OK`；步骤 1c 只列出 `20-gpu-architecture/execution-model`、`20-gpu-architecture/memory-system` 及其各自的 `code/` 子目录；一级域计数 `16`；主题数 `61`；术语条数 ≥ 30。
 
 - [ ] **Step 2: 核验第二组验收标准（spec §10.2）**
 
@@ -3289,13 +3377,21 @@ make 01_sm_probe
 
 - [ ] **Step 4: 更新 `00-meta/index.md`**
 
-确认 `20-gpu-architecture` 一节下列出了两个已完成的主题目录，并补上该主题内的文档清单：
+确认 `20-gpu-architecture` 一节下列出了两个已建成的主题目录。
+
+**同时删除该节内的前向声明注释**（Task 4 写入的 `<!-- 以下两行是前向声明… -->`），因为此刻这两个目录已真实存在：
 
 ```markdown
 ## 20-gpu-architecture
 - [execution-model](../20-gpu-architecture/execution-model/) —— SM 结构 / SIMT 与发散 / 占用率与延迟隐藏
 - [memory-system](../20-gpu-architecture/memory-system/) —— 存储层次 / 访存合并 / 共享内存 bank 冲突
 ```
+
+Run:
+```bash
+grep -c '前向声明' 00-meta/index.md
+```
+Expected: `0`（注释已删除）。
 
 - [ ] **Step 5: 更新 `20-gpu-architecture/README.md`**
 
@@ -3366,7 +3462,7 @@ Run:
 echo "=== 文件总数 ==="
 git ls-files | grep -v '^docs/' | wc -l
 echo "=== 一级域 ==="
-ls -d [0-9][0-9]-*/ | tr '\n' ' '
+ls -d [0-9]*-/ | tr '\n' ' '
 echo
 echo "=== 样板文档 ==="
 ls 20-gpu-architecture/*/[0-9][0-9]-*.md
