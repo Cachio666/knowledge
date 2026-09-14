@@ -101,7 +101,27 @@ for k in title slug domain topic level difficulty prerequisites tags related cod
 done
 ```
 
-**预期输出**：五节全部 `OK`，`code` 字段对无代码文档显示 `MISS`（可接受，spec §6 规定 `code` 为可选），其余 10 个字段全部 `OK`。
+**预期输出**：五节全部 `OK`；12 个字段中，`code` 字段对无代码文档显示 `MISS`（可接受，spec §6 规定 `code` 为可选），其余 11 个全部 `OK`。
+
+**每篇文档还须包含「编译与运行」一节**（spec §10.2 验收标准 4 要求每篇末尾有可执行的编译运行命令）。放在「小结与延伸」之前：
+
+````markdown
+## 编译与运行
+
+```bash
+cd code
+make <NN>_<名称>
+./<NN>_<名称>
+```
+````
+
+其中 `<NN>_<名称>` 填该文档对应代码文件的文件名（见各任务 frontmatter 的 `code` 字段，去掉 `code/` 前缀与扩展名），例如 `01_sm_probe`。
+
+**关于 `status`**：六个文档任务的 frontmatter 都写 `status: stable`，因为每个任务都会在**一次提交内**把第 0–4 节写全并通过 Step 8 检查 —— 这正是 spec §6 判定表中 `stable` 的定义。**`status` 与可选的第 5 节无关**（spec §6 明写），所以省略第 5 节不影响 `stable`。
+
+若你选择分次撰写、某次提交时第 0–4 节尚未齐全，则那一次应写成 `draft`，补齐后在同一提交里改成 `stable`。spec §10.2 验收标准 2 要求最终六篇均为 `stable`，Chunk 5 Task 17 Step 2 会断言这一点。
+
+（`CONTRIBUTING.md` 第 3 节的 frontmatter 示例与 `_template.md` 中的 `status: draft` 是**示例文本，保持 `draft` 不动** —— 它们展示的是新建文档的起始状态。）
 
 ---
 
@@ -1486,7 +1506,9 @@ Expected: 除 `docs/` 下的文件外无输出。
 03-occupancy-and-latency-hiding.md ←→  code/03_occupancy_probe.cu
 ```
 
-**依赖**：本块的 `03` 文档的 `prerequisites` 指向 `02`（同块内），`01` 与 `02` 的顺序不能颠倒。
+**依赖**：本块内三篇文档的 `prerequisites` 分别是 —— `01` 为空（`[]`），`02` 与 `03` 都指向 `01`。因此**必须按 01 → 02 → 03 的顺序写**。
+
+注意 `03` 的 `prerequisites` **只列 `01`**，`memory-system/01` 是放在 `related` 里的。这是有意为之：`memory-system/01` 也把 `01-sm-internals` 列为前置，若 `03` 再把它写进 `prerequisites` 就形成了环（spec §6 要求 `prerequisites` 构成有向无环图）。不要"顺手"把它挪进 `prerequisites`。
 
 ### Task 9: `01-sm-internals.md`
 
@@ -1516,7 +1538,7 @@ related:
   - 20-gpu-architecture/execution-model/03-occupancy-and-latency-hiding
 code:
   - code/01_sm_probe.cu
-status: draft
+status: stable
 updated: 2026-09-14
 ---
 
@@ -1604,7 +1626,7 @@ grep -q '65536' "$f" && echo "OK 含数值量级" || echo "MISS 数值"
 echo "--- 三段式 ---"
 grep -c '成因' "$f"
 ```
-Expected: 五节全部 `OK`；11 个 frontmatter 字段全部 `OK`；三个关键项 `OK`；`成因` 出现次数 ≥ 3。
+Expected: 五节全部 `OK`；12 个 frontmatter 字段全部 `OK`；三个关键项 `OK`；`成因` 出现次数 ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -1637,7 +1659,7 @@ related:
   - 20-gpu-architecture/execution-model/03-occupancy-and-latency-hiding
 code:
   - code/02_divergence_demo.cu
-status: draft
+status: stable
 updated: 2026-09-14
 ---
 
@@ -1715,7 +1737,7 @@ grep -q '__syncwarp' "$f" && echo "OK 含 syncwarp" || echo "MISS syncwarp"
 echo "--- 三段式 ---"
 grep -c '成因' "$f"
 ```
-Expected: 五节与 11 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -1749,7 +1771,7 @@ related:
   - 20-gpu-architecture/execution-model/02-simt-and-divergence
 code:
   - code/03_occupancy_probe.cu
-status: draft
+status: stable
 updated: 2026-09-14
 ---
 
@@ -1841,7 +1863,7 @@ grep -q '__launch_bounds__' "$f" && echo "OK 含 launch_bounds" || echo "MISS la
 echo "--- 三段式 ---"
 grep -c '成因' "$f"
 ```
-Expected: 五节与 11 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -1955,9 +1977,10 @@ int main() {
 // 对应文档：02-simt-and-divergence.md
 //
 // 观测要点：
-//   1. 同一 warp 内线程走不同分支时，路径串行执行，有效并行度下降
-//   2. active = 0 或 32 时全 warp 同路径，两种写法耗时接近
-//   3. active = 16 时 warp 分裂为两条路径，divergent 明显变慢
+//   1. active = 0 或 32 时全 warp 走同一条路径，最快
+//   2. active 在 1..31 之间时 warp 分裂为 2 条路径，硬件逐条串行执行，
+//      耗时接近「重路径 + 轻路径」之和，而非两者中的较大者
+//   3. branchless 版本必须把两条路径都算一遍，故耗时恒定且不低于 divergent
 //
 // 构建：make 02_divergence_demo
 // 运行：./02_divergence_demo
@@ -2079,13 +2102,19 @@ int main() {
   std::printf("元素数 %d，block 数 %d，每 block %d 线程\n\n", n, blocks,
               kThreads);
   std::printf("%-8s %-10s %-16s %-16s %s\n", "active", "路径数",
-              "divergent(ms)", "branchless(ms)", "发散代价");
+              "divergent(ms)", "branchless(ms)", "div/branchless");
 
-  for (int active : {0, 8, 16, 24, 32}) {
+  float t_light   = 0.0f;  // active = 0：全 warp 走轻路径
+  float t_heavy   = 0.0f;  // active = 32：全 warp 走重路径
+
+  for (int active : {0, 4, 8, 16, 24, 32}) {
     const float t_div =
         time_variant<false>(d_in, d_out, n, active, blocks);
     const float t_bl =
         time_variant<true>(d_in, d_out, n, active, blocks);
+
+    if (active == 0)  t_light = t_div;
+    if (active == 32) t_heavy = t_div;
 
     const char* paths = (active == 0 || active == 32) ? "1" : "2";
     std::printf("%-8d %-10s %-16.4f %-16.4f %.2fx\n", active, paths, t_div,
@@ -2093,9 +2122,17 @@ int main() {
   }
 
   std::printf("\n--- 解读 ---\n");
-  std::printf("active=0/32 时全 warp 走同一路径，两种写法耗时接近；\n");
-  std::printf("active=16 时 warp 分裂为两条路径，divergent 明显变慢。\n");
-  std::printf("有效并行度模型：warp 内 N 条互斥路径，最坏串行化后并行度 = 32/N。\n");
+  std::printf("1. active = 0 或 32 时全 warp 走同一条路径，路径数为 1，divergent 最快。\n");
+  std::printf("   纯轻路径 %.4f ms，纯重路径 %.4f ms。\n", t_light, t_heavy);
+  std::printf("2. active 在 1..31 之间时 warp 分裂为两条路径，硬件逐条串行执行，\n");
+  std::printf("   故 divergent 的耗时上升到接近「重路径 + 轻路径」之和 %.4f ms，\n",
+              t_heavy + t_light);
+  std::printf("   而不是两者中的较大者。这就是有效并行度 32/N 的实际含义。\n");
+  std::printf("3. branchless 版本无论 active 取何值，都必须把两条路径都算一遍，\n");
+  std::printf("   因此耗时基本恒定，且不低于 divergent —— 即便在 active = 0 时也是如此。\n");
+  std::printf("   这说明「用算术选择消除分支」对**长**分支并不免费：它把控制流分歧\n");
+  std::printf("   换成了计算冗余。无分支写法的价值在短分支（省去 BSSY/BRA/BSYNC 的开销），\n");
+  std::printf("   不在长分支。\n");
 
   CUDA_CHECK(cudaFree(d_in));
   CUDA_CHECK(cudaFree(d_out));
@@ -2113,10 +2150,18 @@ int main() {
 // 对应文档：03-occupancy-and-latency-hiding.md
 //
 // 观测要点：
-//   1. __launch_bounds__ 的第二个参数强制编译器限制寄存器用量，
-//      从而改变每 SM 的常驻 block 数与占用率
-//   2. 占用率提高不必然带来吞吐提高——访存带宽会先饱和
-//   3. 用 -Xptxas -v 可查看每线程寄存器数与是否发生 spill
+//   1. 每 block 的共享内存用量是占用率的限制项之一：用量越大，
+//      每 SM 能放下的 block 越少，占用率越低
+//   2. cudaOccupancyMaxActiveBlocksPerMultiprocessor 可精确算出
+//      给定 kernel、block 尺寸与共享内存用量下的常驻 block 数
+//   3. 占用率下降不必然带来吞吐下降 —— 若瓶颈是访存带宽而非延迟，
+//      减少 warp 数并不会让带宽变小
+//
+// 为什么用共享内存而不是 __launch_bounds__ 来调节占用率：
+// 本 kernel 只需约 10~16 个寄存器/线程，寄存器从来不是限制项，
+// __launch_bounds__ 的 minBlocks 参数根本不会生效，四行输出会完全相同。
+// 共享内存用量则是确定生效的限制项，且不依赖编译器行为。
+// __launch_bounds__ 的用法见文档第 3 节，此处不演示。
 //
 // 构建：make 03_occupancy_probe
 // 运行：./03_occupancy_probe
@@ -2143,54 +2188,57 @@ namespace {
 constexpr int kThreads = 256;
 constexpr int kReps    = 20;
 
-// 访存受限的累加 kernel。每个线程跨网格步长处理多个元素，
-// 制造持续的访存请求，使「有多少 warp 同时在飞」成为瓶颈之一。
-//
-// __launch_bounds__(kThreads, kMinBlocks) 告诉编译器：每 SM 至少要容纳
-// kMinBlocks 个 block。编译器据此反推每线程可用寄存器上限并限制分配。
-template <int kMinBlocks>
-__global__ void __launch_bounds__(kThreads, kMinBlocks)
-    accumulate_kernel(const float* __restrict__ in, float* __restrict__ out,
-                      int n) {
+// 流式累加的访存受限 kernel。动态共享内存的用量由启动参数给出，
+// 它不参与计算，只用来人为压低每 SM 的常驻 block 数。
+__global__ void accumulate_kernel(const float* __restrict__ in,
+                                  float* __restrict__ out, int n) {
+  extern __shared__ float tile[];
+
   const int stride = gridDim.x * blockDim.x;
-  float acc        = 0.0f;
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += stride) {
+  const int tid    = blockIdx.x * blockDim.x + threadIdx.x;
+
+  float acc = 0.0f;
+  for (int i = tid; i < n; i += stride) {
     acc += in[i];
   }
-  // 防止整个循环被优化掉。该条件实际永不成立。
-  if (acc == -1234567.0f) out[0] = acc;
+
+  // 让共享内存真正参与计算，避免整块共享内存被编译器判定为无用而影响
+  // 占用率计算。tile 至少要有 blockDim.x 个 float。
+  tile[threadIdx.x] = acc;
+  __syncthreads();
+  if (threadIdx.x == 0 && blockIdx.x == 0) out[0] = tile[0];
 }
 
 struct Result {
-  int   regs_per_thread;
-  int   blocks_per_sm;
-  float occupancy;  // 0..1
-  float ms;
-  float gbps;
+  size_t smem_bytes;
+  int    blocks_per_sm;
+  int    regs_per_thread;
+  float  occupancy;  // 0..1
+  float  ms;
+  float  gbps;
 };
 
-template <int kMinBlocks>
-Result probe(const float* d_in, float* d_out, int n, int blocks,
-             int threads_per_sm) {
+Result probe(size_t smem_bytes, const float* d_in, float* d_out, int n,
+             int blocks, int threads_per_sm) {
   cudaFuncAttributes attr{};
-  CUDA_CHECK(cudaFuncGetAttributes(&attr, accumulate_kernel<kMinBlocks>));
+  CUDA_CHECK(cudaFuncGetAttributes(&attr, accumulate_kernel));
 
   int blocks_per_sm = 0;
   CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &blocks_per_sm, accumulate_kernel<kMinBlocks>, kThreads, 0));
+      &blocks_per_sm, accumulate_kernel, kThreads, smem_bytes));
 
   cudaEvent_t begin, end;
   CUDA_CHECK(cudaEventCreate(&begin));
   CUDA_CHECK(cudaEventCreate(&end));
 
   // 预热
-  accumulate_kernel<kMinBlocks><<<blocks, kThreads>>>(d_in, d_out, n);
+  accumulate_kernel<<<blocks, kThreads, smem_bytes>>>(d_in, d_out, n);
   CUDA_CHECK_LAST();
   CUDA_CHECK(cudaDeviceSynchronize());
 
   CUDA_CHECK(cudaEventRecord(begin));
   for (int r = 0; r < kReps; ++r) {
-    accumulate_kernel<kMinBlocks><<<blocks, kThreads>>>(d_in, d_out, n);
+    accumulate_kernel<<<blocks, kThreads, smem_bytes>>>(d_in, d_out, n);
   }
   CUDA_CHECK(cudaEventRecord(end));
   CUDA_CHECK(cudaEventSynchronize(end));
@@ -2202,33 +2250,24 @@ Result probe(const float* d_in, float* d_out, int n, int blocks,
   CUDA_CHECK(cudaEventDestroy(begin));
   CUDA_CHECK(cudaEventDestroy(end));
 
-  const float resident_threads =
-      static_cast<float>(blocks_per_sm) * kThreads;
-  const float max_threads = static_cast<float>(threads_per_sm);
-  const float gbps        = static_cast<float>(n) * sizeof(float) /
-                     (ms * 1e-3f) / 1e9f;
-
-  return Result{attr.numRegs, blocks_per_sm, resident_threads / max_threads, ms,
-                gbps};
-}
-
-void print_row(const char* label, const Result& r) {
-  std::printf("%-16s %-14d %-16d %-12.1f %-12.4f %.1f\n", label,
-              r.regs_per_thread, r.blocks_per_sm, r.occupancy * 100.0f, r.ms,
-              r.gbps);
+  const float resident = static_cast<float>(blocks_per_sm) * kThreads;
+  return Result{smem_bytes, blocks_per_sm, attr.numRegs,
+                resident / static_cast<float>(threads_per_sm), ms,
+                static_cast<float>(n) * sizeof(float) / (ms * 1e-3f) / 1e9f};
 }
 
 }  // namespace
 
 int main() {
   constexpr int n      = 1 << 24;  // 16M 元素 = 64 MB
-  constexpr int blocks = 2048;
+  constexpr int blocks = 4096;
 
   cudaDeviceProp p{};
   CUDA_CHECK(cudaGetDeviceProperties(&p, 0));
   std::printf("设备: %s\n", p.name);
-  std::printf("每 SM 最大常驻线程 %d，SM 数量 %d\n\n",
-              p.maxThreadsPerMultiProcessor, p.multiProcessorCount);
+  std::printf("每 SM 最大常驻线程 %d，每 SM 共享内存 %zu KB，每 block %d 线程\n\n",
+              p.maxThreadsPerMultiProcessor, p.sharedMemPerMultiprocessor / 1024,
+              kThreads);
 
   float* d_in  = nullptr;
   float* d_out = nullptr;
@@ -2236,26 +2275,42 @@ int main() {
   CUDA_CHECK(cudaMalloc(&d_out, sizeof(float)));
   CUDA_CHECK(cudaMemset(d_in, 0, n * sizeof(float)));
 
-  std::printf("%-16s %-14s %-16s %-12s %-12s %s\n", "__launch_bounds__",
-              "寄存器/线程", "每 SM 常驻 block", "占用率", "耗时(ms)",
-              "带宽(GB/s)");
+  // 逐个取值探测。最小取 1 KB —— 内核要用 tile[0..kThreads-1]，
+  // 即 kThreads × 4 = 1024 字节，低于此值会越界。
+  const size_t smems[] = {1u << 10, 8u << 10, 16u << 10, 32u << 10, 48u << 10};
 
-  // kMinBlocks 依次收紧寄存器预算，观察占用率与吞吐的变化。
-  // 上限取 6 以避免超过部分架构 1536 线程/SM 的限制。
-  print_row("(256, 1)", probe<1>(d_in, d_out, n, blocks,
-                                 p.maxThreadsPerMultiProcessor));
-  print_row("(256, 2)", probe<2>(d_in, d_out, n, blocks,
-                                 p.maxThreadsPerMultiProcessor));
-  print_row("(256, 4)", probe<4>(d_in, d_out, n, blocks,
-                                 p.maxThreadsPerMultiProcessor));
-  print_row("(256, 6)", probe<6>(d_in, d_out, n, blocks,
-                                 p.maxThreadsPerMultiProcessor));
+  const Result first = probe(smems[0], d_in, d_out, n, blocks,
+                             p.maxThreadsPerMultiProcessor);
+
+  std::printf("寄存器用量 %d/线程（不是本 kernel 的限制项）\n", first.regs_per_thread);
+  std::printf("常驻 block 数 = min(线程数限制 %d, 共享内存限制, block 数限制 %d)\n\n",
+              p.maxThreadsPerMultiProcessor / kThreads, p.maxBlocksPerMultiProcessor);
+
+  std::printf("%-14s %-16s %-12s %-12s %s\n", "共享内存/block",
+              "每 SM 常驻 block", "占用率", "耗时(ms)", "带宽(GB/s)");
+  std::printf("%-14zu %-16d %-12.1f %-12.4f %.1f\n", first.smem_bytes / 1024,
+              first.blocks_per_sm, first.occupancy * 100.0f, first.ms,
+              first.gbps);
+
+  for (size_t i = 1; i < sizeof(smems) / sizeof(smems[0]); ++i) {
+    const Result r = probe(smems[i], d_in, d_out, n, blocks,
+                           p.maxThreadsPerMultiProcessor);
+    std::printf("%-14zu %-16d %-12.1f %-12.4f %.1f\n", r.smem_bytes / 1024,
+                r.blocks_per_sm, r.occupancy * 100.0f, r.ms, r.gbps);
+  }
 
   std::printf("\n--- 解读 ---\n");
-  std::printf("kMinBlocks 越大，编译器被允许分配的寄存器越少，单位线程的\n");
-  std::printf("寄存器压力下降，每 SM 能放下的 block 数上升，占用率提高。\n");
-  std::printf("但带宽随占用率上升的幅度会迅速衰减——访存带宽一旦饱和，\n");
-  std::printf("再多 warp 也只能排队。占用率是约束，不是优化目标。\n");
+  std::printf("共享内存用量从 1 KB 加到 48 KB，「每 SM 常驻 block」与「占用率」\n");
+  std::printf("逐级下降。注意寄存器那一项自始至终不变 —— 它不是本 kernel 的限制项，\n");
+  std::printf("真正起作用的是共享内存。四项约束取最小，谁先卡住谁决定占用率。\n\n");
+  std::printf("再对比「占用率」与「带宽」两列：\n");
+  std::printf("  · 若带宽基本不随占用率下降而变，说明该 kernel 的瓶颈是访存带宽\n");
+  std::printf("    而非延迟 —— 硬件带宽已被打满，再多 warp 也只能排队等内存。\n");
+  std::printf("  · 若带宽随占用率同步下降，说明此时仍是延迟受限，warp 数不足以\n");
+  std::printf("    掩盖访存延迟。\n");
+  std::printf("两种情形都指向同一结论：占用率是**约束**而非**优化目标**。\n");
+  std::printf("调优时应先用 profiling 判断瓶颈类型，再决定是否值得为占用率\n");
+  std::printf("牺牲寄存器或共享内存。具体数值随 GPU 型号与架构而异。\n");
 
   CUDA_CHECK(cudaFree(d_in));
   CUDA_CHECK(cudaFree(d_out));
@@ -2320,7 +2375,7 @@ Expected: 四个 `OK 文件存在`；三个 `.cu` 各有 1 处 `define CUDA_CHEC
 人工审查清单（逐条核对并在提交信息中确认）：
 
 1. 每个 `.cu` 都包含 `#include <cuda_runtime.h>`，且错误检查宏在每次 CUDA API 调用后使用。
-2. 每次 `<<<>>>` kernel 启动后都有 `CUDA_CHECK_LAST()`。
+2. 每个 `<<<>>>` 启动序列后至少检查一次 `CUDA_CHECK_LAST()`（计时循环内不必逐次检查，但预热后与循环结束后各须检查一次）。
 3. 所有 `cudaMalloc` 都有配对的 `cudaFree`，`cudaMallocHost` 有配对的 `cudaFreeHost`。
 4. `03_occupancy_probe.cu` 中 `__launch_bounds__` 的第二个参数最大取 6，`6 × 256 = 1536` 不超过常见架构的每 SM 最大线程数。
 5. `02_divergence_demo.cu` 的 `path_heavy` 循环次数为 32 且带 `#pragma unroll` —— 循环太短会被编译器 if-convert 成谓词执行，导致观测不到发散。
@@ -2371,7 +2426,7 @@ related:
   - 20-gpu-architecture/memory-system/02-coalescing-and-cache-line
 code:
   - code/01_bandwidth_probe.cu
-status: draft
+status: stable
 updated: 2026-09-14
 ---
 
@@ -2461,7 +2516,7 @@ grep -q '软件管理的缓存' "$f" && echo "OK 含核心论断" || echo "MISS 
 grep -q 'local memory' "$f" && echo "OK 含 local memory" || echo "MISS local memory"
 grep -c '成因' "$f"
 ```
-Expected: 五节与 11 个字段全部 `OK`；两个关键项 `OK`；`成因` ≥ 3。
+Expected: J 个字段全部 `OK`；两个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -2494,7 +2549,7 @@ related:
   - 20-gpu-architecture/memory-system/03-shared-memory-bank-conflict
 code:
   - code/02_coalescing_demo.cu
-status: draft
+status: stable
 updated: 2026-09-14
 ---
 
@@ -2584,7 +2639,7 @@ grep -q 'sector' "$f" && echo "OK 含 sector" || echo "MISS sector"
 grep -q 'AoS' "$f" && echo "OK 含 AoS/SoA" || echo "MISS AoS"
 grep -c '成因' "$f"
 ```
-Expected: 五节与 11 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -2618,7 +2673,7 @@ related:
   - 40-kernels/gemm/02-shared-memory-tiling
 code:
   - code/03_bank_conflict_demo.cu
-status: draft
+status: stable
 updated: 2026-09-14
 ---
 
@@ -2709,7 +2764,7 @@ grep -q '32 路冲突' "$f" && echo "OK 含冲突推导" || echo "MISS 冲突推
 grep -q 'swizzle' "$f" && echo "OK 含 swizzle" || echo "MISS swizzle"
 grep -c '成因' "$f"
 ```
-Expected: 五节与 11 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
+Expected: J 个字段全部 `OK`；三个关键项 `OK`；`成因` ≥ 3。
 
 - [ ] **Step 9: 提交**
 
@@ -2907,11 +2962,14 @@ int main() {
 //
 // 观测要点：
 //   1. kStride = 1 时，一个 warp 的 32 次访问落在同一条 128B cache line，1 个事务
-//   2. kStride = S 时，一个 warp 的 32 次访问分散在 S 条 cache line 上，S 个事务
-//   3. 两种情形的「总内存流量相同」，差别只在有用字节 —— 有效利用率 = 1 / S
+//   2. kStride = S 时，一个 warp 的 32 次访问跨越 S 条 cache line，S 个事务
+//   3. 四种 stride 下「有用读取次数」恒定，传输字节按 stride 增长，
+//      故有效利用率 = 1 / kStride
 //
 // 构建：make 02_coalescing_demo
 // 运行：./02_coalescing_demo
+//
+// 显存占用：kStride = 8 时数组为 512 MB，是本程序的最大分配。
 
 #include <cstdio>
 #include <cstdlib>
@@ -2934,39 +2992,55 @@ namespace {
 
 constexpr int kThreads = 256;
 constexpr int kBlocks  = 2048;
+constexpr int kIters   = 32;   // 每个线程固定读取次数
 constexpr int kReps    = 20;
+
+constexpr long long kTotalThreads = static_cast<long long>(kBlocks) * kThreads;
+constexpr long long kTotalWarps   = kTotalThreads / 32;
+
+// 全部线程共读 kTotalThreads × kIters 次。数组长度随 kStride 增长，
+// 使**每个线程的读取次数恒为 kIters**，于是「有用字节」与 kStride 无关，
+// 可以直接比较有效带宽。
+constexpr long long kReads = kTotalThreads * kIters;
+
+// 数组长度：total_threads × kStride × kIters。
+// kStride = 8 时最大，为 1.34 亿个 float = 512 MB。
+template <int kStride>
+constexpr long long array_len() {
+  return kTotalThreads * kStride * kIters;
+}
 
 // kStride 决定 warp 内相邻 lane 的地址间隔。
 //
-// 每个 warp 负责一段连续的 32×kStride 个元素，其中第 lane 个 lane
-// 读取本段内的第 lane×kStride 个元素：
-//   kStride = 1  → warp 读 32 个连续元素，落在同一条 128B cache line，1 个事务
-//   kStride = S  → warp 的 32 次读分散在 S 条 cache line 上，S 个事务
+// 每个 warp 负责一段连续的 32 × kStride 个元素，其中第 lane 个 lane
+// 读取本段内的第 lane × kStride 个元素：
+//   kStride = 1 → warp 读 32 个连续元素，落在同一条 128B cache line，1 个事务
+//   kStride = S → warp 的 32 次读跨越 S 条 cache line，S 个事务
 //
-// 网格逐段推进覆盖整个数组，因此两种 kStride 下的**总内存流量完全相同**
-// （都是把整个数组的每条 cache line 取一遍），差别只在「有用字节」上：
-//   kStride = S 时，每条 cache line 只贡献 1 个有用元素，其余 S−1 个被浪费。
+// 全部 warp 的段拼起来恰好覆盖整个数组，且每条 cache line 只被一个 warp
+// 触及一次。于是「传输字节」为 数组大小，而「有用字节」恒为 kReads × 4。
 //
-// 这一点很关键：若改成对数组取模的简单跳读（in[i * kStride % n]），
-// kStride = 32 时只会碰到数组 1/32 的内存行，工作集小到被 L2 装下，
-// 测出来的就不是合并损失而是 L2 带宽了。
+// 有效利用率 = 有用字节 / 传输字节 = 1 / kStride。
+//
+// 只取 1、2、4、8 四个取值：它们都能整除一条 cache line 含的 32 个 float，
+// 因此每条被触及的 cache line 的 4 个 sector 都会被用到 —— sector 粒度
+// 与整行粒度算出的利用率一致，不会出现「按 sector 算是 1/8、按整行算是
+// 1/16」这种含糊结果。取 16 或 32 就会破坏这个性质。
 template <int kStride>
 __global__ void strided_sum_kernel(const float* __restrict__ in,
                                    float* __restrict__ out, long long n) {
-  const long long total_threads =
-      static_cast<long long>(gridDim.x) * blockDim.x;
   const long long tid =
       static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
-
   const long long warp_id = tid >> 5;
   const int       lane    = threadIdx.x & 31;
 
-  // 全部 warp 推进一段，跨度为 total_threads × kStride 个元素
-  const long long span = total_threads * kStride;
+  const long long warp_span = 32LL * kStride;
 
   float acc = 0.0f;
-  for (long long base = 0; base < n; base += span) {
-    const long long idx = base + warp_id * 32 * kStride + lane * kStride;
+  for (int j = 0; j < kIters; ++j) {
+    const long long idx =
+        (static_cast<long long>(j) * kTotalWarps + warp_id) * warp_span +
+        static_cast<long long>(lane) * kStride;
     if (idx < n) acc += in[idx];
   }
   if (acc == -1234567.0f) out[0] = acc;
@@ -2998,52 +3072,59 @@ float time_case(const float* d_in, float* d_out, long long n) {
 }
 
 struct Case {
-  int   stride;
-  float ms;
+  int       stride;
+  long long n;
+  float     ms;
 };
 
 }  // namespace
 
 int main() {
-  const long long n = 1LL << 26;  // 64M 元素 = 256 MB
+  const long long n_max = array_len<8>();
 
   float* d_in  = nullptr;
   float* d_out = nullptr;
-  CUDA_CHECK(cudaMalloc(&d_in, n * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&d_in, n_max * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&d_out, sizeof(float)));
-  CUDA_CHECK(cudaMemset(d_in, 0, n * sizeof(float)));
+  CUDA_CHECK(cudaMemset(d_in, 0, n_max * sizeof(float)));
 
   const double useful_bytes = static_cast<double>(kReads) * sizeof(float);
 
-  std::printf("数组 %lld 个元素 (%.0f MB)，共读 %lld 次 (%.1f MB 有用数据)\n\n",
-              n, static_cast<double>(n) * sizeof(float) / 1e6, kReads,
-              useful_bytes / 1e6);
+  std::printf("每线程读取 %d 次，全部线程共读 %lld 次 = %.1f MB 有用数据\n",
+              kIters, kReads, useful_bytes / 1e6);
+  std::printf("数组长度随 stride 增长，最大 %.0f MB\n\n",
+              static_cast<double>(n_max) * sizeof(float) / 1e6);
 
   const Case cases[] = {
-      {1, time_case<1>(d_in, d_out, n)},   {2, time_case<2>(d_in, d_out, n)},
-      {4, time_case<4>(d_in, d_out, n)},   {8, time_case<8>(d_in, d_out, n)},
-      {16, time_case<16>(d_in, d_out, n)}, {32, time_case<32>(d_in, d_out, n)},
+      {1, array_len<1>(), time_case<1>(d_in, d_out, array_len<1>())},
+      {2, array_len<2>(), time_case<2>(d_in, d_out, array_len<2>())},
+      {4, array_len<4>(), time_case<4>(d_in, d_out, array_len<4>())},
+      {8, array_len<8>(), time_case<8>(d_in, d_out, array_len<8>())},
   };
 
-  // 以 stride = 1 为基准，其利用率定义为 100%
-  const double base_gbps =
-      useful_bytes / (cases[0].ms * 1e-3) / 1e9;
+  // 以 stride = 1 为基准，其有效利用率定义为 1
+  const double base_gbps = useful_bytes / (cases[0].ms * 1e-3) / 1e9;
 
-  std::printf("%-8s %-14s %-12s %-16s %s\n", "stride", "warp 跨线数",
-              "耗时(ms)", "有用带宽(GB/s)", "相对利用率");
+  std::printf("%-8s %-12s %-12s %-12s %-16s %s\n", "stride", "warp 跨线数",
+              "数组(MB)", "耗时(ms)", "有用带宽(GB/s)", "相对利用率");
 
   for (const Case& c : cases) {
     const double gbps = useful_bytes / (c.ms * 1e-3) / 1e9;
-    std::printf("%-8d %-14d %-12.4f %-16.1f %.3f\n", c.stride, c.stride,
-                c.ms, gbps, gbps / base_gbps);
+    std::printf("%-8d %-12d %-12.0f %-12.4f %-16.1f %.3f\n", c.stride, c.stride,
+                static_cast<double>(c.n) * sizeof(float) / 1e6, c.ms, gbps,
+                gbps / base_gbps);
   }
 
   std::printf("\n--- 解读 ---\n");
-  std::printf("stride = 1 时相邻 lane 地址相邻，一个 warp 的 32 次访问\n");
-  std::printf("落在同一条 128B cache line 上，只需 1 个内存事务。\n");
-  std::printf("stride = S 时相邻 lane 相隔 S 个 float，一个 warp 跨 S 条 cache line，\n");
-  std::printf("事务数变成 S 倍，有效利用率降到 1/S。\n");
-  std::printf("请对照「相对利用率」一列与 1/S 是否吻合。\n");
+  std::printf("四种 stride 下的「有用读取次数」完全相同，但数组长度按 stride 增长，\n");
+  std::printf("即传输字节按 stride 增长，因此「相对利用率」一列应接近 1/stride。\n");
+  std::printf("stride = 1 时 warp 的 32 次访问落在同一条 128B cache line 上，\n");
+  std::printf("取回的每个字节都被用到；stride = 8 时一次访问跨越 8 条 cache line，\n");
+  std::printf("每条只用到 1/8 的字节，有效带宽随之降到 1/8。\n");
+  std::printf("本程序只取 1/2/4/8 四个 stride：它们都能整除一条 cache line 所含的\n");
+  std::printf("32 个 float，因此每条被触及的 cache line 的 4 个 sector 都会被用到，\n");
+  std::printf("sector 粒度与整行粒度给出同样的利用率。取 16 或 32 会破坏这个性质，\n");
+  std::printf("使「利用率」取决于内存系统按 sector 还是按整行传输，结论会含糊。\n");
 
   CUDA_CHECK(cudaFree(d_in));
   CUDA_CHECK(cudaFree(d_out));
@@ -3155,9 +3236,8 @@ float time_case(const float* d_in, float* d_out, int n, int blocks) {
   CUDA_CHECK(cudaEventDestroy(begin));
   CUDA_CHECK(cudaEventDestroy(end));
 
-  // 共享内存读取次数 = block 数 × warp 数 × 行数 × 每线程读取次数
-  //                   = block 数 × kWarps × kRows × kReps
-  // 计入每轮装载与读取各 kRows 次，这里只统计读取侧。
+  // 返回单次执行的平均耗时。共享内存读取次数在 main 中按
+  // block 数 × 线程数 × kReps × kRows 统计（每线程每轮读 kRows 次）。
   return ms / 10.0f;
 }
 
@@ -3202,7 +3282,12 @@ int main() {
   std::printf("全部映射到同一个 bank，32 次访问被串行化为 32 轮。\n");
   std::printf("行距 33 与 32 互质，bank 随 lane 遍历 32 个位置，无冲突。\n");
   std::printf("注意：padding 会让共享内存用量增加 1/32，可能影响占用率 ——\n");
-  std::printf("这也是「加 padding 不总是有益」的原因。\n");
+  std::printf("这也是「加 padding 不总是有益」的原因。\n\n");
+  std::printf("关于上面的加速比：不必期待它恰好等于 32。kPad = 0 时行距为 32，\n");
+  std::printf("编译器可能把 32 次 LDS.32 向量化成 8 次 LDS.128，冲突形态变成\n");
+  std::printf("「16 路 × 2 相位」，实测加速比会小于 32 倍的直觉值。看量级即可。\n");
+  std::printf("另外全局侧每次只读同一段约 800 KB 的数据（恒在 L2 命中），\n");
+  std::printf("这是刻意的 —— 让共享内存访问而非全局访存主导耗时。\n");
 
   CUDA_CHECK(cudaFree(d_in));
   CUDA_CHECK(cudaFree(d_out));
@@ -3258,10 +3343,10 @@ clean:
 本机无 `nvcc`，**不编译**。逐项核对：
 
 ```bash
-cd 20-gpu-architecture/memory-system/code && echo "--- 文件存在 ---" && for f in 01_bandwidth_probe.cu 02_coalescing_demo.cu 03_bank_conflict_demo.cu Makefile; do test -f "$f" && echo "OK   $f" || echo "MISS $f"; done && echo "--- 编号对应 ---" && for n in 01 02 03; do ls ${n}_*.cu >/dev/null 2>&1 && echo "OK   code/$n" || echo "MISS code/$n"; done && echo "--- Makefile 缩进检查（应为 Tab）---" && grep -qP '^\t' Makefile && echo "OK 使用 Tab" || echo "MISS 未使用 Tab（需检查）" && echo "--- 文档↔代码编号一致性 ---" && ls ../*.md | sed 's|.*/||; s|\.md$||' | sort && ls *.cu | sed 's|_.*||' | sort | uniq
+cd 20-gpu-architecture/memory-system/code && echo "--- 文件存在 ---" && for f in 01_bandwidth_probe.cu 02_coalescing_demo.cu 03_bank_conflict_demo.cu Makefile; do test -f "$f" && echo "OK   $f" || echo "MISS $f"; done && echo "--- 编号对应 ---" && for n in 01 02 03; do ls ${n}_*.cu >/dev/null 2>&1 && echo "OK   code/$n" || echo "MISS code/$n"; done && echo "--- Makefile 缩进检查（应为 Tab）---" && grep -q '^	' Makefile && echo "OK 使用 Tab" || echo "MISS 未使用 Tab（需检查）" && echo "--- 文档↔代码编号一致性（两侧都应输出 01 02 03）---" && ls ../*.md | sed 's|.*/||; s|\.md$||; s|-.*||' | sort | tr '\n' ' ' && echo && ls *.cu | sed 's|_.*||' | sort -u | tr '\n' ' ' && echo
 ```
 
-Expected: 四个 `OK 文件存在`；三个编号 `OK`；Makefile 使用 Tab；`../*.md` 的前缀为 `01 02 03`，`*.cu` 的前缀去重后同样为 `01 02 03` —— **两者必须一致**（这是 spec §5.1 的「编号即外键」约束）。
+Expected: 四个 `OK 文件存在`；三个编号 `OK`；Makefile 使用 Tab；最后一段的两行输出**都应是 `01 02 03`** —— **两者必须一致**（这是 spec §5.1 的「编号即外键」约束）。
 
 人工审查清单：
 
@@ -3343,7 +3428,7 @@ for d in 20-gpu-architecture/execution-model 20-gpu-architecture/memory-system; 
   fi
 done
 
-echo "=== 2. 六篇文档的五节完整性与 frontmatter ==="
+echo "=== 2. 六篇文档的五节完整性、frontmatter 与 status ==="
 for f in 20-gpu-architecture/*/[0-9][0-9]-*.md; do
   miss=0
   for h in "## 0. 背景与动机" "## 1. 原理" "## 2. 执行映射" "## 3. 实现与演进" "## 4. 踩坑与失败模式"; do
@@ -3352,6 +3437,8 @@ for f in 20-gpu-architecture/*/[0-9][0-9]-*.md; do
   for k in title slug domain topic level difficulty prerequisites tags related code status updated; do
     grep -qE "^${k}:" "$f" || { echo "MISS field $k in $f"; miss=1; }
   done
+  # spec §10.2 验收标准 2：status 必须为 stable
+  grep -q '^status: stable$' "$f" || { echo "MISS status!=stable in $f"; miss=1; }
   test $miss -eq 0 && echo "OK   $f"
 done
 
@@ -3359,24 +3446,30 @@ echo "=== 3. 六个 .cu 与两个 Makefile ==="
 ls 20-gpu-architecture/*/code/*.cu | wc -l
 ls 20-gpu-architecture/*/code/Makefile | wc -l
 
-echo "=== 4. 每篇文档末尾有编译运行命令 ==="
+echo "=== 4. 每篇文档末尾有编译与运行小节（spec §10.2 验收标准 4）==="
 for f in 20-gpu-architecture/*/[0-9][0-9]-*.md; do
-  grep -qE 'make [0-9]{2}_' "$f" && echo "OK   $f" || echo "MISS $f 缺编译命令"
+  grep -qF '## 编译与运行' "$f" || { echo "MISS 编译与运行节 in $f"; continue; }
+  grep -qE 'make [0-9]{2}_' "$f" || { echo "MISS 编译命令 in $f"; continue; }
+  echo "OK   $f"
 done
+
+echo "=== 5. 实测数字须有来源或标注为推导值（spec §10.2 验收标准 5）==="
+grep -rn '推导值\|CUDA [0-9]' 20-gpu-architecture/*/[0-9][0-9]-*.md || echo "无实测数字，无需标注"
 ```
-Expected: 两组编号均 `OK 一致`；六篇文档全部 `OK`，无 `MISS`；`.cu` 计数为 `6`；`Makefile` 计数为 `2`；六篇文档全部 `OK`。
+Expected: 两组编号均 `OK 一致`；六篇文档全部 `OK`，无 `MISS`；`.cu` 计数为 `6`；`Makefile` 计数为 `2`；六篇文档的「编译与运行」检查全部 `OK`。
 
-**若任一文档缺编译运行命令**，补上如下格式的小节（放在第 6 节之前）：
+**关于检查 5**：六篇文档**可以整体省略第 5 节「实测数据」**（spec §7.1 规定为可选，§6 规定 `status` 与第 5 节无关）。若确实未写实测数字，该检查应输出「无实测数字，无需标注」——这是**通过**，不是失败。只有当文档里出现了具体性能数字时，才必须有对应的 GPU 型号 + CUDA 版本标注，或明确写成「推导值」。
 
-````markdown
-## 编译与运行
+**若任一文档缺「编译与运行」小节**，按通用约定中的格式补上（放在「小结与延伸」之前）。**若缺 `status: stable`**，用通用约定中给出的 `sed` 命令修正后重新提交。
 
-```bash
-cd code
-make 01_sm_probe
-./01_sm_probe
-```
-````
+**人工通读（spec §7.2 自查第 5 条）**
+
+七条验收标准中，第 1、2、3、4 条与 §7.2 的前四条已由上面的 `grep` 覆盖。剩下两条**无法机械核验，须人工完成**：
+
+1. **§7.2 第 5 条「可独立读懂」**：逐篇通读，确认不依赖未列在 `prerequisites` 中的文档即可理解。若发现某处理解需要额外前置，把对应路径补进该文档的 `prerequisites`，并回到 spec §8.3 的核对清单确认未引入环。
+2. **§7.2 第 3 条「≥2 个组件名 + ≥1 个数值量级」**：`grep` 只能检查是否出现关键字，无法判断是否讲清楚。通读第 2 节时确认组件名与数值是**用来说明机制**的，而不是罗列。
+
+这两条通过后，才可在 Step 7 提交并把 roadmap 标记为完成。
 
 - [ ] **Step 3: 更新 `00-meta/roadmap.md`**
 
