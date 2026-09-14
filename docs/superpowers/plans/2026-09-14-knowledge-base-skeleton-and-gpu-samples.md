@@ -3332,7 +3332,15 @@ for d in 20-gpu-architecture/execution-model 20-gpu-architecture/memory-system; 
   code_n=$(ls "$d"/code/*.cu | sed 's|.*/||; s|_.*||' | sort | tr '\n' ' ')
   echo "文档编号：$doc_n"
   echo "代码编号：$code_n"
-  test "$doc_n" = "$code_n" && echo "OK 一致" || echo "MISS 不一致"
+  # 先确认两侧都非空。zsh 下 glob 无匹配会使命令替换为空串，
+  # 两个空串相等会给出「OK 一致」的假阳性。
+  if [ -z "$doc_n" ] || [ -z "$code_n" ]; then
+    echo "MISS 文件缺失"
+  elif [ "$doc_n" = "$code_n" ]; then
+    echo "OK 一致"
+  else
+    echo "MISS 不一致"
+  fi
 done
 
 echo "=== 2. 六篇文档的五节完整性与 frontmatter ==="
