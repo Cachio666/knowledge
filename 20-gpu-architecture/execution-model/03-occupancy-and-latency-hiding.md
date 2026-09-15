@@ -277,7 +277,7 @@ float occupancy   = (float)residentWarps / maxWarpsPerSM;   // maxWarpsPerSM = �
 
 **第 4 个参数必须与真正启动 kernel 时传的动态共享内存字节数完全一致**，否则算出来的不是你要跑的那个配置。这一点在本示例里被用来做文章：把 `kDynSmemBytes` 从 1 KB 扫到一个较大的值（kernel 至少要为自己的 tile 申请 `blockDim` 个元素的共享内存，低于 1 KB 会越界），就能看到占用率沿 §1 推导二里**共享内存那一行**逐级台阶式下降——其余三项不动，只有这一项在变。
 
-配套程序 `code/03_occupancy_probe.cu` 做的就是这件事：扫共享内存、扫 block 大小、读设备属性，把四项约束与最终占用率一起打印出来。
+配套程序 `code/03_occupancy_probe.cu` 做的就是这件事：读设备属性、扫每 block 的动态共享内存字节数（block 大小固定为 256 线程），把该配置下的常驻 block 数、约束分解那一行与最终占用率一起打印出来。
 
 **它是上界，不是预测。** 它算的是「架构允许挂住多少 warp」，不含任何运行时效应（warp 实际在访存上停了多久、grid 是否小到填不满 SM）。所以它回答的是 §1 推导二，不是推导一。
 

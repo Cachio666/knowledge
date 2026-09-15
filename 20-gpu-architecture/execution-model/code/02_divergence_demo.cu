@@ -10,6 +10,7 @@
 // 构建：make 02_divergence_demo
 // 运行：./02_divergence_demo
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <initializer_list>
@@ -142,8 +143,9 @@ int main() {
     if (active == 32) t_heavy = t_div;
 
     const char* paths = (active == 0 || active == 32) ? "1" : "2";
+    const float ratio = (t_bl > 0.0f) ? (t_div / t_bl) : 0.0f;
     std::printf("%-8d %-10s %-16.4f %-16.4f %.2fx\n", active, paths, t_div,
-                t_bl, t_div / t_bl);
+                t_bl, ratio);
   }
 
   std::printf("\n--- 解读 ---\n");

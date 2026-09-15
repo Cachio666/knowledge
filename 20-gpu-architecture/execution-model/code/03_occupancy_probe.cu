@@ -18,6 +18,7 @@
 // 构建：make 03_occupancy_probe
 // 运行：./03_occupancy_probe
 
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 
@@ -71,10 +72,7 @@ struct Result {
 };
 
 Result probe(size_t smem_bytes, const float* d_in, float* d_out, int n,
-             int blocks, int threads_per_sm) {
-  cudaFuncAttributes attr{};
-  CUDA_CHECK(cudaFuncGetAttributes(&attr, accumulate_kernel));
-
+             int blocks, int threads_per_sm, int regs_per_thread) {
   int blocks_per_sm = 0;
   CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &blocks_per_sm, accumulate_kernel, kThreads, smem_bytes));
@@ -103,7 +101,7 @@ Result probe(size_t smem_bytes, const float* d_in, float* d_out, int n,
   CUDA_CHECK(cudaEventDestroy(end));
 
   const float resident = static_cast<float>(blocks_per_sm) * kThreads;
-  return Result{smem_bytes, blocks_per_sm, attr.numRegs,
+  return Result{smem_bytes, blocks_per_sm, regs_per_thread,
                 resident / static_cast<float>(threads_per_sm), ms,
                 static_cast<float>(n) * sizeof(float) / (ms * 1e-3f) / 1e9f};
 }
@@ -118,7 +116,8 @@ int main() {
   CUDA_CHECK(cudaGetDeviceProperties(&p, 0));
   std::printf("设备: %s\n", p.name);
   std::printf("每 SM 最大常驻线程 %d，每 SM 共享内存 %zu KB，每 block %d 线程\n\n",
-              p.maxThreadsPerMultiProcessor, p.sharedMemPerMultiprocessor / 1024,
+              p.maxThreadsPerMultiProcessor,
+              static_cast<size_t>(p.sharedMemPerMultiprocessor) / 1024,
               kThreads);
 
   float* d_in  = nullptr;
@@ -131,8 +130,13 @@ int main() {
   // 即 kThreads × 4 = 1024 字节，低于此值会越界。
   const size_t smems[] = {1u << 10, 8u << 10, 16u << 10, 32u << 10, 48u << 10};
 
+  // 寄存器用量与共享内存档位无关，只需查一次。
+  cudaFuncAttributes attr{};
+  CUDA_CHECK(cudaFuncGetAttributes(&attr, accumulate_kernel));
+  const int regs_per_thread = attr.numRegs;
+
   const Result first = probe(smems[0], d_in, d_out, n, blocks,
-                             p.maxThreadsPerMultiProcessor);
+                             p.maxThreadsPerMultiProcessor, regs_per_thread);
 
   std::printf("寄存器用量 %d/线程（不是本 kernel 的限制项）\n", first.regs_per_thread);
   std::printf("常驻 block 数 = min(线程数限制 %d, 共享内存限制, block 数限制 %d)\n\n",
@@ -146,7 +150,7 @@ int main() {
 
   for (size_t i = 1; i < sizeof(smems) / sizeof(smems[0]); ++i) {
     const Result r = probe(smems[i], d_in, d_out, n, blocks,
-                           p.maxThreadsPerMultiProcessor);
+                           p.maxThreadsPerMultiProcessor, regs_per_thread);
     std::printf("%-14zu %-16d %-12.1f %-12.4f %.1f\n", r.smem_bytes / 1024,
                 r.blocks_per_sm, r.occupancy * 100.0f, r.ms, r.gbps);
   }

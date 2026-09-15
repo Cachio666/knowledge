@@ -9,6 +9,7 @@
 // 构建：make 01_sm_probe
 // 运行：./01_sm_probe
 
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <initializer_list>
@@ -46,7 +47,7 @@ int main() {
   std::printf("每 SM 最大常驻线程     : %d\n", threads_per_sm);
   std::printf("每 SM 最大常驻 warp    : %d\n", warps_per_sm);
   std::printf("每 SM 共享内存         : %zu KB\n",
-              p.sharedMemPerMultiprocessor / 1024);
+              static_cast<size_t>(p.sharedMemPerMultiprocessor) / 1024);
   std::printf("每 SM 最大常驻 block   : %d\n", p.maxBlocksPerMultiProcessor);
 
   // 单个 warp 占用的寄存器数 = 每线程寄存器数 x 32。
