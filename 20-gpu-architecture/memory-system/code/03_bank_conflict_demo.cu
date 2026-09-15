@@ -100,7 +100,7 @@ __global__ void column_read_kernel(const T* __restrict__ in,
 }
 
 // 返回单次启动的平均耗时。共享内存读取次数与行距无关：
-// 每线程每轮读 rows 次，共 kReps 轮。
+// 每线程每轮读 rows 次，共 kRounds 轮。
 template <typename T>
 float time_case(const T* d_in, T* d_out, int n, int blocks, int rows, int cols,
                 size_t smem_bytes) {
@@ -207,23 +207,21 @@ int main() {
   std::printf("关于「相对耗时」：不必期待它恰好等于「串行遍数预期」。行距为 32 时\n");
   std::printf("一行的 32 个元素在共享内存里连续，编译器可能把同一行的连续读向量化成\n");
   std::printf("128 位访问，而 128 位访问多数自带 2 路冲突（文档 §2 末），冲突形态随之\n");
-  std::printf("改变，实测比值因此通常小于 32 倍。具体形态取决于编译产物，本程序不做\n");
+  std::printf("改变，实测比值因此未必等于 32 倍。具体形态取决于编译产物，本程序不做\n");
   std::printf("断言 —— 想看的话，用 make regs 读 -Xptxas -v 的报告。\n");
   std::printf("还要注意这个比值是「吞吐侧」的预测：该循环反复读同一块 tile，瓶颈落在\n");
   std::printf("共享内存端口上（§2 的两笔账）。若实测比值远小于预期，先怀疑这个前提\n");
   std::printf("没成立；「延迟侧」的预测比值要小得多，约 2.2 : 1。\n");
   std::printf("padding 会让共享内存用量增加 1/32，可能影响占用率 —— 这也是\n");
   std::printf("「加 padding 不总是有益」的原因（§1 第六步、§4.2）。\n");
-  std::printf("全局侧每次只读同一段约 800 KB 的数据（恒在 L2 命中），这是刻意的 ——\n");
-  std::printf("让共享内存访问而非全局访存主导耗时。\n");
+  std::printf("全局侧每次启动只读同一段约 8 MB 的数据（double 档约 17 MB），首启\n");
+  std::printf("之后恒在 L2 命中 —— 这是刻意的：让共享内存访问而非全局访存主导耗时。\n");
 
   // ---- 64 位（double）元素：同样的按列取用 ----
-  // 8 warp × 32 行 × 33 列 × 8 字节 = 67584 B（= 66 KiB，下面按 1024 折算
-  // 打印），越过了动态共享内存 48 KiB 的
-  // 默认上限，必须先申请提额（上限见 sharedMemPerBlockOptin）。
-  // 前提：设备的 opt-in 上限要不小于 67584 B（= 66 KB）—— sm_80 起满足
-  // （sm_80 是 163 KB），
-  // Turing（sm_75）只有 64 KB，跑这一档会在下面的 CUDA_CHECK 处报错退出。
+  // 8 warp × 32 行 × 33 列 × 8 字节 = 67584 B（= 66 KiB），越过了动态共享
+  // 内存 48 KiB 的默认上限，必须先申请提额（上限见 sharedMemPerBlockOptin）。
+  // 前提：设备的 opt-in 上限要不小于 67584 B —— sm_80 起满足（sm_80 是
+  // 163 KB），Turing（sm_75）只有 64 KB，跑这一档会在下面的 CUDA_CHECK 处退出。
   const size_t smem64_max =
       static_cast<size_t>(kWarps) * kRows * 33 * sizeof(double);
   CUDA_CHECK(cudaFuncSetAttribute(column_read_kernel<double>,
