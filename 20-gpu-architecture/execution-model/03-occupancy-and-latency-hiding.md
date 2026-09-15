@@ -275,7 +275,7 @@ int residentWarps = blocksPerSM * warpsPerBlock;            // 就是 §1 推导
 float occupancy   = (float)residentWarps / maxWarpsPerSM;   // maxWarpsPerSM = 每 SM 线程上限 ÷ 32
 ```
 
-**第 4 个参数必须与真正启动 kernel 时传的动态共享内存字节数完全一致**，否则算出来的不是你要跑的那个配置。这一点在本示例里被用来做文章：把 `kDynSmemBytes` 从 1 KB 扫到一个较大的值（kernel 至少要为自己的 tile 申请 `blockDim` 个元素的共享内存，低于 1 KB 会越界），就能看到占用率沿 §1 推导二里**共享内存那一行**逐级台阶式下降——其余三项不动，只有这一项在变。
+**第 4 个参数必须与真正启动 kernel 时传的动态共享内存字节数完全一致**，否则算出来的不是你要跑的那个配置。这一点在本示例里被用来做文章：把 `kDynSmemBytes` 从「刚好卡住线程上限」的那一档起逐级加大（kernel 至少要为自己的 tile 申请 `blockDim` 个元素的共享内存，低于 1 KB 会越界），就能看到占用率沿 §1 推导二里**共享内存那一行**逐级台阶式下降——其余三项不动，只有这一项在变。
 
 配套程序 `code/03_occupancy_probe.cu` 做的就是这件事：读设备属性、扫每 block 的动态共享内存字节数（block 大小固定为 256 线程），把该配置下的常驻 block 数、约束分解那一行与最终占用率一起打印出来。
 
@@ -354,7 +354,7 @@ float occupancy   = (float)residentWarps / maxWarpsPerSM;   // maxWarpsPerSM = �
 
 ## 编译与运行
 
-配套程序 `code/03_occupancy_probe.cu` 按 §1 推导二做三件事：打印本设备的 `S_max`、`B_max` 与线程上限（标题行）；给出该配置下每 SM 的常驻 block 数与占用率，**其中占用率一列取自 `cudaOccupancyMaxActiveBlocksPerMultiprocessor`**；再扫描每 block 动态共享内存字节数（从 1 KB 起），打印占用率沿共享内存那一行逐级下降的台阶（对应 §3 改进一的用法）。
+配套程序 `code/03_occupancy_probe.cu` 按 §1 推导二做三件事：打印本设备的 `S_max`、`B_max` 与线程上限（标题行）；给出该配置下每 SM 的常驻 block 数与占用率，**其中占用率一列取自 `cudaOccupancyMaxActiveBlocksPerMultiprocessor`**；再按设备规格推出五档每 block 动态共享内存字节数（从「刚好卡住线程上限」的那一档起逐级加大），打印占用率沿共享内存那一行逐级下降的台阶（对应 §3 改进一的用法）。
 
 **它没有手算列，验证方式是人机对照**：拿打印出来的三个设备常量，按 §1 推导二的四行公式在纸上各算一次、取最小值，再与程序给出的 `blocksPerSM × (blockDim ÷ 32)` 比。**两者相等，才说明四项约束确实找齐了**；不等就说明漏了一项（推导二那张表就是对照表）。这也符合 §0 的口径声明——程序给的是 API 的答案，手算那一列得由读者自己填。顺带还能复算推导二第十一步那个反解：把 block 调到 64 线程以下，看 `B_max × W_b` 是否开始成为最小值。
 

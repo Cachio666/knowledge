@@ -6,6 +6,7 @@
 #   make              构建全部
 #   make 01_sm_probe  构建单个目标
 #   make run          构建并依次运行
+#   make regs         查看每线程寄存器用量与 spill（默认 01_sm_probe）
 #   make clean        清理
 #
 # 若 -arch=native 不可用，改为显式指定，如：make ARCH=-arch=sm_80
@@ -17,6 +18,9 @@ LDFLAGS   ?=
 
 TARGETS := 01_sm_probe 02_divergence_demo 03_occupancy_probe
 
+# make regs 的目标，可覆盖：make regs T=03_occupancy_probe
+T ?= 01_sm_probe
+
 .PHONY: all clean run
 all: $(TARGETS)
 
@@ -26,7 +30,7 @@ all: $(TARGETS)
 # 查看每线程寄存器用量与 spill 情况（只打印 ptxas 报告，不产出目标文件）
 .PHONY: regs
 regs:
-	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xptxas -v -c $(word 1,$(TARGETS)).cu -o /dev/null
+	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xptxas -v -c $(T).cu -o /dev/null
 
 run: all
 	@for t in $(TARGETS); do \

@@ -2,10 +2,12 @@
 // 对应文档：02-simt-and-divergence.md
 //
 // 观测要点：
-//   1. active = 0 或 32 时全 warp 走同一条路径，最快
+//   1. active = 0 时 divergent 能整个跳过重路径的 32 条 FMA，两版差距最大；
+//      active = 32 时重路径本来就非走不可，divergent 能省的只剩轻路径那一条加法
 //   2. active 在 1..31 之间时 warp 分裂为 2 条路径，硬件把两条路径的指令
 //      都发射一遍，耗时落到接近重路径的那一档
 //   3. branchless 版本必须把两条路径都算一遍，故耗时恒定且不低于 divergent
+//      （这是按模型预期的形状，不是实测结论）
 //
 // 构建：make 02_divergence_demo
 // 运行：./02_divergence_demo
@@ -107,10 +109,25 @@ float time_variant(const float* d_in, float* d_out, int n, int active,
   return ms / kReps;
 }
 
+// 两个变体必须逐元素给出相同结果（同一段算术、同一个选择），这里拿
+// divergent 的输出做基准比对，报出不一致的元素数。
+int count_mismatch(const float* d_a, const float* d_b, float* h_a, float* h_b,
+                   int n) {
+  CUDA_CHECK(cudaMemcpy(h_a, d_a, n * sizeof(float), cudaMemcpyDeviceToHost));
+  CUDA_CHECK(cudaMemcpy(h_b, d_b, n * sizeof(float), cudaMemcpyDeviceToHost));
+  int bad = 0;
+  for (int i = 0; i < n; ++i) {
+    if (h_a[i] != h_b[i]) ++bad;
+  }
+  return bad;
+}
+
 }  // namespace
 
 int main() {
-  constexpr int n      = 1 << 22;  // 4M 元素
+  // 工作集刻意压到 L2 以内（2 MB 入 + 2 MB 出）。若让它落在 HBM 上，
+  // 访存地板会盖过发射侧的差异，两列耗时之差将退化到噪声。
+  constexpr int n      = 1 << 19;  // 512K 元素 = 2 MB
   constexpr int blocks = (n + kThreads - 1) / kThreads;
 
   float* h_in = nullptr;
@@ -121,52 +138,72 @@ int main() {
 
   float* d_in  = nullptr;
   float* d_out = nullptr;
+  float* d_ref = nullptr;  // divergent 版本最后一次的输出，做正确性基准
   CUDA_CHECK(cudaMalloc(&d_in, n * sizeof(float)));
   CUDA_CHECK(cudaMalloc(&d_out, n * sizeof(float)));
+  CUDA_CHECK(cudaMalloc(&d_ref, n * sizeof(float)));
   CUDA_CHECK(cudaMemcpy(d_in, h_in, n * sizeof(float), cudaMemcpyHostToDevice));
+
+  float* h_ref = nullptr;
+  float* h_out = nullptr;
+  CUDA_CHECK(cudaMallocHost(&h_ref, n * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&h_out, n * sizeof(float)));
 
   std::printf("元素数 %d，block 数 %d，每 block %d 线程\n\n", n, blocks,
               kThreads);
-  std::printf("%-8s %-10s %-16s %-16s %s\n", "active", "路径数",
-              "divergent(ms)", "branchless(ms)", "div/branchless");
+  std::printf("%-8s %-10s %-16s %-16s %-12s %s\n", "active", "路径数",
+              "divergent(ms)", "branchless(ms)", "diff(ms)", "div/branchless");
 
   float t_light   = 0.0f;  // active = 0：全 warp 走轻路径
   float t_heavy   = 0.0f;  // active = 32：全 warp 走重路径
+  int   bad       = 0;     // 两个变体输出不一致的元素总数
 
   for (int active : {0, 4, 8, 16, 24, 32}) {
     const float t_div =
         time_variant<false>(d_in, d_out, n, active, blocks);
+    CUDA_CHECK(cudaMemcpy(d_ref, d_out, n * sizeof(float),
+                          cudaMemcpyDeviceToDevice));
     const float t_bl =
         time_variant<true>(d_in, d_out, n, active, blocks);
+    bad += count_mismatch(d_ref, d_out, h_ref, h_out, n);
 
     if (active == 0)  t_light = t_div;
     if (active == 32) t_heavy = t_div;
 
     const char* paths = (active == 0 || active == 32) ? "1" : "2";
     const float ratio = (t_bl > 0.0f) ? (t_div / t_bl) : 0.0f;
-    std::printf("%-8d %-10s %-16.4f %-16.4f %.2fx\n", active, paths, t_div,
-                t_bl, ratio);
+    std::printf("%-8d %-10s %-16.4f %-16.4f %-12.4f %.2fx\n", active, paths,
+                t_div, t_bl, t_div - t_bl, ratio);
   }
 
+  std::printf("\n正确性核对：每一档下 branchless 与 divergent 的输出逐元素一致"
+              "（不一致元素共 %d 个）\n", bad);
+
   std::printf("\n--- 解读 ---\n");
-  std::printf("1. active = 0 或 32 时全 warp 走同一条路径，路径数为 1，divergent 最快。\n");
+  std::printf("1. active = 0 时全 warp 走轻路径，divergent 能整个跳过重路径的 32 条 FMA，\n");
+  std::printf("   两版差距最大；active = 32 时全 warp 走重路径，重路径本来就非走不可，\n");
+  std::printf("   divergent 能省的只剩轻路径那一条加法，差距又回到最窄。\n");
   std::printf("   纯轻路径 %.4f ms，纯重路径 %.4f ms（下一条解读会引用它）。\n",
               t_light, t_heavy);
   std::printf("2. active 在 1..31 之间时 warp 分裂为两条路径，硬件把两条路径的指令\n");
-  std::printf("   都发射一遍。轻路径只多一两条指令，省下的算量换不回重路径的开销，\n");
-  std::printf("   因此 divergent 的耗时会落到接近**重路径**那一档（%.4f ms）。\n",
+  std::printf("   都发射一遍。发射总量恒为 32 + 1 = 33 条、与 active 无关，所以耗时\n");
+  std::printf("   近乎平坦，而其中轻路径只占 1 条，故这个平坦值逼近**重路径**那一档\n");
+  std::printf("   （%.4f ms）。这正是有效并行度 32/N 的含义：warp 分裂后按最重的\n",
               t_heavy);
-  std::printf("   这正是有效并行度 32/N 的含义：warp 分裂后按最重的那条路径计时。\n");
-  std::printf("   注意本 kernel 的耗时下限由那次全局访存决定，所以分裂出的轻路径\n");
-  std::printf("   几乎不额外增加时间 —— 若两条路径的算量相当，耗时会接近两者之和。\n");
-  std::printf("3. branchless 版本无论 active 取何值，都必须把两条路径都算一遍，\n");
-  std::printf("   因此耗时基本恒定，且不低于 divergent —— 即便在 active = 0 时也是如此。\n");
+  std::printf("   那条路径计时。此时两版只差一条 SEL 的量级，分不出胜负。\n");
+  std::printf("3. branchless 版本无论 active 取何值，都必须把两条路径都算一遍。\n");
+  std::printf("   按模型的预期形状：它的耗时基本恒定、与 active 无关，且不低于\n");
+  std::printf("   divergent。这是推导出的形状而非实测结论 —— 中间取值时 divergent\n");
+  std::printf("   还要付 BSSY/BSYNC 与合流等待，ratio 略大于 1.00 属正常。\n");
   std::printf("   这说明「用算术选择消除分支」对**长**分支并不免费：它把控制流分歧\n");
   std::printf("   换成了计算冗余。无分支写法的价值在短分支（省去 BSSY/BRA/BSYNC 的开销），\n");
   std::printf("   不在长分支。\n");
 
   CUDA_CHECK(cudaFree(d_in));
   CUDA_CHECK(cudaFree(d_out));
+  CUDA_CHECK(cudaFree(d_ref));
   CUDA_CHECK(cudaFreeHost(h_in));
+  CUDA_CHECK(cudaFreeHost(h_ref));
+  CUDA_CHECK(cudaFreeHost(h_out));
   return 0;
 }

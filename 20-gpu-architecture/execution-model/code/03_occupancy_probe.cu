@@ -55,8 +55,9 @@ __global__ void accumulate_kernel(const float* __restrict__ in,
     acc += in[i];
   }
 
-  // 让共享内存真正参与计算，避免整块共享内存被编译器判定为无用而影响
-  // 占用率计算。tile 至少要有 blockDim.x 个 float。
+  // 给 tile 一次真实写入，是为了让编译产物里保留这段共享内存代码路径，
+  // 便于用 -Xptxas -v 观察；占用率的计算本身只取决于启动参数 smem_bytes，
+  // 与 tile 是否被读写无关。注意 tile 至少要有 blockDim.x 个 float。
   tile[threadIdx.x] = acc;
   __syncthreads();
   if (threadIdx.x == 0 && blockIdx.x == 0) out[0] = tile[0];
@@ -112,13 +113,26 @@ int main() {
   constexpr int n      = 1 << 24;  // 16M 元素 = 64 MB
   constexpr int blocks = 4096;
 
+  // 内核要写 tile[0 .. kThreads-1]，所以每 block 动态共享内存的下限是
+  // kThreads × sizeof(float)；上限是动态共享内存的默认上限 48 KB ——
+  // 越过它必须调用 cudaFuncSetAttribute，本程序刻意不越过这条线。
+  static_assert(kThreads * sizeof(float) <= (48u << 10),
+                "kThreads 太大：tile 放不进动态共享内存的默认上限");
+  constexpr size_t kSmemMin = kThreads * sizeof(float);
+  constexpr size_t kSmemMax = 48u << 10;
+
   cudaDeviceProp p{};
   CUDA_CHECK(cudaGetDeviceProperties(&p, 0));
+  const size_t s_max = static_cast<size_t>(p.sharedMemPerMultiprocessor);
+  const int    w_max = p.maxThreadsPerMultiProcessor;  // 每 SM 线程上限
+  const int    b_max = p.maxBlocksPerMultiProcessor;   // 每 SM 常驻 block 上限
+
   std::printf("设备: %s\n", p.name);
-  std::printf("每 SM 最大常驻线程 %d，每 SM 共享内存 %zu KB，每 block %d 线程\n\n",
-              p.maxThreadsPerMultiProcessor,
-              static_cast<size_t>(p.sharedMemPerMultiprocessor) / 1024,
-              kThreads);
+  std::printf("S_max（每 SM 共享内存）%zu KB，B_max（每 SM 常驻 block 上限）%d，"
+              "W_max（每 SM 线程上限）%d = %d 个 warp\n",
+              s_max / 1024, b_max, w_max, w_max / 32);
+  std::printf("每 block %d 线程（W_b = %d 个 warp），每 block 动态共享内存下限 "
+              "%zu 字节\n\n", kThreads, kThreads / 32, kSmemMin);
 
   float* d_in  = nullptr;
   float* d_out = nullptr;
@@ -126,9 +140,21 @@ int main() {
   CUDA_CHECK(cudaMalloc(&d_out, sizeof(float)));
   CUDA_CHECK(cudaMemset(d_in, 0, n * sizeof(float)));
 
-  // 逐个取值探测。最小取 1 KB —— 内核要用 tile[0..kThreads-1]，
-  // 即 kThreads × 4 = 1024 字节，低于此值会越界。
-  const size_t smems[] = {1u << 10, 8u << 10, 16u << 10, 32u << 10, 48u << 10};
+  // 档位由设备推出：S_max ÷ {线程上限允许的 block 数，逐档减一}，向下
+  // 取 128 字节对齐，再夹到 [kSmemMin, kSmemMax]。膝盖在 S_max ÷ (W_max ÷
+  // kThreads)（A100 约 20.5 KB、H100 约 28.5 KB），档位从膝盖起步、逐档
+  // 上移，五档各自给出不同的常驻 block 数（A100/H100：8/7/6/5/4，
+  // CC 8.6：6/5/4/3/2），而不是前几档全被线程数限制卡住、印出同一行。
+  const int knee = w_max / kThreads;
+  size_t smems[5];
+  for (int i = 0; i < 5; ++i) {
+    const int div = (knee - i) > 2 ? (knee - i) : 2;
+    size_t    v   = s_max / static_cast<size_t>(div);
+    v &= ~static_cast<size_t>(127);  // 向下取 128 字节对齐
+    if (v < kSmemMin) v = kSmemMin;
+    if (v > kSmemMax) v = kSmemMax;
+    smems[i] = v;
+  }
 
   // 寄存器用量与共享内存档位无关，只需查一次。
   cudaFuncAttributes attr{};
@@ -156,9 +182,9 @@ int main() {
   }
 
   std::printf("\n--- 解读 ---\n");
-  std::printf("前几档的「每 SM 常驻 block」可能不变 —— 此时限制项是线程数\n");
-  std::printf("（每 SM 最大常驻线程 ÷ 每 block 线程数），共享内存还没用满。\n");
-  std::printf("用量继续增大后，共享内存取代线程数成为限制项，占用率随之下台阶。\n");
+  std::printf("第一档大致落在线程数限制上（每 SM 最大常驻线程 ÷ 每 block 线程数），\n");
+  std::printf("共享内存尚未卡住；再往下每一档，共享内存都盖过线程数成为更紧的限制项，\n");
+  std::printf("占用率随之下台阶。\n");
   std::printf("注意「寄存器/线程」自始至终不变 —— 它不是本 kernel 的限制项。\n");
   std::printf("四项约束取最小：谁先卡住，谁就决定占用率。\n\n");
   std::printf("再对比「占用率」与「带宽」两列：\n");

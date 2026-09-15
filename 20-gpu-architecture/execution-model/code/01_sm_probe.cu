@@ -54,14 +54,19 @@ int main() {
   // 寄存器文件能容纳的 warp 数 = regs_per_sm / (每线程寄存器数 x 32)。
   // 该值一旦小于架构上限 warps_per_sm，寄存器就成为占用率的限制项。
   std::printf("\n--- 寄存器预算（warp = 32 线程）---\n");
-  std::printf("%-16s %-16s %-18s %s\n", "每线程寄存器", "单 warp 占用",
-              "寄存器可容 warp", "是否成为瓶颈");
+  std::printf("%-18s %-12s %-16s %-20s %-14s %s\n", "每线程寄存器", "分配后",
+              "单 warp 占用", "寄存器可容warp", "常驻warp", "是否成为瓶颈");
 
   for (int regs : {16, 24, 32, 40, 64, 128, 255}) {
-    const int per_warp = regs * 32;
+    // 分配粒度是 8 个寄存器一档，实际占用按档上取整（文档 §1 第七步）；
+    // 每线程寄存器上限是 255，故 255 这一档不再上取整。
+    const int rounded  = (regs + 7) / 8 * 8;
+    const int eff      = rounded < 255 ? rounded : 255;
+    const int per_warp = eff * 32;
     const int capacity = regs_per_sm / per_warp;
-    std::printf("%-16d %-16d %-18d %s\n", regs, per_warp, capacity,
-                capacity < warps_per_sm ? "是" : "否");
+    const int resident = capacity < warps_per_sm ? capacity : warps_per_sm;
+    std::printf("%-18d %-12d %-16d %-20d %-14d %s\n", regs, eff, per_warp,
+                capacity, resident, capacity < warps_per_sm ? "是" : "否");
   }
 
   std::printf("\n--- 解读 ---\n");
