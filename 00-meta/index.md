@@ -10,7 +10,20 @@
 - [进度表](roadmap.md)
 
 ## 10-foundations
-尚未开始。
+- [floating-point](../10-foundations/floating-point/) —— IEEE754 格式 / 舍入与误差模型 / 求和与 FMA / 低精度格式
+  - [01-ieee754-format](../10-foundations/floating-point/01-ieee754-format.md)
+  - [02-rounding-and-error-model](../10-foundations/floating-point/02-rounding-and-error-model.md)
+  - [03-summation-and-accumulation](../10-foundations/floating-point/03-summation-and-accumulation.md)
+  - [04-low-precision-formats](../10-foundations/floating-point/04-low-precision-formats.md)
+- [numerical-linear-algebra](../10-foundations/numerical-linear-algebra/) —— 范数与条件数 / GEMM 误差 / 分解稳定性 / 迭代法
+  - [01-norms-and-condition-number](../10-foundations/numerical-linear-algebra/01-norms-and-condition-number.md)
+  - [02-gemm-rounding-error](../10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md)
+  - [03-matrix-factorization-stability](../10-foundations/numerical-linear-algebra/03-matrix-factorization-stability.md)
+  - [04-iterative-methods](../10-foundations/numerical-linear-algebra/04-iterative-methods.md)
+- [performance-models](../10-foundations/performance-models/) —— roofline 模型 / Amdahl 扩展性 / 实测 roofline
+  - [01-roofline-model](../10-foundations/performance-models/01-roofline-model.md)
+  - [02-amdahl-and-scaling](../10-foundations/performance-models/02-amdahl-and-scaling.md)
+  - [03-measuring-roofline](../10-foundations/performance-models/03-measuring-roofline.md)
 
 ## 20-gpu-architecture
 - [execution-model](../20-gpu-architecture/execution-model/) —— SM 结构 / SIMT 与发散 / 占用率与延迟隐藏

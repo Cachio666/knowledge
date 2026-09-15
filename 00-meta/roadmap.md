@@ -1,16 +1,16 @@
 # 实施进度表
 
 > 最后更新：2026-09-15
-> 进度：2 / 61 主题完成
+> 进度：5 / 61 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
 计数口径：分母 61 = 有固定二级结构的 13 个域的二级目录总数（`00-meta`、`140-papers`、`150-playground` 不计入）。新增或删除主题时须同步更新分母。
 
 ## 10-foundations
-- [ ] floating-point
-- [ ] numerical-linear-algebra
-- [ ] performance-models
+- [x] floating-point
+- [x] numerical-linear-algebra
+- [x] performance-models
 
 ## 20-gpu-architecture
 - [x] execution-model
