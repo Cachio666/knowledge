@@ -16,7 +16,7 @@ related:
 code:
   - code/01_sm_probe.cu
 status: stable
-updated: 2026-09-14
+updated: 2026-09-15
 ---
 
 # SM 内部结构

@@ -16,7 +16,7 @@ related:
 code:
   - code/02_divergence_demo.cu
 status: stable
-updated: 2026-09-14
+updated: 2026-09-15
 ---
 
 # SIMT 执行模型与分支发散
