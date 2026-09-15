@@ -1,0 +1,19 @@
+# 50-performance 性能工程
+
+跨层的性能方法论。本域不重复讲具体算子的优化手法，只讲**怎么定位瓶颈**与**怎么测量**。
+
+## 本域覆盖什么
+
+| 主题 | 内容 |
+|---|---|
+| profiling-tools | nsight compute / nsight systems / CUPTI / torch profiler |
+| bottleneck-diagnosis | 瓶颈定位方法论 / 常见反模式 / 计算-访存-延迟三分法 |
+| tuning-practice | 调优实战 / 参数搜索 / 可复现的基准测试方法 |
+
+## 与其他域的关系
+
+- **上游**：`20-gpu-architecture`（硬件计数器）、`10-foundations`（roofline 作为判据）。
+- **下游**：`40-kernels`、`60-compilers`、`120-inference` 的调优都引用本域的方法论。
+- **横切**：本域是横切域。任何文档第 5 节「实测数据」的测量方法都链接到此处，不在各文档里重复描述测量步骤。
+
+## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
