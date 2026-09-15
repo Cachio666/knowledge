@@ -10,6 +10,9 @@ tags: [sm, warp, register-file, cuda-core, scheduler]
 related:
   - 20-gpu-architecture/execution-model/02-simt-and-divergence
   - 20-gpu-architecture/execution-model/03-occupancy-and-latency-hiding
+  - 20-gpu-architecture/memory-system/01-hierarchy-overview
+  - 20-gpu-architecture/memory-system/02-coalescing-and-cache-line
+  - 20-gpu-architecture/memory-system/03-shared-memory-bank-conflict
 code:
   - code/01_sm_probe.cu
 status: stable

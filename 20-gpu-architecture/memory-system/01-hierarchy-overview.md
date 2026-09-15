@@ -11,6 +11,7 @@ tags: [memory-hierarchy, hbm, l2, shared-memory, bandwidth, latency]
 related:
   - 20-gpu-architecture/execution-model/03-occupancy-and-latency-hiding
   - 20-gpu-architecture/memory-system/02-coalescing-and-cache-line
+  - 20-gpu-architecture/execution-model/02-simt-and-divergence
 code:
   - code/01_bandwidth_probe.cu
 status: stable

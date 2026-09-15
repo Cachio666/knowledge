@@ -11,6 +11,8 @@ tags: [coalescing, cache-line, sector, transaction, soa, aos]
 related:
   - 20-gpu-architecture/execution-model/03-occupancy-and-latency-hiding
   - 20-gpu-architecture/memory-system/03-shared-memory-bank-conflict
+  - 20-gpu-architecture/execution-model/01-sm-internals
+  - 20-gpu-architecture/execution-model/02-simt-and-divergence
 code:
   - code/02_coalescing_demo.cu
 status: stable

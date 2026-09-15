@@ -12,6 +12,8 @@ related:
   - 20-gpu-architecture/memory-system/02-coalescing-and-cache-line
   - 40-kernels/gemm/02-shared-memory-tiling
   - 20-gpu-architecture/execution-model/03-occupancy-and-latency-hiding
+  - 20-gpu-architecture/execution-model/01-sm-internals
+  - 20-gpu-architecture/execution-model/02-simt-and-divergence
 code:
   - code/03_bank_conflict_demo.cu
 status: stable
