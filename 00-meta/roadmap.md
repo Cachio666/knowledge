@@ -1,7 +1,7 @@
 # 实施进度表
 
-> 最后更新：2026-09-14
-> 进度：0 / 61 主题完成
+> 最后更新：2026-09-15
+> 进度：2 / 61 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -13,8 +13,8 @@
 - [ ] performance-models
 
 ## 20-gpu-architecture
-- [ ] execution-model
-- [ ] memory-system
+- [x] execution-model
+- [x] memory-system
 - [ ] tensor-core
 - [ ] interconnect
 - [ ] architecture-evolution

@@ -13,9 +13,14 @@
 尚未开始。
 
 ## 20-gpu-architecture
-<!-- 以下两行是前向声明：目录由 Chunk 3/4 创建。全部创建完成后可删除本注释。 -->
 - [execution-model](../20-gpu-architecture/execution-model/) —— SM 结构 / SIMT 与发散 / 占用率与延迟隐藏
+  - [01-sm-internals](../20-gpu-architecture/execution-model/01-sm-internals.md)
+  - [02-simt-and-divergence](../20-gpu-architecture/execution-model/02-simt-and-divergence.md)
+  - [03-occupancy-and-latency-hiding](../20-gpu-architecture/execution-model/03-occupancy-and-latency-hiding.md)
 - [memory-system](../20-gpu-architecture/memory-system/) —— 存储层次 / 访存合并 / 共享内存 bank 冲突
+  - [01-hierarchy-overview](../20-gpu-architecture/memory-system/01-hierarchy-overview.md)
+  - [02-coalescing-and-cache-line](../20-gpu-architecture/memory-system/02-coalescing-and-cache-line.md)
+  - [03-shared-memory-bank-conflict](../20-gpu-architecture/memory-system/03-shared-memory-bank-conflict.md)
 
 ## 30-gpu-programming
 尚未开始。
