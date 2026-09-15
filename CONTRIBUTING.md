@@ -10,7 +10,7 @@
 | 二级/三级目录 | `kebab-case`，无编号 | `memory-system` |
 | 文档文件 | `NN-kebab-case.md`，两位数，域内主题内唯一 | `02-coalescing-and-cache-line.md` |
 | 代码文件 | `NN_snake_case.ext`，`NN` 与对应文档相同 | `02_coalescing_demo.cu` · `01_format_probe.py` |
-| 代码辅助模块 | 无编号，放在需要它的 `code/` 目录内 | `code/fpbits.py` |
+| 代码辅助模块 | 无编号，放在需要它的 `code/` 目录内 | `code/fpbits.py` · `code/specs.py` |
 | 目录索引 | 固定名 `README.md` | — |
 | 非知识文档 | 前缀下划线 `_`，表示"不是知识内容" | `_template.md` |
 | 设计与规划工件 | 放 `docs/`，不进 16 个一级域 | `docs/superpowers/specs/` |
@@ -34,6 +34,15 @@
 |---|---|---|
 | `.cu` | `Makefile`（`nvcc`） | 提供 `all` / `run` / `clean`，另有 `regs` 查看寄存器用量与 spill |
 | `.py` | `Makefile`（`python3`）+ `requirements.txt` | 提供同样的 `run` / `clean`；`make <程序名>` 可单独跑一个 |
+
+**当文档的事实前提是外部规格而非数学时，`code/` 应含一个共享事实源 `specs.py`。**
+`20-gpu-architecture` 的 `tensor-core` / `interconnect` / `architecture-evolution` 三个主题即此形态：程序从硬件规格常量出发推导，推导过程可复核，但**常量本身不可自证**。约定是——
+
+- 每条规格常量带一行 `# 来源：` 注释与**口径注释**（方向、稠密性、精度与累加器、封装档）；
+- **常量名编码口径**，使误用可见（`NVLINK_PER_GPU_BIDIR_GBps` 而非 `NVLINK_BW`）；
+- 只放从来源抄来的数，**不放推导值**；找不到可靠来源的项不写进来，改记为 `UNSOURCED`。
+
+由此文档的数字分三类，**禁止把推导写成「实测」**：**规格值**（来自 `specs.py`，带来源）、**推导值**（程序算出，可复核）、**引用值**（外部来源的实测，须注明「本仓库不复核其测量口径」）。
 
 **没有配套代码的文档不单独存在。** 若某主题确实不需要代码，则该主题下所有文档都不建 `code/`，正文也不出现指向 `code/` 的链接。
 

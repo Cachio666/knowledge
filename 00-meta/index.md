@@ -34,6 +34,21 @@
   - [01-hierarchy-overview](../20-gpu-architecture/memory-system/01-hierarchy-overview.md)
   - [02-coalescing-and-cache-line](../20-gpu-architecture/memory-system/02-coalescing-and-cache-line.md)
   - [03-shared-memory-bank-conflict](../20-gpu-architecture/memory-system/03-shared-memory-bank-conflict.md)
+- [tensor-core](../20-gpu-architecture/tensor-core/) —— MMA 原语 / fragment 布局 / wgmma / tcgen05 与 TMEM / 结构化稀疏
+  - [01-mma-primitive](../20-gpu-architecture/tensor-core/01-mma-primitive.md)
+  - [02-fragment-layout](../20-gpu-architecture/tensor-core/02-fragment-layout.md)
+  - [03-wgmma-and-pipeline](../20-gpu-architecture/tensor-core/03-wgmma-and-pipeline.md)
+  - [04-tcgen05-and-tmem](../20-gpu-architecture/tensor-core/04-tcgen05-and-tmem.md)
+  - [05-structured-sparsity](../20-gpu-architecture/tensor-core/05-structured-sparsity.md)
+- [interconnect](../20-gpu-architecture/interconnect/) —— 带宽口径 / 拓扑与 bisection / 拓扑受限的集合通信 / 标称与可达
+  - [01-bandwidth-conventions](../20-gpu-architecture/interconnect/01-bandwidth-conventions.md)
+  - [02-topology-and-bisection](../20-gpu-architecture/interconnect/02-topology-and-bisection.md)
+  - [03-collectives-on-topology](../20-gpu-architecture/interconnect/03-collectives-on-topology.md)
+  - [04-measuring-bandwidth](../20-gpu-architecture/interconnect/04-measuring-bandwidth.md)
+- [architecture-evolution](../20-gpu-architecture/architecture-evolution/) —— 能力断点 / 跨代趋势 / 架构不变量
+  - [01-capability-breakpoints](../20-gpu-architecture/architecture-evolution/01-capability-breakpoints.md)
+  - [02-scaling-trends](../20-gpu-architecture/architecture-evolution/02-scaling-trends.md)
+  - [03-invariants](../20-gpu-architecture/architecture-evolution/03-invariants.md)
 
 ## 30-gpu-programming
 尚未开始。

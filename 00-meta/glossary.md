@@ -21,6 +21,14 @@
 | predication | 谓词执行 | 用指令前缀谓词代替跳转的机制，可避免短分支产生发散。 |
 | ILP (Instruction-Level Parallelism) | 指令级并行 | 单个线程内多条无依赖指令的重叠执行。 |
 | TLP (Thread-Level Parallelism) | 线程级并行 | 通过多 warp 并发来填补流水线气泡。 |
+| MMA (Matrix Multiply-Accumulate) | 矩阵乘加 | Tensor Core 执行的基本指令族。形状固定（如 `m16n8k16`），**「固定形状」是理解它的钥匙**——tile 尺寸、fragment 布局、操作数来源都由它决定。 |
+| fragment | 片段 | 一个矩阵被**分布式**存在一个 warp 的 32 个 lane 寄存器里的形态。只有 `mma.sync` 的 lane→元素映射有规范定义（可推导、可穷举验证双射）；**`nvcuda::wmma` 层的映射官方明确写 "unspecified and target architecture dependent"，不可推导**。 |
+| ldmatrix | — | 把共享内存里的一块矩阵一次搬进 fragment 的指令。fragment 布局中 `groupID = lane>>2` / `threadID_in_group = lane%4` 的物理来源就是它（一个 8×8 的 16-bit 矩阵每行 16 字节由 4 个连续 lane 各取 4 字节）。 |
+| warpgroup | 线程束组 | 4 个连续 warp（128 线程）。Hopper 起 `wgmma` 的执行单元从 warp 升到 warpgroup，且为异步。 |
+| wgmma | — | Hopper (sm_90a) 的异步 warpgroup MMA。**B 操作数必须在共享内存**，A 可以是寄存器或共享内存描述符——别写成「两者都必须在 SMEM」。 |
+| TMEM (Tensor Memory) | 张量内存 | Blackwell 引入的片上存储，**512 列 × 128 行 × 32-bit = 256 KB**（官方口径是 **per CTA**，不是 per SM）。它让累加器不再占寄存器文件（两者恰好同为 256 KB）。需要一个 warpgroup 才能覆盖全部 128 lane。 |
+| tcgen05 | — | Blackwell (sm_100a) 的 MMA 指令族。与前代的关键差异是**单线程发射**（不再是 warp 或 warpgroup），且 **D 累加器必须在 TMEM**。 |
+| Tensor Core | 张量核心 | 做 MMA 的专用单元。**「每 SM 几个 tensor core」不是可靠指标**——NVIDIA 每代都在改「一个 tensor core」的定义，数量从 Volta 的 8 降到 Ampere 的 4 而算力翻倍。稳定的量是 **FP16 FMA/clock/SM**。 |
 
 ## 存储层次
 
@@ -46,9 +54,16 @@
 
 | 英文 | 中文 | 说明 |
 |---|---|---|
-| NVLink | — | NVIDIA 的 GPU 间高速互联，带宽显著高于 PCIe。 |
-| NVSwitch | — | 连接多张 GPU 的交换芯片，构成全互联拓扑。 |
-| PCIe | — | 通用外设互联总线，GPU 与主机通信的主要通道。 |
+| NVLink | — | NVIDIA 的 GPU 间高速互联，带宽显著高于 PCIe。**厂商标称的每 GPU 带宽全部是「双向合计」**：H100 的 900 GB/s = 450 发送 + 450 接收，**任何单向搬运的天花板是 450**。做「搬运 X 字节要多久」的推导时用错会差 2 倍。 |
+| NVSwitch | — | 连接多张 GPU 的交换芯片，构成**全互联（full bisection）**拓扑。它的价值不只是「更宽」，而是**路径均匀性**——任意 GPU 对都能拿到满带宽，而 ring 下只有相邻对能。 |
+| PCIe | — | 通用外设互联总线，GPU 与主机通信的主要通道。**一个「带宽」有三种口径**：线速率（`GT/s × lane ÷ 8`，不可达）、载荷（扣编码）、营销取整。8b/10b 只用于 Gen1/2，**Gen3 起改用 128b/130b**，所以「标称 vs 有效」的差额从前两代的 20% 掉到 1.5%。**NVIDIA 自己用的是标称值。** |
+| bisection bandwidth | 对分带宽 | 把网络均切成两半时，**跨越切口的链路总容量**。ring 的 bisection **不随 N 增长**（恒为 `L × b`），全互联随 `N²` 增长。集合通信的下界由它给出。官方直述值：HGX A100 8-GPU = 2.4 TB/s，HGX H100 8-GPU = 3.6 TB/s（恰为聚合端口带宽的一半）。 |
+| NVLink Domain | NVLink 域 | 官方定义是「能通过 NVLink 互相通信的节点集合」，**是跨 OS 实例的概念**。逐代：DGX-1 8 → DGX-2 16 → HGX A100/H100 8 → H100 + NVLink Switch System 256 → GB200 NVL72 72 → 多机架 576。**「A100 SuperPOD 的 256 卡」不是 NVLink 域**（跨节点走 InfiniBand，域仍是 8）。 |
+| P2P (peer-to-peer) | 对等访问 | GPU 之间直接走 PCIe 交换数据，不经主机内存。**失败是静默的**——PCIe peer 写是无 ACK 的 posted transaction，丢包只体现在 host kernel log，GPU 侧看到的是 hang 或静默数据损坏。**ACS 与 IOMMU 都会破坏它**（Grace Hopper/DGX 平台例外，应保持 IOMMU 开启）。 |
+| algbw / busbw | 算法带宽 / 总线带宽 | nccl-tests 的两个指标。`busbw = algbw × 修正系数`（AllReduce 是 `2(n-1)/n`，ReduceScatter/AllGather/AlltoAll 是 `(n-1)/n`，Broadcast/Reduce 是 1）。**只有 busbw 能与硬件峰值对比，且上限是单向的那一列（H100 = 450 GB/s），不是 900。** 但它在 NVLS/SHARP 下会高估。 |
+| all-to-all | 全交换 | 每个 rank 把数据分给所有其他 rank，没有归约可做。跨切口量 `∝ N`（all-reduce 是常数 `2S`），**跨界占比恒为 1/4 而不随 N 下降**——所以它是 bisection-bound 的，规模越大越吃拓扑。 |
+| scale-up / scale-out | 纵向 / 横向扩展 | 两套**并行**网络，不可合并。GB200 NVL72 的 130 TB/s 是 scale-up（NVLink 机架内），scale-out 是 72 × 800 Gb/s = 7.2 TB/s，**两者差 18 倍**。 |
+| InfiniBand | — | 机间互联。EDR 100 / HDR 200 / NDR 400 / XDR 800 Gb/s，按 `Gb/s ÷ 8` 换算是**未扣协议开销的上界**。节点内 vs 节点间每 GPU 双向带宽之比：H100 是 18:1，**按单向比则是 9:1——两个数都对，取决于表达什么**。 |
 
 ## 精度与量化
 
@@ -62,6 +77,9 @@
 | QAT (Quantization-Aware Training) | 量化感知训练 | 训练时插入伪量化节点，让模型适应量化误差。 |
 | scale / zero-point | 缩放因子/零点 | 仿射量化的两个参数，决定浮点与整数域的映射。 |
 | outlier | 离群值 | 数值分布中的极端值，是激活量化困难的主因。 |
+| 2:4 structured sparsity | 2:4 结构化稀疏 | **每连续 4 个元素（沿 K 维）中恰有 2 个非零**，逐行约束。只施加在 A 操作数上（B 与累加器保持稠密），所以是 **SpMM 不是 SpGEMM**。理论加速 2×，端到端实测普遍只有 **1.2×~1.6×**。 |
+| metadata (稀疏) | 稀疏元数据 | 记录每个 4 元素组中两个非零位置的索引，**每个 4 元素组用两个 2-bit 索引 = 共 4 bit**（不是 2 bit）。16-bit 数据下对原数据占 1/16，对压缩后载荷占 1/8。**含 metadata 的总压缩率是 36/64（省 44%），不是 50%**。 |
+| dense / sparse (算力口径) | 稠密 / 含稀疏 | 厂商标称的 TFLOPS **默认已含 2:4 稀疏的 2×**（如 H100 的 1979 是 sparse，dense 只有 989.5）。**更麻烦的是书写顺序：NVIDIA 自家文档 dense\|sparse 与 sparse\|dense 两种都用了**（Blackwell 技术简报用前者，DGX B200/B300 datasheet 用后者）。永远看脚注，别信顺序。 |
 
 ## 数学与数值基础
 

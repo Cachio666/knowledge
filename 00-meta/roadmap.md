@@ -1,7 +1,7 @@
 # 实施进度表
 
 > 最后更新：2026-09-15
-> 进度：5 / 61 主题完成
+> 进度：8 / 61 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -15,9 +15,9 @@
 ## 20-gpu-architecture
 - [x] execution-model
 - [x] memory-system
-- [ ] tensor-core
-- [ ] interconnect
-- [ ] architecture-evolution
+- [x] tensor-core
+- [x] interconnect
+- [x] architecture-evolution
 
 ## 30-gpu-programming
 - [ ] cuda
