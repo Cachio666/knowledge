@@ -10,9 +10,13 @@
 // 构建：make 02_coalescing_demo
 // 运行：./02_coalescing_demo
 //
-// 显存占用：kStride = 8 时数组为 512 MB，是本程序的最大分配。
+// 口径说明：本文件里「数组多少 MB」按十进制（1e6 字节）计，与程序输出
+// 一致（kStride = 8 的数组是 537 MB，不是 512）；文中引用 L2 的
+// 40 MB / 50 MB / 126 MB 则沿用文档与厂商规格的口径，两者不同源。
 //
-// 工作集提示：stride = 1 时数组为 64 MB。目标环境（sm_80 的 L2 为 40 MB、
+// 显存占用：kStride = 8 时数组为 537 MB，是本程序的最大分配。
+//
+// 工作集提示：stride = 1 时数组为 67 MB。目标环境（sm_80 的 L2 为 40 MB、
 // sm_90 为 50 MB）装不下，会真正落到 HBM。若换到 L2 达 126 MB 的新架构
 // （如 B100/B200），stride = 1 那一档可能整块驻留 L2，该行数值会偏高、
 // 与 1/stride 的拟合变差 —— 这是预期的，不是 bug。
@@ -50,7 +54,7 @@ constexpr long long kTotalWarps   = kTotalThreads / 32;
 constexpr long long kReads = kTotalThreads * kIters;
 
 // 数组长度：total_threads × kStride × kIters。
-// kStride = 8 时最大，为 1.34 亿个 float = 512 MB。
+// kStride = 8 时最大，为 1.34 亿个 float = 537 MB（十进制）。
 template <int kStride>
 constexpr long long array_len() {
   return kTotalThreads * kStride * kIters;

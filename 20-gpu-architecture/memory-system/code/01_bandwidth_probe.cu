@@ -173,14 +173,17 @@ int main() {
   cudaDeviceProp p{};
   CUDA_CHECK(cudaGetDeviceProperties(&p, 0));
 
-  // 显存时钟与总线宽度在 CUDA 13 里已从 cudaDeviceProp 移除，
+  // 显存时钟、显存总线宽度与 SM 时钟在 CUDA 13 里已从 cudaDeviceProp 移除
+  // （clockRate / memoryClockRate / memoryBusWidth 三者一并移除），
   // 这里统一走 cudaDeviceGetAttribute —— 12.x 与 13.x 都可用。
-  int mem_clock_khz = 0;
-  int mem_bus_bits  = 0;
+  int mem_clock_khz = 0;  // 显存时钟，只用来折算带宽
+  int mem_bus_bits  = 0;  // 显存总线宽度
+  int sm_clock_khz  = 0;  // SM 峰值时钟，用来折算「每周期可交付字节数」
   CUDA_CHECK(
       cudaDeviceGetAttribute(&mem_clock_khz, cudaDevAttrMemoryClockRate, 0));
-  CUDA_CHECK(
-      cudaDeviceGetAttribute(&mem_bus_bits, cudaDevAttrMemoryBusWidth, 0));
+  CUDA_CHECK(cudaDeviceGetAttribute(&mem_bus_bits,
+                                    cudaDevAttrGlobalMemoryBusWidth, 0));
+  CUDA_CHECK(cudaDeviceGetAttribute(&sm_clock_khz, cudaDevAttrClockRate, 0));
 
   // 规格峰值 = 显存时钟 × 总线宽度 ÷ 8 × 2（DDR 每周期传输两次）
   const double peak_gbps = static_cast<double>(mem_clock_khz) * 1e3 *
@@ -195,12 +198,18 @@ int main() {
   std::printf("每 block 共享内存上限      : %zu KB（可选择加入的上限 %zu KB）\n",
               static_cast<size_t>(p.sharedMemPerBlock) / 1024,
               static_cast<size_t>(p.sharedMemPerBlockOptin) / 1024);
+  // L2 一行沿用文档 §3 规格表的口径（1 MiB 记作 1 MB），与上面的数组
+  // 容量（十进制 MB）不同源：前者对齐文档数字，后者对齐 %f 的打印值。
   std::printf("L2 容量                    : %zu KB (%.1f MB)\n",
               static_cast<size_t>(p.l2CacheSize) / 1024,
               static_cast<double>(p.l2CacheSize) / (1 << 20));
   std::printf("显存总线                   : %d bit @ %d kHz\n", mem_bus_bits,
               mem_clock_khz);
   std::printf("显存带宽（规格峰值）       : %.1f GB/s\n", peak_gbps);
+  std::printf("SM 峰值时钟                : %d kHz\n", sm_clock_khz);
+  std::printf("  —— 折算口径（文档 §1 第五步）：显存带宽 ÷ **SM 时钟** =\n");
+  std::printf("     每周期可交付字节数。上面的显存时钟只用来折算带宽，\n");
+  std::printf("     拿它去除带宽会得到偏小的结果。\n");
 
   const size_t n_sizes = sizeof(kSweepBytes) / sizeof(kSweepBytes[0]);
   const size_t max_bytes = kSweepBytes[n_sizes - 1];
@@ -240,7 +249,9 @@ int main() {
   std::printf("该级的容量线、访问开始落到下一级的信号（容量数字见上表规格）。\n");
 
   // ---- 参考基线：三种访问模式的带宽 ----
-  const int n_base = 1 << 24;  // 16M 元素 = 64 MB
+  // 16M 元素 = 67 MB（十进制，与下面 %.0f 那一行的口径一致；
+  // 换算成 MiB 才是 64）
+  const int n_base = 1 << 24;
 
   float* d_in  = nullptr;
   float* d_out = nullptr;
