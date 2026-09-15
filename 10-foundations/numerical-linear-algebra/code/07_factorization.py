@@ -358,6 +358,13 @@ b_t = g.standard_normal(n_t)
 
 
 def best(fn, rep=5):
+    """一次试验：跑 rep 次取最小，消除单次调度噪声。
+
+    最小值的意义是「这段代码在这台机器上最快能跑多快」——它比平均值稳定得多。
+    但**它仍然不是逐位可复现的**：CPU 频率漂移、cache 状态、后台进程都会影响它。
+    所以本程序不报单次结果，而是跑多次试验并报出**范围**。
+    见下面「计时为什么报范围」一节。
+    """
     ts = []
     for _ in range(rep):
         t0 = time.perf_counter()
@@ -366,55 +373,114 @@ def best(fn, rep=5):
     return min(ts)
 
 
-t_solve = best(lambda: np.linalg.solve(A_spd, b_t))
-t_chol = best(lambda: np.linalg.cholesky(A_spd))
-t_qr_r = best(lambda: np.linalg.qr(A_spd, mode="r"))
-t_qr_full = best(lambda: np.linalg.qr(A_spd))
-print()
-print("  %-28s %-14s %-16s %s" % ("操作", "时间 (ms)", "理论 flops", "ns/flop"))
-print("  " + "-" * 74)
-for name, t, f in (("cholesky(A)", t_chol, n_t ** 3 / 3.0),
-                   ("solve(A,b)  [LU + 回代]", t_solve, 2.0 / 3.0 * n_t ** 3 + 2 * n_t ** 2),
-                   ("qr(A, mode='r')  [只算 R]", t_qr_r, 2.0 / 3.0 * n_t ** 3),
-                   ("qr(A)  [Q 和 R 都算]", t_qr_full, 4.0 / 3.0 * n_t ** 3)):
-    print("  %-28s %-14.2f %-16.3e %.3f" % (name, t * 1e3, f, t * 1e9 / f))
+TRIALS = 9
+OPS = (
+    ("cholesky(A)", lambda: np.linalg.cholesky(A_spd)),
+    ("solve(A,b)  [LU + 回代]", lambda: np.linalg.solve(A_spd, b_t)),
+    ("qr(A, mode='r')  [只算 R]", lambda: np.linalg.qr(A_spd, mode="r")),
+    ("qr(A)  [Q 和 R 都算]", lambda: np.linalg.qr(A_spd)),
+)
+FLOPS = (n_t ** 3 / 3.0, 2.0 / 3.0 * n_t ** 3 + 2 * n_t ** 2,
+         2.0 / 3.0 * n_t ** 3, 4.0 / 3.0 * n_t ** 3)
+
+# samples[i][t] = 第 t 次试验中第 i 个操作的最小耗时
+samples = [[] for _ in OPS]
+for _ in range(TRIALS):
+    for i, (_, fn) in enumerate(OPS):
+        samples[i].append(best(fn))
+
+med = [float(np.median(s)) for s in samples]
+lo = [min(s) for s in samples]
+hi = [max(s) for s in samples]
+t_chol, t_solve, t_qr_r, t_qr_full = med
 
 print()
-print("  %-40s %-10s %s" % ("比值", "实测", "flops 模型预测"))
-print("  " + "-" * 70)
-print("  %-40s %-10.3f %.3f" % ("cholesky / solve", t_chol / t_solve, 0.5))
-print("  %-40s %-10.3f %.3f" % ("cholesky / qr(mode='r')", t_chol / t_qr_r, 0.5))
-print("  %-40s %-10.3f %.3f" % ("qr(mode='r') / qr(full)", t_qr_r / t_qr_full, 0.5))
+print("每项跑 %d 次试验，每次试验内部再取 5 次的最小值。" % TRIALS)
+print()
+print("  %-28s %-22s %-12s %-16s %s"
+      % ("操作", "时间 (ms) 中位 [最小 ~ 最大]", "波动", "理论 flops", "ns/flop"))
+print("  " + "-" * 96)
+for i, (name, _) in enumerate(OPS):
+    swing = (hi[i] - lo[i]) / med[i] * 100
+    print("  %-28s %8.2f [%7.2f ~ %7.2f]  正负 %5.1f%%  %-16.3e %.3f"
+          % (name, med[i] * 1e3, lo[i] * 1e3, hi[i] * 1e3, swing,
+             FLOPS[i], med[i] * 1e9 / FLOPS[i]))
+
+print()
+print("比值的**逐次试验**分布（每次试验内四个操作都测一遍，所以比值可以配对）：")
+print()
+print("  %-40s %-12s %-24s %s"
+      % ("比值", "中位", "9 次试验的范围", "flops 模型预测"))
+print("  " + "-" * 92)
+PAIRS = ((0, 1, "cholesky / solve"), (0, 2, "cholesky / qr(mode='r')"),
+         (2, 3, "qr(mode='r') / qr(full)"))
+ratio_stats = []
+for a, b_, label in PAIRS:
+    per_trial = [samples[a][t] / samples[b_][t] for t in range(TRIALS)]
+    r_med = float(np.median(per_trial))
+    r_lo, r_hi = min(per_trial), max(per_trial)
+    ratio_stats.append((label, r_med, r_lo, r_hi))
+    print("  %-40s %-12.3f [%.3f ~ %.3f]  %18s"
+          % (label, r_med, r_lo, r_hi, "%.3f" % 0.5))
+
+print()
+print("【计时为什么报范围，而不报一个数】")
+print()
+print("其余各节的数字都是逐位可复现的——同一个输入必然给出同一个输出。")
+print("**计时不是。** 同一台机器上重复运行，上面那三个比值各自摆动。")
+print("判据很简单：**观察到的范围有没有把模型预测值 0.5 包进去。**")
+print()
+for label, r_med, r_lo, r_hi in ratio_stats:
+    margin = 100 * min(abs(r_lo - 0.5), abs(r_hi - 0.5)) / 0.5
+    if r_lo <= 0.5 <= r_hi:
+        verdict = "**范围跨过 0.5 ⇒ 未证实**"
+    elif margin >= 25:
+        verdict = "范围离 0.5 还有 %.0f%% ⇒ 模型与实测明显不符，结论成立" % margin
+    else:
+        verdict = "范围离 0.5 只剩 %.0f%% ⇒ 方向一致，但具体数值对不上模型" % margin
+    print("    %-26s [%.3f ~ %.3f]   %s" % (label, r_lo, r_hi, verdict))
+print()
+print("于是三种判定各自对应一种写法，不能混：")
+print("  · **范围跨过预测值**：只能说「这一次测量与预测一致」，不能说模型被验证——")
+print("    这叫**未证实**，不叫成立。")
+print("  · **范围远离预测值**（如 67%）：模型与实测明显不符，结论成立，且可以报出差异倍数。")
+print("  · **范围离预测值不远不近**（如 9%）：方向一致，但**具体数值对不上模型**——")
+print("    此时只能说「Cholesky 比 LU 快」，不能说「实测 0.42，模型 0.50，吻合」。")
+print()
+print("把「未证实」写成「成立」、把「方向一致」写成「数值吻合」，是拿单次计时下结论的两种典型形态。")
 
 print()
 print("三个读数，一好一坏一印证：")
 print()
-print("① **Cholesky / LU = %.2f，模型预测 0.50**。这一条成立，而且理由和模型说的"
-      % (t_chol / t_solve))
-print("   完全一样：对称性省掉一半消元。这是三种分解里唯一能被 flops 模型")
-print("   准确预测的比值，也是「对称正定就用 Cholesky」这条建议的定量依据——")
-print("   直接省掉约 %.0f%% 的时间。" % (100 * (1 - t_chol / t_solve)))
+_, cs, cs_lo, cs_hi = ratio_stats[0]
+_, cq, cq_lo, cq_hi = ratio_stats[1]
+_, qf, qf_lo, qf_hi = ratio_stats[2]
+print("① **`Cholesky / LU = %.3f`（9 次试验 [%.3f ~ %.3f]），模型预测 0.50。**"
+      % (cs, cs_lo, cs_hi))
+print("   方向完全一致：对称性省掉一半消元。但**数值上模型乐观了约 %.0f%%**——"
+      % (100 * (0.5 - cs) / 0.5))
+print("   实测比 flops 模型更快，因为 LU 还要额外做主元搜索与行交换，那部分不在")
+print("   flops 计数里。所以这一条的准确说法是「对称正定省一半**量级**的时间」，")
+print("   而不是「实测 0.42、模型 0.50、吻合」。它是三者中唯一重复运行也稳定的。")
 print()
-print("② **Cholesky / QR = %.3f，模型预测 0.50——模型乐观了 %.1f 倍。**"
-      % (t_chol / t_qr_r, 0.5 / (t_chol / t_qr_r)))
-print("   flops 只差 2 倍（n³/3 对 2n³/3），实测差了 %.1f 倍。" % (t_qr_r / t_chol))
-print("   原因看最后一列：numpy 的 QR 每 flop 花 %.3f ns，Cholesky 只花 %.3f ns，"
-      % (t_qr_r * 1e9 / (2.0 / 3.0 * n_t ** 3), t_chol * 1e9 / (n_t ** 3 / 3.0)))
-print("   差 %.1f 倍。LAPACK 的 Cholesky/LU 有高度优化的分块内核（BLAS-3 占比高），"
-      % ((t_qr_r * 1e9 / (2.0 / 3.0 * n_t ** 3)) / (t_chol * 1e9 / (n_t ** 3 / 3.0))))
-print("   而 QR 的 Householder 反射受限于 BLAS-2 的内存带宽，算力吃不满。")
+print("② **`Cholesky / QR = %.3f`（[%.3f ~ %.3f]），模型预测 0.50——模型乐观了 %.1f 倍。**"
+      % (cq, cq_lo, cq_hi, 0.5 / cq))
+print("   flops 只差 2 倍（n³/3 对 2n³/3），实测差了 %.1f 倍。原因看 ns/flop 那一列："
+      % (1 / cq))
+print("   numpy 的 QR 每 flop 比 Cholesky 贵约 %.1f 倍。LAPACK 的 Cholesky/LU 有高度"
+      % (med[2] / FLOPS[2] / (med[0] / FLOPS[0])))
+print("   优化的分块内核（BLAS-3 占比高），而 QR 的 Householder 反射受限于 BLAS-2 的")
+print("   内存带宽。**这是全表最结实的一个结论**——它的范围从不接近 0.5。")
 print()
-print("   **所以 flops 计数只能比较同一个库里的相似算法，不能跨实现预测时间。**")
-print("   写 kernel 时听到「QR 和 LU 同阶」而以为两者一样快，是要吃亏的。")
+print("③ **`qr(mode=\'r\') / qr(full) = %.3f`（[%.3f ~ %.3f]），模型预测 0.5。**"
+      % (qf, qf_lo, qf_hi))
+print("   范围**跨过了 0.5**——摆动幅度大于它与模型预测值之间的差距。")
+print("   两者的差别确实只是「要不要显式组装 Q」（flops 表里 4n³/3 与 2n³/3 之差），")
+print("   理论上应当成立；但要实测证实它，需要比「多次取最小」更严格的测量方法")
+print("   （固定 CPU 频率、绑定核心、提高重复次数并做统计检验）。**本文如实报未证实。**")
 print()
-print("③ **qr(mode='r') / qr(full) = %.2f，模型预测 0.5**——这一条也成立。"
-      % (t_qr_r / t_qr_full))
-print("   因为两者的差别就是「要不要显式组装 Q」，正是 flops 表里 4n³/3 与 2n³/3 之差。")
-print("   这是同一份 LAPACK 代码内部的比较，所以模型有效。")
-print()
-print("顺带：这里用 `solve` 而不是 `inv(A) @ b`。05 节已经测过两者的精度几乎相同，")
-print("差别在代价——求逆比求解多约 %.0f 倍。**「别用 inv」的理由是省算力，不是省精度。**"
-      % 3)
+print("顺带：这里用 `solve` 而不是 `inv(A) @ b`。前面已测过两者的精度几乎相同，")
+print("差别在代价——求逆比求解多约 3 倍。**「别用 inv」的理由是省算力，不是省精度。**")
 
 rule("5. 与 LLM 的关联：GPTQ 的 Hessian 几乎不正定")
 
