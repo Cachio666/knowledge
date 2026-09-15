@@ -207,7 +207,7 @@ int main() {
               mem_clock_khz);
   std::printf("显存带宽（规格峰值）       : %.1f GB/s\n", peak_gbps);
   std::printf("SM 峰值时钟                : %d kHz\n", sm_clock_khz);
-  std::printf("  —— 折算口径（文档 §1 第五步）：显存带宽 ÷ **SM 时钟** =\n");
+  std::printf("  —— 折算口径（文档 §1 第五步）：显存带宽 ÷ SM 时钟 =\n");
   std::printf("     每周期可交付字节数。上面的显存时钟只用来折算带宽，\n");
   std::printf("     拿它去除带宽会得到偏小的结果。\n");
 
