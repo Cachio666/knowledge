@@ -7,6 +7,11 @@
 //   3. 四种 stride 下「有用读取次数」恒定，传输字节按 stride 增长，
 //      故有效利用率 = 1 / kStride
 //
+// 能力边界：程序给的是**有效带宽**，验不出**延迟** —— 它能核对的只有「传输
+// 字节数变了多少」这一本书，无法核对单次事务要多少个周期（那是 01 与 03 的
+// 题目）。绝对带宽数取决于具体机器，没有可比的基准值；能对照的只有四档之间
+// 的比值。
+//
 // 构建：make 02_coalescing_demo
 // 运行：./02_coalescing_demo
 //
@@ -155,12 +160,15 @@ int main() {
   // 以 stride = 1 为基准，其有效利用率定义为 1
   const double base_gbps = useful_bytes / (cases[0].ms * 1e-3) / 1e9;
 
-  std::printf("%-8s %-12s %-12s %-12s %-16s %-14s %s\n", "stride", "warp 跨线数",
-              "数组(MB)", "耗时(ms)", "有用带宽(GB/s)", "相对利用率", "模型值");
+  // 表头按「显示宽度」手工对齐：printf 的 %-Ns 按字节补空格，而中文一个字
+  // 3 字节、只占 2 列，混排时会少补，得自己数空格。
+  std::printf(
+      "stride   warp 跨线数 数组(MB)    耗时(ms)    有用带宽(GB/s)   "
+      "相对利用率     模型值\n");
 
   for (const Case& c : cases) {
     const double gbps = useful_bytes / (c.ms * 1e-3) / 1e9;
-    std::printf("%-8d %-12d %-12.0f %-12.4f %-16.1f %-14.1f %.1f%%\n", c.stride,
+    std::printf("%-9d%-12d%-12.0f%-12.4f%-17.1f%-15.1f%.1f%%\n", c.stride,
                 c.stride, static_cast<double>(c.n) * sizeof(float) / 1e6, c.ms,
                 gbps, 100.0 * gbps / base_gbps, 100.0 / c.stride);
   }

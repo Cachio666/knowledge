@@ -46,10 +46,12 @@ constexpr int kBlocks   = 1024;
 constexpr int kReps     = 20;
 constexpr int kSmemIter = 4096;  // 共享内存读取轮数，用来放大片内访问
 
-// 工作集扫描的档位（字节）：8 KB 起、每档 ×4，一路越过 L2。
-// 拐点出现在哪一档，那一档就是当前访问模式下真正接管的层级。
-const size_t kSweepBytes[] = {8u << 10,  32u << 10, 128u << 10, 512u << 10,
-                              2u << 20,  8u << 20,  32u << 20,  128u << 20};
+// 工作集扫描的档位（字节）：8 KB 起、每档 ×4 或 ×2，一路越过 L2。
+// 8 / 16 / 32 MB 三档把「每 SM 触及越过每 SM 上限」这一步夹紧，
+// 拐点落在这三档之间。
+const size_t kSweepBytes[] = {8u << 10,  32u << 10,  128u << 10, 512u << 10,
+                              2u << 20,  8u << 20,  16u << 20,  32u << 20,
+                              128u << 20};
 
 // 每档的目标读取量：把同一块工作集反复读，直到搬动约 256 MB。
 // 小工作集单趟只有几纳秒，不放大就量到的是启动开销而不是带宽。
@@ -115,46 +117,24 @@ __global__ void smem_read_kernel(const float* __restrict__ in,
   if (acc == -1234567.0f) out[0] = acc;
 }
 
-template <typename Kernel>
-float time_kernel(Kernel k, int blocks, int threads, size_t smem, int n,
-                  const float* d_in, float* d_out) {
+// 计时：预热一次（顺带检查启动错误），再连续启动 kReps 次取平均。
+// 参数按原样转发给 kernel —— 工作集扫描那个 kernel 比另外三个多一个
+// inner 轮数参数，用可变参数把两者统一起来，省掉一份重复的计时代码。
+// 注意：转发是按 kernel 形参顺序原样传的，调用处要按 kernel 的签名写。
+template <typename Kernel, typename... Args>
+float time_kernel(Kernel k, int blocks, int threads, size_t smem,
+                  Args... args) {
   cudaEvent_t begin, end;
   CUDA_CHECK(cudaEventCreate(&begin));
   CUDA_CHECK(cudaEventCreate(&end));
 
-  k<<<blocks, threads, smem>>>(d_in, d_out, n);
+  k<<<blocks, threads, smem>>>(args...);
   CUDA_CHECK_LAST();
   CUDA_CHECK(cudaDeviceSynchronize());
 
   CUDA_CHECK(cudaEventRecord(begin));
   for (int r = 0; r < kReps; ++r) {
-    k<<<blocks, threads, smem>>>(d_in, d_out, n);
-  }
-  CUDA_CHECK(cudaEventRecord(end));
-  CUDA_CHECK(cudaEventSynchronize(end));
-  CUDA_CHECK_LAST();
-
-  float ms = 0.0f;
-  CUDA_CHECK(cudaEventElapsedTime(&ms, begin, end));
-  CUDA_CHECK(cudaEventDestroy(begin));
-  CUDA_CHECK(cudaEventDestroy(end));
-  return ms / kReps;
-}
-
-// 与 time_kernel 同构，多一个内层轮数参数。返回单次启动的平均耗时。
-float time_sweep(const float* d_in, float* d_out, int n, int inner,
-                 int blocks) {
-  cudaEvent_t begin, end;
-  CUDA_CHECK(cudaEventCreate(&begin));
-  CUDA_CHECK(cudaEventCreate(&end));
-
-  sweep_read_kernel<<<blocks, kThreads>>>(d_in, d_out, n, inner);
-  CUDA_CHECK_LAST();
-  CUDA_CHECK(cudaDeviceSynchronize());
-
-  CUDA_CHECK(cudaEventRecord(begin));
-  for (int r = 0; r < kReps; ++r) {
-    sweep_read_kernel<<<blocks, kThreads>>>(d_in, d_out, n, inner);
+    k<<<blocks, threads, smem>>>(args...);
   }
   CUDA_CHECK(cudaEventRecord(end));
   CUDA_CHECK(cudaEventSynchronize(end));
@@ -193,13 +173,16 @@ int main() {
               p.minor);
   std::printf("\n--- 存储规格 ---\n");
   std::printf("SM 数                      : %d\n", p.multiProcessorCount);
-  std::printf("每 SM 统一 L1/共享内存     : %zu KB\n",
+  std::printf("每 SM 共享内存上限         : %zu KB\n",
               static_cast<size_t>(p.sharedMemPerMultiprocessor) / 1024);
   std::printf("每 block 共享内存上限      : %zu KB（可选择加入的上限 %zu KB）\n",
               static_cast<size_t>(p.sharedMemPerBlock) / 1024,
               static_cast<size_t>(p.sharedMemPerBlockOptin) / 1024);
-  // L2 一行沿用文档 §3 规格表的口径（1 MiB 记作 1 MB），与上面的数组
-  // 容量（十进制 MB）不同源：前者对齐文档数字，后者对齐 %f 的打印值。
+  std::printf("  —— 上面两行是「可分给共享内存」的上限。那块统一 L1/共享内存\n");
+  std::printf("     SRAM 的物理池子更大（文档 §1 第六步的 256 KB 是规格值），\n");
+  std::printf("     而 CUDA API 不暴露这个池子的大小。\n");
+  // L2 一行沿用文档 §3 规格表的口径（1 MiB 记作 1 MB），与数组容量
+  // （十进制 MB）不同源：前者对齐文档数字，后者对齐 %f 的打印值。
   std::printf("L2 容量                    : %zu KB (%.1f MB)\n",
               static_cast<size_t>(p.l2CacheSize) / 1024,
               static_cast<double>(p.l2CacheSize) / (1 << 20));
@@ -210,6 +193,8 @@ int main() {
   std::printf("  —— 折算口径（文档 §1 第五步）：显存带宽 ÷ SM 时钟 =\n");
   std::printf("     每周期可交付字节数。上面的显存时钟只用来折算带宽，\n");
   std::printf("     拿它去除带宽会得到偏小的结果。\n");
+  std::printf("  —— MB 口径：本段里的规格数沿用 1 MiB = 1 MB（与文档一致）；\n");
+  std::printf("     下面由程序算出的数组容量按十进制 MB，与 %%.0f 的打印值一致。\n");
 
   const size_t n_sizes = sizeof(kSweepBytes) / sizeof(kSweepBytes[0]);
   const size_t max_bytes = kSweepBytes[n_sizes - 1];
@@ -220,12 +205,15 @@ int main() {
   CUDA_CHECK(cudaMalloc(&d_flag, sizeof(float)));
   CUDA_CHECK(cudaMemset(d_scan, 0, max_bytes));
 
+  const int sm_count = p.multiProcessorCount;
+
   std::printf("\n--- 工作集扫描：顺序只读 ---\n");
-  std::printf("对照文档 §1 第六步的容量：每 SM 统一池 %zu KB、L2 %.1f MB。\n",
+  std::printf("两个对照点（文档 §1 第六步）：每 SM 共享内存上限 %zu KB、L2 %.1f MB。\n",
               static_cast<size_t>(p.sharedMemPerMultiprocessor) / 1024,
               static_cast<double>(p.l2CacheSize) / (1 << 20));
-  std::printf("%-14s %-14s %-12s %-14s %s\n", "工作集(KB)", "元素数", "内层轮数",
-              "耗时(ms)", "吞吐(GB/s)");
+  // 表头与数值行都按「显示宽度」手工对齐：printf 的 %-Ns 按字节补空格，
+  // 而中文一个字 3 字节、只占 2 列，混排时会少补，得自己数空格。
+  std::printf("工作集(KB) block 数  每 SM 触及(KB)  耗时(ms)    吞吐(GB/s)\n");
 
   for (size_t i = 0; i < n_sizes; ++i) {
     const size_t ws_bytes = kSweepBytes[i];
@@ -236,17 +224,34 @@ int main() {
     if (inner < 1) inner = 1;
     if (inner > 65536) inner = 65536;
 
+    // 数组按 block 均分：每个 block 只扫自己那一段，所以一个 SM 上有几个
+    // block 就触及几份。block 数小于 SM 数的档位占不满机器，见下面的解读。
     int blocks = (n + kThreads - 1) / kThreads;
     if (blocks > kBlocks) blocks = kBlocks;
 
-    const float  ms    = time_sweep(d_scan, d_flag, n, inner, blocks);
+    const float  ms = time_kernel(sweep_read_kernel, blocks, kThreads, 0,
+                                  d_scan, d_flag, n, inner);
     const double moved = static_cast<double>(n) * sizeof(float) * inner;
-    std::printf("%-14zu %-14d %-12d %-14.4f %.1f\n", ws_bytes / 1024, n, inner,
-                ms, moved / (ms * 1e-3) / 1e9);
+    const double per_sm =
+        static_cast<double>(ws_bytes) / static_cast<double>(sm_count) / 1024.0;
+    std::printf("%-11zu%-10d%-16.1f%-12.4f%.1f\n", ws_bytes / 1024, blocks,
+                per_sm, ms, moved / (ms * 1e-3) / 1e9);
   }
 
-  std::printf("\n解读：吞吐在某一档之后明显下台阶，那一档就是工作集越过了\n");
-  std::printf("该级的容量线、访问开始落到下一级的信号（容量数字见上表规格）。\n");
+  std::printf("\n--- 解读（工作集扫描）---\n");
+  std::printf("这张表要横着读三列。\n");
+  std::printf("  · 「每 SM 触及」= 工作集 ÷ SM 数。数组是按 block 均分的，每个 SM\n");
+  std::printf("    只碰自己那一份，所以要与「每 SM 共享内存上限」比的是这一列，\n");
+  std::printf("    而不是第一列的工作集本身 —— 工作集跨过那个上限时不代表越线，\n");
+  std::printf("    越线的是它除以 SM 数的那一份。盯住这一列第一次超过上限的那档。\n");
+  std::printf("  · 「工作集」用来比 L2：整块工作集跨过 L2 容量（上行）之后，访问\n");
+  std::printf("    才会落到 HBM。\n");
+  std::printf("  · 「block 数」：前几档的 block 数小于 SM 数，机器没占满，那里的\n");
+  std::printf("    「每 SM 触及」只是按 SM 数均分的假想值（实际是少数 SM 各扛下\n");
+  std::printf("    整块工作集），吞吐也因此受并行度限制 —— 别用它们找拐点。\n");
+  std::printf("两处容易误读：工作集落在片上池以内的档位，吞吐可以高于上面打印的\n");
+  std::printf("HBM 规格峰值（它根本没经过 HBM）；而 HBM 档位的实测值通常在规格\n");
+  std::printf("峰值的 70%%~90%%，这是预期值，不是本程序的结论。\n");
 
   // ---- 参考基线：三种访问模式的带宽 ----
   // 16M 元素 = 67 MB（十进制，与下面 %.0f 那一行的口径一致；
@@ -266,31 +271,34 @@ int main() {
               kBlocks, kThreads);
 
   const float ms_copy =
-      time_kernel(copy_kernel, kBlocks, kThreads, 0, n_base, d_in, d_out);
+      time_kernel(copy_kernel, kBlocks, kThreads, 0, d_in, d_out, n_base);
   const float ms_read =
-      time_kernel(read_kernel, kBlocks, kThreads, 0, n_base, d_in, d_out);
+      time_kernel(read_kernel, kBlocks, kThreads, 0, d_in, d_out, n_base);
 
   const size_t smem_bytes = kThreads * sizeof(float);
   const float  ms_smem    = time_kernel(smem_read_kernel, kBlocks, kThreads,
-                                        smem_bytes, n_base, d_in, d_out);
+                                        smem_bytes, d_in, d_out, n_base);
 
   // 共享内存读取次数 = block 数 × 每 block 线程数 × 轮数
   const double smem_bytes_moved = static_cast<double>(kBlocks) * kThreads *
                                   kSmemIter * sizeof(float);
 
-  std::printf("%-22s %-14s %s\n", "访问类型", "耗时(ms)", "带宽(GB/s)");
-  std::printf("%-22s %-14.4f %.1f\n", "HBM 拷贝（读+写）", ms_copy,
+  // 第一列的中文标签按显示宽度手工补空格（18 列）：printf 的 %-Ns 按字节
+  // 补齐，「HBM 只读」与「HBM 拷贝（读+写）」因此不会自动对齐。
+  std::printf("访问类型          耗时(ms)    带宽(GB/s)\n");
+  std::printf("%s%-12.4f%.1f\n", "HBM 拷贝（读+写） ", ms_copy,
               bytes * 2.0 / (ms_copy * 1e-3) / 1e9);
-  std::printf("%-22s %-14.4f %.1f\n", "HBM 只读", ms_read,
+  std::printf("%s%-12.4f%.1f\n", "HBM 只读          ", ms_read,
               bytes / (ms_read * 1e-3) / 1e9);
-  std::printf("%-22s %-14.4f %.1f\n", "共享内存读取", ms_smem,
+  std::printf("%s%-12.4f%.1f\n", "共享内存读取      ", ms_smem,
               smem_bytes_moved / (ms_smem * 1e-3) / 1e9);
 
   std::printf("\n--- 解读 ---\n");
   std::printf("共享内存带宽应显著高于 HBM —— 这是各级存储分级的直接体现。\n");
   std::printf("注意本程序测的是带宽，不是延迟：HBM 靠大量并行通道堆带宽，\n");
   std::printf("单次访问的延迟仍是数百 cycles，两者并不矛盾。\n");
-  std::printf("实测值通常只有规格峰值的 70%%~90%%，属正常范围。\n");
+  std::printf("HBM 档位的实测值通常在规格峰值的 70%%~90%%（预期值，不是本程序\n");
+  std::printf("的结论）；共享内存那一行不受这条约束，它可以高于 HBM 规格峰值。\n");
 
   CUDA_CHECK(cudaFree(d_in));
   CUDA_CHECK(cudaFree(d_out));

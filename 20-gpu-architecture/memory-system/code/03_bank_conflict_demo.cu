@@ -47,8 +47,8 @@ namespace {
 constexpr int kThreads = 256;  // 8 个 warp
 constexpr int kWarps   = kThreads / 32;
 constexpr int kRows    = 32;   // 参与比较的 tile 行数
-constexpr int kReps    = 200;  // 反复执行，让共享内存访问占主导
-constexpr int kTimes   = 10;   // 计时循环的启动次数
+constexpr int kRounds  = 200;  // kernel 内每线程的读取轮数（让共享内存访问占主导）
+constexpr int kReps    = 10;   // 计时循环的启动次数（与 01 / 02 同名同义）
 
 // 每个 warp 独占一块 rows × cols 的 tile，行距 = cols（列数）。
 // 关键访问是 tile[warp][lane][r]：固定列 r，行随 lane 变化。
@@ -72,22 +72,27 @@ __global__ void column_read_kernel(const T* __restrict__ in,
 
   T acc = static_cast<T>(0);
 
-  for (int rep = 0; rep < kReps; ++rep) {
-    // 装载：读全局内存写入共享内存。按 [行][列] 顺序，warp 内 lane 对应列，
-    // 全局侧是合并访问，共享侧无冲突。
+  // 装载：只做一次 —— tile 在轮与轮之间并不变化。放在轮循环之外，是因为
+  // 装载与 bank 冲突无关，让它跟着 kRounds 轮重复只会稀释被测的那部分。
+  // 这里也不再对 n 取模：n 是 kernel 参数，取模要发一整条除法序列，而
+  // blockIdx.x*rows*32 + r*32 + lane 本来就落在数组内（由宿主保证）。
+  // 按 [行][列] 顺序写，warp 内 lane 对应列：全局侧合并访问，共享侧无冲突。
 #pragma unroll 4
-    for (int r = 0; r < rows; ++r) {
-      const int g = static_cast<int>(
-          ((static_cast<long long>(rep) * rows + r) * 32 + lane) % n);
-      my[r * cols + lane] = in[g];
-    }
-    __syncthreads();
+  for (int r = 0; r < rows; ++r) {
+    const int g = blockIdx.x * rows * 32 + r * 32 + lane;
+    my[r * cols + lane] = (g < n) ? in[g] : static_cast<T>(0);
+  }
+  __syncthreads();
 
-    // 读取：固定列 r，行随 lane 变化 —— 这是产生冲突的访问模式
+  // 读取：固定列 r，行随 lane 变化 —— 这是产生冲突的访问模式，也是本程序
+  // 唯一要测的东西。每线程每轮读 rows 次，共 kRounds 轮。
+  for (int rep = 0; rep < kRounds; ++rep) {
 #pragma unroll 4
     for (int r = 0; r < rows; ++r) {
       acc += my[lane * cols + r];
     }
+    // 轮末的屏障：它同时是一个优化栅栏 —— 否则编译器可以把这些纯读的
+    // 循环整个提到轮循环之外，那样就只测了一轮。
     __syncthreads();
   }
 
@@ -109,7 +114,7 @@ float time_case(const T* d_in, T* d_out, int n, int blocks, int rows, int cols,
   CUDA_CHECK(cudaDeviceSynchronize());
 
   CUDA_CHECK(cudaEventRecord(begin));
-  for (int r = 0; r < kTimes; ++r) {
+  for (int r = 0; r < kReps; ++r) {
     column_read_kernel<T>
         <<<blocks, kThreads, smem_bytes>>>(d_in, d_out, rows, cols, n);
   }
@@ -121,7 +126,7 @@ float time_case(const T* d_in, T* d_out, int n, int blocks, int rows, int cols,
   CUDA_CHECK(cudaEventElapsedTime(&ms, begin, end));
   CUDA_CHECK(cudaEventDestroy(begin));
   CUDA_CHECK(cudaEventDestroy(end));
-  return ms / kTimes;
+  return ms / kReps;
 }
 
 // §1 第三步的串行遍数预测：gcd(行距, 32)
@@ -157,35 +162,39 @@ int main() {
 
   // ---- 行距扫描：同一份 32 行的 tile，只改列数 ----
   // 最后一档把行数改成 33、行距仍是 32，用来演示「决定冲突的是行距」。
-  const int   lanes[]  = {32, 33, 34, 36, 32};
+  const int   strides[] = {32, 33, 34, 36, 32};
   const int   rows[]   = {kRows, kRows, kRows, kRows, kRows + 1};
   const char* labels[] = {"行距 32", "行距 33", "行距 34", "行距 36",
                           "行距 32、行数 33（[33][32]）"};
-  constexpr int kCases = static_cast<int>(sizeof(lanes) / sizeof(lanes[0]));
+  constexpr int kCases =
+      static_cast<int>(sizeof(strides) / sizeof(strides[0]));
 
   float ms_f[kCases];
   for (int i = 0; i < kCases; ++i) {
-    const size_t smem = static_cast<size_t>(kWarps) * rows[i] * lanes[i] *
+    const size_t smem = static_cast<size_t>(kWarps) * rows[i] * strides[i] *
                         sizeof(float);
     ms_f[i] =
-        time_case<float>(d_in, d_out, n, blocks, rows[i], lanes[i], smem);
+        time_case<float>(d_in, d_out, n, blocks, rows[i], strides[i], smem);
   }
 
   // 以「行距 33」（无冲突）为基准 —— 它的串行遍数是 1
   const float base_ms = ms_f[1];
 
+  // 中文标签放在最后一列：printf 的 %-Ns 按字节补空格，中文列放在前面会把
+  // 后面的数值列挤歪；放末尾就不必手工数字空格。
   std::printf("--- 32 位（float）元素：只改列数（行距）---\n");
-  std::printf("%-28s %-8s %-8s %-16s %-14s %s\n", "配置", "行距", "行数",
-              "串行遍数预期", "耗时(ms)", "相对耗时");
+  std::printf("行距    行数    串行遍数预期    耗时(ms)     相对耗时  配置\n");
   for (int i = 0; i < kCases; ++i) {
-    std::printf("%-28s %-8d %-8d %-16d %-14.4f %.3f\n", labels[i], lanes[i],
-                rows[i], serial_passes(lanes[i]), ms_f[i], ms_f[i] / base_ms);
+    std::printf("%-8d%-8d%-16d%-13.4f%-10.3f%s\n", strides[i], rows[i],
+                serial_passes(strides[i]), ms_f[i], ms_f[i] / base_ms,
+                labels[i]);
   }
   std::printf("「串行遍数预期」= gcd(行距, 32)（§1 第三步），它同时就是以\n");
   std::printf("「行距 33」那一档为 1 的预期耗时比，即 32 : 1 : 2 : 4。\n");
 
   std::printf("\n--- 解读（32 位）---\n");
-  std::printf("五种配置的计算量完全相同，只有行距不同：32 与 33。\n");
+  std::printf("前四档的计算量完全相同，只有行距不同（32 / 33 / 34 / 36）；第五档把\n");
+  std::printf("行数改成 33，多做 1/32 的功。\n");
   std::printf("行距 32 与 bank 数 32 相等，导致固定列访问时 lane 与 lane\n");
   std::printf("全部映射到同一个 bank，32 次访问被串行化为 32 轮。\n");
   std::printf("行距 33 与 32 互质，bank 随 lane 遍历 32 个位置，无冲突。\n");
@@ -193,12 +202,13 @@ int main() {
   std::printf("四档一起给出 gcd 判据的完整形状。\n");
   std::printf("最后一行 [33][32] 把行数改成 33、行距仍是 32 —— 决定冲突的是行距，\n");
   std::printf("不是行数（§4.1）。注意它不是逐拍相同：读循环按行数走，这一档每轮\n");
-  std::printf("多读一行，做功比「行距 32」多 1/32，所以实测比值是约 33 而不是 32\n");
+  std::printf("多读一行，做功比「行距 32」多 1/32，所以预期比值是约 33 而不是 32\n");
   std::printf("（差 3.1%%）。冲突形态与量级不变，只是这 1/32 的差别要算进去。\n\n");
   std::printf("关于「相对耗时」：不必期待它恰好等于「串行遍数预期」。行距为 32 时\n");
-  std::printf("一行的 32 个元素在共享内存里连续，编译器可能把 32 次 LDS.32 向量化成\n");
-  std::printf("8 次 LDS.128，冲突形态变成「16 路 × 2 相位」，实测比值会小于 32 倍的\n");
-  std::printf("直觉值。看量级即可。\n");
+  std::printf("一行的 32 个元素在共享内存里连续，编译器可能把同一行的连续读向量化成\n");
+  std::printf("128 位访问，而 128 位访问多数自带 2 路冲突（文档 §2 末），冲突形态随之\n");
+  std::printf("改变，实测比值因此通常小于 32 倍。具体形态取决于编译产物，本程序不做\n");
+  std::printf("断言 —— 想看的话，用 make regs 读 -Xptxas -v 的报告。\n");
   std::printf("还要注意这个比值是「吞吐侧」的预测：该循环反复读同一块 tile，瓶颈落在\n");
   std::printf("共享内存端口上（§2 的两笔账）。若实测比值远小于预期，先怀疑这个前提\n");
   std::printf("没成立；「延迟侧」的预测比值要小得多，约 2.2 : 1。\n");
@@ -224,27 +234,27 @@ int main() {
   CUDA_CHECK(cudaMalloc(&d_out64, sizeof(double)));
   CUDA_CHECK(cudaMemset(d_in64, 0, n * sizeof(double)));
 
-  const int   lanes64[]  = {32, 33};
-  const char* labels64[] = {"行距 32（double）", "行距 33（double）"};
-  constexpr int kCases64 = static_cast<int>(sizeof(lanes64) / sizeof(lanes64[0]));
+  const int   strides64[] = {32, 33};
+  const char* labels64[]  = {"行距 32（double）", "行距 33（double）"};
+  constexpr int kCases64 =
+      static_cast<int>(sizeof(strides64) / sizeof(strides64[0]));
 
   float ms_d[kCases64];
   for (int i = 0; i < kCases64; ++i) {
     const size_t smem =
-        static_cast<size_t>(kWarps) * kRows * lanes64[i] * sizeof(double);
-    ms_d[i] = time_case<double>(d_in64, d_out64, n, blocks, kRows, lanes64[i],
-                                smem);
+        static_cast<size_t>(kWarps) * kRows * strides64[i] * sizeof(double);
+    ms_d[i] = time_case<double>(d_in64, d_out64, n, blocks, kRows,
+                                strides64[i], smem);
   }
 
   std::printf("\n--- 64 位（double）元素：同样的按列取用 ---\n");
   std::printf("每 block 动态共享内存最大需 %.1f KB，已用 cudaFuncSetAttribute 提额。\n",
               smem64_max / 1024.0);
-  std::printf("%-28s %-8s %-8s %-16s %-14s %s\n", "配置", "行距", "行数",
-              "串行遍数预期", "耗时(ms)", "相对耗时");
+  std::printf("行距    行数    串行遍数预期    耗时(ms)     相对耗时  配置\n");
   for (int i = 0; i < kCases64; ++i) {
-    std::printf("%-28s %-8d %-8d %-16d %-14.4f %.3f\n", labels64[i],
-                lanes64[i], kRows, serial_passes(lanes64[i]), ms_d[i],
-                ms_d[i] / ms_d[1]);
+    std::printf("%-8d%-8d%-16d%-13.4f%-10.3f%s\n", strides64[i], kRows,
+                serial_passes(strides64[i]), ms_d[i], ms_d[i] / ms_d[1],
+                labels64[i]);
   }
 
   std::printf("\n--- 解读（64 位）---\n");
