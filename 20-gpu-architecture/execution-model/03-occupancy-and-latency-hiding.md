@@ -307,7 +307,7 @@ float occupancy   = (float)residentWarps / maxWarpsPerSM;   // maxWarpsPerSM = �
 
 上面三步都建立在一条前提上：**每线程的寄存器数由编译器在编译期定死，运行期不能变**（[01-sm-internals](01-sm-internals.md) §1 第一步）。§2 也正是靠这条前提才得出「warp 切换不需要保存上下文、因此几乎免费」——寄存器静态躺在文件里，换 warp 只是换指针。近两代硬件在这条前提上各开了一个口子。
 
-**其一，寄存器额度可以运行期调配。** Hopper（CC 9.0）引入 PTX 指令 `setmaxnreg`（`.inc` / `.dec`，带 `.sync` 后缀）：一个 warpgroup 可以在运行期把寄存器额度交出去或要回来，代价是一次 warpgroup 级的显式同步。它改变的不是总量（65536 不变），而是**同一 block 内不同 warp 之间的分配**——第一行（寄存器）于是从一个编译期常量，变成了可以在时间轴上分时复用的预算。
+**其一，寄存器额度可以运行期调配。** Hopper（CC 9.0）引入 PTX 指令 `setmaxnreg`（`.inc` / `.dec`，带 `.sync` 后缀）：一个 warpgroup 可以在运行期把寄存器额度交还到 block 级的寄存器池，或者从池里要回来（要不到时会阻塞），代价是一次 warpgroup 级的显式同步。可设的额度落在 24～256 之间、且必须是 **8 的倍数**——正是 [01-sm-internals](01-sm-internals.md) §1 第七步那个分配粒度。它改变的不是总量（65536 不变），而是**同一 block 内不同 warp 之间的分配**：第一行（寄存器）于是从一个编译期常量，变成了可以在时间轴上分时复用的预算。
 
 它服务的正是 [02-simt-and-divergence](02-simt-and-divergence.md) §3「前沿」讲的 warp specialization：生产者 warp 只需要很少的寄存器来做 TMA 搬运，消费者 warp 需要很多来放累加器。让生产者在搬运阶段把额度交出去、消费者接过来，**两类 warp 于是能同时住在同一个 SM 上**——静态分配下这是做不到的：第 2 行（共享内存）与第 4 行（线程上限）都还有余量，唯独第 1 行两边都要。
 
