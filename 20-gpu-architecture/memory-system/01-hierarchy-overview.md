@@ -321,7 +321,7 @@ Maxwell 把统一池从 64 KB 扩到 **96 KB**（每 block 的共享内存上限
 |---|---|---|---|---|---|---|
 | Fermi (2010) | Tesla M2090 | 64 KB（可 48:16 切分） | 48 KB | 768 KB | GDDR5 | 177 GB/s |
 | Kepler (2012) | Tesla K40 | 64 KB（三档切分） | 48 KB | 1.5 MB | GDDR5 | 288 GB/s |
-| Maxwell (2014) | GTX 980 | 96 KB | 48 KB | 2 MB | GDDR5 | 224 GB/s |
+| Maxwell (2014) | GTX 980 | 96 KB | 96 KB | 2 MB | GDDR5 | 224 GB/s |
 | Pascal (2016) | Tesla P100 | 64 KB | 64 KB | 4 MB | HBM2 | 732 GB/s |
 | Volta (2017) | Tesla V100 | 128 KB | 96 KB | 6 MB | HBM2 | 900 GB/s |
 | Turing (2018) | RTX 2080 Ti | 96 KB | 64 KB | 6 MB（满配 TU102） | GDDR6 | 616 GB/s |
