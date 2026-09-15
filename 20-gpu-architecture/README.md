@@ -10,7 +10,7 @@
 | [memory-system](memory-system/) | 存储层次 / 访存合并 / 共享内存 bank 冲突 | 未开始 |
 | tensor-core | MMA 指令族 / wmma / wgmma / tcgen05 / 稀疏 MMA | 未开始 |
 | interconnect | NVLink / NVSwitch / PCIe / 多卡拓扑与带宽 | 未开始 |
-| architecture-evolution | Volta→Ampere→Hopper→Blackwell 逐代规格差异 | 未开始 |
+| architecture-evolution | 跨代横向对比与规律提炼。**规格明细归各机制主题**（如逐代 SM 规格在 `execution-model`），本主题只做横向比较与趋势归纳，不重复罗列规格 | 未开始 |
 
 ## 与其他域的关系
 
