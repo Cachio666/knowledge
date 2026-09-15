@@ -114,7 +114,7 @@ warp 是 32 个线程，它们共享同一条指令流，只是各自持有不�
 
 共享部分包括：
 
-- **LSU（load/store unit）**：处理访存指令，把 warp 的 32 个地址合并成尽量少的事务（正文在 `20-gpu-architecture/memory-system`，此处回链）；
+- **LSU（load/store unit）**：处理访存指令，把 warp 的 32 个地址合并成尽量少的请求（合并的判定规则与代价，正文在 [memory-system/02-coalescing-and-cache-line](../memory-system/02-coalescing-and-cache-line.md)，此处回链）；
 - **SFU（special function unit）**：执行 `sin`、`cos`、`rsqrt`、`exp` 等超越函数，吞吐远低于 FP32 通路（通常每分片每周期 4 个 lane）；
 - **常数缓存（constant cache）**：广播式读取 `__constant__` 与 kernel 参数，同一 warp 内地址相同时一次读取即可服务全部 lane；
 - **共享内存 / L1**：同一块物理存储，按配置切分。Hopper 上这块存储**合计 256 KB**，其中至多 228 KB 可切给共享内存，其余作 L1 缓存——注意 228 KB 是共享内存的上限，不是这块存储的物理总量。

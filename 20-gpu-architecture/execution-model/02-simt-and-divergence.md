@@ -249,7 +249,7 @@ BSYNC B0               // 等 B0 对应的 lane 全部到齐，合并 active mas
 |---|---|---|
 | 一条 warp 指令的发射 | 1 cycle / 调度器 | 每 SM 4 个调度器，故每 SM 每周期最多 4 条（见 01 §2） |
 | 共享内存访问延迟 | 约 20～30 cycles | 无 bank 冲突时；冲突会按冲突路数成倍放大 |
-| 全局访存延迟 | 数百 cycles | 未命中 L1 时，数百 cycle 起步（正文在 `20-gpu-architecture/memory-system`，此处回链） |
+| 全局访存延迟 | 数百 cycles | 未命中 L1 时，数百 cycle 起步（正文在 [memory-system/01-hierarchy-overview](../memory-system/01-hierarchy-overview.md) §1、§2，此处回链） |
 | `BSSY` / `BSYNC` 的固定开销 | 数 cycle | 相对分支体长度是一个固定项，不随分支体增长 |
 
 这张表给出一条判据：**分支体的算量如果短到能与 `BSSY`/`BSYNC` 的固定开销相比，它就不值得一条真分支。**
