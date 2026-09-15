@@ -149,10 +149,25 @@ int main() {
   CUDA_CHECK(cudaMallocHost(&h_ref, n * sizeof(float)));
   CUDA_CHECK(cudaMallocHost(&h_out, n * sizeof(float)));
 
+  // 本程序赖以观测差异的前提是「工作集驻留 L2」。把它做成可验证的事实，
+  // 而不是注释里的断言：前提不成立时会显式提示，免得读者以为程序坏了。
+  cudaDeviceProp p{};
+  CUDA_CHECK(cudaGetDeviceProperties(&p, 0));
+  const size_t working_set = static_cast<size_t>(n) * 2 * sizeof(float);
+  std::printf("设备: %s，L2 缓存 %d KB，工作集（入 + 出）%zu KB\n", p.name,
+              p.l2CacheSize / 1024, working_set / 1024);
+  if (working_set > static_cast<size_t>(p.l2CacheSize)) {
+    std::printf("注意：工作集大于 L2，访存会落到 HBM，两版耗时之差将被访存地板\n");
+    std::printf("      吸收，下表可能接近平坦 —— 这不是程序出错，而是本程序赖以\n");
+    std::printf("      观测差异的前提不成立。\n");
+  }
+  std::printf("\n");
+
   std::printf("元素数 %d，block 数 %d，每 block %d 线程\n\n", n, blocks,
               kThreads);
-  std::printf("%-8s %-10s %-16s %-16s %-12s %s\n", "active", "路径数",
-              "divergent(ms)", "branchless(ms)", "diff(ms)", "div/branchless");
+  std::printf("%-8s %-10s %-16s %-16s %-12s %-12s %s\n", "active", "路径数",
+              "divergent(ms)", "branchless(ms)", "diff(ms)", "不一致",
+              "div/branchless");
 
   float t_light   = 0.0f;  // active = 0：全 warp 走轻路径
   float t_heavy   = 0.0f;  // active = 32：全 warp 走重路径
@@ -165,19 +180,20 @@ int main() {
                           cudaMemcpyDeviceToDevice));
     const float t_bl =
         time_variant<true>(d_in, d_out, n, active, blocks);
-    bad += count_mismatch(d_ref, d_out, h_ref, h_out, n);
+    const int miss = count_mismatch(d_ref, d_out, h_ref, h_out, n);
+    bad += miss;
 
     if (active == 0)  t_light = t_div;
     if (active == 32) t_heavy = t_div;
 
     const char* paths = (active == 0 || active == 32) ? "1" : "2";
     const float ratio = (t_bl > 0.0f) ? (t_div / t_bl) : 0.0f;
-    std::printf("%-8d %-10s %-16.4f %-16.4f %-12.4f %.2fx\n", active, paths,
-                t_div, t_bl, t_div - t_bl, ratio);
+    std::printf("%-8d %-10s %-16.4f %-16.4f %-12.4f %-12d %.2fx\n", active,
+                paths, t_div, t_bl, t_div - t_bl, miss, ratio);
   }
 
-  std::printf("\n正确性核对：每一档下 branchless 与 divergent 的输出逐元素一致"
-              "（不一致元素共 %d 个）\n", bad);
+  std::printf("\n两版输出比对：不一致元素共 %d 个（0 表示逐元素一致，"
+              "各档明细见上表「不一致」一列）\n", bad);
 
   std::printf("\n--- 解读 ---\n");
   std::printf("1. active = 0 时全 warp 走轻路径，divergent 能整个跳过重路径的 32 条 FMA，\n");
@@ -195,6 +211,7 @@ int main() {
   std::printf("   按模型的预期形状：它的耗时基本恒定、与 active 无关，且不低于\n");
   std::printf("   divergent。这是推导出的形状而非实测结论 —— 中间取值时 divergent\n");
   std::printf("   还要付 BSSY/BSYNC 与合流等待，ratio 略大于 1.00 属正常。\n");
+  std::printf("   判读以 diff(ms) 一列为准：比值列会被每档固定的启动开销稀释。\n");
   std::printf("   这说明「用算术选择消除分支」对**长**分支并不免费：它把控制流分歧\n");
   std::printf("   换成了计算冗余。无分支写法的价值在短分支（省去 BSSY/BRA/BSYNC 的开销），\n");
   std::printf("   不在长分支。\n");
