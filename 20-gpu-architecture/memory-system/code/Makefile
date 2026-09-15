@@ -1,7 +1,8 @@
 # memory-system 示例构建
 #
 # 目标环境：CUDA Toolkit >= 12.0，GPU 算力 >= sm_80（03 的 64 位一档
-# 需要每 block 动态共享内存的 opt-in 上限 >= 66 KB，sm_80 起满足）
+# 需要每 block 动态共享内存的 opt-in 上限 >= 67584 B（= 66 KB，程序按
+# 1024 折算打印），sm_80 起满足）
 #
 # 用法：
 #   make              构建全部

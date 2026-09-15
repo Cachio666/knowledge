@@ -317,7 +317,7 @@ Maxwell 把统一池从 64 KB 扩到 **96 KB**（每 block 的共享内存上限
 
 下表为各代**代表型号**的存储规格，供交叉验证。
 
-| 代（年份） | 代表型号 | 统一 L1/共享内存 每 SM | 共享内存上限 / 块 | L2 | 显存 | 带宽 |
+| 代（年份） | 代表型号 | 统一 L1/共享内存 每 SM | 共享内存上限 / SM | L2 | 显存 | 带宽 |
 |---|---|---|---|---|---|---|
 | Fermi (2010) | Tesla M2090 | 64 KB（可 48:16 切分） | 48 KB | 768 KB | GDDR5 | 177 GB/s |
 | Kepler (2012) | Tesla K40 | 64 KB（三档切分） | 48 KB | 1.5 MB | GDDR5 | 288 GB/s |
@@ -326,7 +326,7 @@ Maxwell 把统一池从 64 KB 扩到 **96 KB**（每 block 的共享内存上限
 | Volta (2017) | Tesla V100 | 128 KB | 96 KB | 6 MB | HBM2 | 900 GB/s |
 | Turing (2018) | RTX 2080 Ti | 96 KB | 64 KB | 6 MB（满配 TU102） | GDDR6 | 616 GB/s |
 | Ampere (2020) | A100 80 GB | 192 KB | 164 KB | 40 MB | HBM2e | 2039 GB/s |
-| Hopper (2022) | H100 SXM | 256 KB | 227 KB | 50 MB | HBM3 | 3350 GB/s |
+| Hopper (2022) | H100 SXM | 256 KB | 228 KB | 50 MB | HBM3 | 3350 GB/s |
 | Blackwell (2024) | B200 | 256 KB | 228 KB | 约 126 MB（双 die 合计） | HBM3e | 8000 GB/s |
 
 **表中数字的来源**：共享内存上限与每 SM 的容量取自 *CUDA C++ Programming Guide* 的 compute capability 表与各代架构白皮书 / tuning guide（Fermi—Blackwell）；统一池大小取自各代白皮书（GF100 的 64 KB 可配置、GK110 的三档切分、GM204 的 96 KB、GV100 的 128 KB、GA100 的 192 KB、GH100 的 256 KB）；L2 与带宽取自各代白皮书的型号规格页。**唯一一项需要注明口径的是 Blackwell 的 L2**：NVIDIA 未在公开白皮书中给出 GB100 的 L2 容量，表中那个数是第三方规格库给出的双 die 合计值，**只作量级参考**，不要拿它做设计。另注意**表内不能横向跨型号比较**：Maxwell 一行用的是消费级型号、Ampere 一行用的是数据中心型号，这正是 [01-sm-internals](../execution-model/01-sm-internals.md) §4.1 提醒过的那类陷阱。

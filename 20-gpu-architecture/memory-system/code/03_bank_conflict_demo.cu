@@ -218,9 +218,11 @@ int main() {
   std::printf("让共享内存访问而非全局访存主导耗时。\n");
 
   // ---- 64 位（double）元素：同样的按列取用 ----
-  // 8 warp × 32 行 × 33 列 × 8 字节 = 66 KB，越过了动态共享内存 48 KB 的
+  // 8 warp × 32 行 × 33 列 × 8 字节 = 67584 B（= 66 KiB，下面按 1024 折算
+  // 打印），越过了动态共享内存 48 KiB 的
   // 默认上限，必须先申请提额（上限见 sharedMemPerBlockOptin）。
-  // 前提：设备的 opt-in 上限要 ≥ 66 KB —— sm_80 起满足（sm_80 是 163 KB），
+  // 前提：设备的 opt-in 上限要不小于 67584 B（= 66 KB）—— sm_80 起满足
+  // （sm_80 是 163 KB），
   // Turing（sm_75）只有 64 KB，跑这一档会在下面的 CUDA_CHECK 处报错退出。
   const size_t smem64_max =
       static_cast<size_t>(kWarps) * kRows * 33 * sizeof(double);
