@@ -422,7 +422,7 @@ make 01_bandwidth_probe
 
 ## 参考
 
-- NVIDIA, *CUDA C++ Programming Guide* ——「Memory Hierarchy」章节：各级存储的可见范围与管理方式、统一 L1/共享内存的切分；「Compute Capabilities」章节：各 CC 的共享内存上限与每 SM 容量。
+- NVIDIA, *CUDA C++ Programming Guide* ——「Memory Hierarchy」章节：各级存储的可见范围与管理方式、统一 L1/共享内存的切分；「Device Memory Accesses」小节：local memory 的物理归属、缓存行为，以及它的布局规则（局部数组按线程 ID 交织排布，故 warp 内访问同一相对下标时满合并）——§2「local memory 的物理归属」一段的依据；「Compute Capabilities」章节：各 CC 的共享内存上限与每 SM 容量。
 - NVIDIA 各代架构白皮书：*NVIDIA's Next Generation CUDA Compute Architecture: Fermi*（GF100 的统一 L1/共享内存）、*Kepler GK110 Architecture*（三档切分、1536 KB L2）、*Maxwell GM204 Architecture*（96 KB 池、2 MB L2）、*NVIDIA Tesla P100*（HBM2、4 MB L2）、*NVIDIA Tesla V100*（128 KB 统一池、6 MB L2）、*NVIDIA A100 Tensor Core GPU Architecture*（192 KB 池、40 MB L2）、*NVIDIA H100 Tensor Core GPU Architecture*（228 KB 共享内存、50 MB L2、DSMEM）、*NVIDIA Blackwell Architecture Technical Brief*（TMEM、HBM3e）。
 - NVIDIA 各代 tuning guide：*Volta*、*Turing*、*Ampere*、*Hopper*、*Blackwell*——每代的逐 SM 规格与共享内存配置方式。
 - 各代代表型号的显存规格（GDDR5/HBM2/HBM2e/HBM3/HBM3e 的容量与带宽）均取自对应产品的官方 datasheet 页。
