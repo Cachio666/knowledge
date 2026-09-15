@@ -23,7 +23,7 @@ updated: 2026-09-15
 
 ## 0. 背景与动机
 
-一个用共享内存做分块（tiling）的矩阵乘法。每个 lane 负责 tile 的一行（`lane` 是 warp 内 0～31 的编号，见 [01-sm-internals](../execution-model/01-sm-internals.md) §1），内层循环沿列推进：
+一个用共享内存做分块（tiling）的矩阵乘法。每个 lane 负责 tile 的一行（`lane` 是 warp 内 0～31 的编号，见 [02-simt-and-divergence](../execution-model/02-simt-and-divergence.md) §1），内层循环沿列推进：
 
 ```cuda
 __shared__ float tile[32][32];
@@ -51,7 +51,7 @@ __shared__ float tile[32][33];       // 只改了这一个数
 
 先约定三个词，本文只用这三个。
 
-- **lane**：warp 内的一条数据通路，编号 0～31（定义与 warp 的关系见 [01-sm-internals](../execution-model/01-sm-internals.md) §1）。一个 warp 的 32 个 lane 在同一时刻执行同一条访存指令。
+- **lane**：warp 内的一条数据通路，编号 0～31（定义与 warp 的关系见 [02-simt-and-divergence](../execution-model/02-simt-and-divergence.md) §1）。一个 warp 的 32 个 lane 在同一时刻执行同一条访存指令。
 - **bank**：共享内存地址空间的划分单位。一共 32 个，每个 4 字节宽，地址按 4 字节为单位轮流分配（§1 第一步）。
 - **串行遍数**：一次 warp 访问被拆成几遍逐遍服务。它是本文衡量冲突代价的量。
 
@@ -69,7 +69,7 @@ bank(addr) = (addr ÷ 4) mod 32
 
 由这个定义直接得到一条硬件宽度：**32 个 bank 每个每周期能供 4 字节，合计 128 字节/周期**。它恰好是一个 warp 的 32 个 lane 各读一个 `float` 的宽度——这与 [02-coalescing-and-cache-line](02-coalescing-and-cache-line.md) §2 那条"32 个 lane × 4 字节 = 128 字节 = 一条 cache line"是同一个对齐值，两边的设计意图一致：**让"一个 warp 的一次满效访问"正好一遍做完。**
 
-（bank 宽度在计算能力 3.x 上可以配置成 8 字节，5.0 起固定回 4 字节。本文按 4 字节推，8 字节的情形与它的实际影响见 §2 末。）
+（bank 宽度在计算能力 3.x 上可以配置成 8 字节，5.0 起固定回 4 字节。本文按 4 字节推——5.0 之后的架构都是这个口径。别把 §2 末那段"64 位访问"当成这件事：那里换掉的是**元素宽度**（`double` / `float2`），bank 宽度仍然是 4 字节。）
 
 **第二步：冲突判定——三条规则。**
 
@@ -79,7 +79,7 @@ bank(addr) = (addr ÷ 4) mod 32
 |---|---|---|
 | 落在 **32 个不同的 bank** | 无冲突 | 一遍完成 |
 | 多个地址落在**同一个 32 位字**内 | 多播（broadcast） | 仍算无冲突 |
-| 多个地址落在同一个 bank 的**不同** 32 位字上 | 冲突 | 按该 bank 上被请求的不同地址数串行化 |
+| 多个地址落在同一个 bank 的**不同** 32 位字上 | 冲突 | **取各 bank 上不同地址数的最大值**，按这个值串行化 |
 
 第二条值得单独说一句：**广播的判定单位是一个 32 位字，不是"完全相同的地址"。** 两个 lane 分别读同一个 `float` 的第 1 和第 3 个字节，硬件同样只取一次再广播出去，因为它们在同一个字里。所以 `char` 数组按 `shared[base + lane]` 访问是无冲突的——4 个连续 `char` 共享一个字。
 
@@ -94,7 +94,7 @@ bank(addr) = (addr ÷ 4) mod 32
 bank(i) = (base + s · i) mod 32
 ```
 
-`i` 从 0 取到 31 时，集合 `{s · i mod 32}` 是**模 32 下由 `s` 生成的子群**，也就是 32 的全体倍数：
+`i` 从 0 取到 31 时，集合 `{s · i mod 32}` 是**模 32 下由 `s` 生成的子群**，也就是 `d = gcd(s, 32)` 的全体倍数：
 
 ```text
 {s · i mod 32 : i = 0 … 31} = {0, d, 2d, … , 32 − d}     其中 d = gcd(s, 32)
@@ -187,7 +187,7 @@ bank = (lane × 33 + c) mod 32 = (lane + c) mod 32
 
 1. warp scheduler 发射一条 `LDS`，32 个 lane 的地址一起进 LSU；
 2. LSU 按 `(addr ÷ 4) mod 32` 把 32 个地址分进 32 个 bank 的桶；
-3. **每个桶里的不同地址数，就是这条指令要串行多少遍**——一个桶里有两个不同地址，bank 阵列就要被访问两次，第二次才轮到另一批 lane；
+3. **各桶里不同地址数的最大值，就是这条指令要串行多少遍**——任何一个桶里有两个不同地址，bank 阵列就要被访问两次，第二次才轮到另一批 lane；
 4. 每一遍**只服务一个地址**，其余 lane 空等；
 5. 全部遍做完，结果一起写回目的寄存器。
 
@@ -213,7 +213,7 @@ bank = (lane × 33 + c) mod 32 = (lane + c) mod 32
 到上面为止，模型都是"32 个 lane 的 4 字节访问"。把元素换成 `double` 或 `float2`，规则换三条：
 
 1. **一条 warp 的 64 位访问会被拆成两个 half-warp 请求（各 16 个 lane），独立发出。** 所以冲突是在**半个 warp 内部**判定的，判定池从 32 个 lane 变成 16 个。
-2. **冲突的判据没变**：同一个 half-warp 内，两个 lane 落在同一个 bank 的不同地址上，就是冲突。文档给的例子正是 `__shared__ double shared[32]` 按连续下标访问——它**没有冲突**，因为每个 half-warp 的 16 个 lane 恰好铺满 32 个 4 字节 bank（每个 double 横跨相邻两个）。
+2. **冲突的判据没变**：同一个 half-warp 内，两个 lane 落在同一个 bank 的不同地址上，就是冲突。文档给的例子正是 `extern __shared__ double shared[]` 按 `shared[BaseIndex + tid]` 连续下标访问——它**没有冲突**，因为每个 half-warp 的 16 个 lane 恰好铺满 32 个 4 字节 bank（每个 double 横跨相邻两个）。
 3. **每个 lane 的 8 字节横跨两个相邻 bank**，而 bank 阵列一次仍然只供 128 字节——所以一次 32 个 lane 的 64 位访问**至少要 2 遍**，不管有没有冲突。等价的说法是：可以**把 32 个 bank 看成 16 个"双字槽"**（每个槽 8 字节），同一个槽里出现两个不同地址就是冲突。
 
 为什么这三条要一起看？因为第 1 条会让**冲突路数的数字变小**（池子小了一半），第 3 条会让**地板抬高**（最少 2 遍）。这是两笔方向相反的账，只读前一笔就会得出"改用 64 位访问能省一半冲突"的结论——§4.3 那条坑就是它的产物。
@@ -271,7 +271,7 @@ m = 5 → 1 遍（无冲突）      m = 3 → 4 遍      m = 0 → 32 遍（等�
 
 **所以 swizzle 给的不是"有冲突 / 无冲突"这个二值开关，而是一个可调的档位**：用几次异或把冲突路数从 32 一路拧到 1，代价按掩码位数付。
 
-它换掉的正是 padding 的两笔代价：容量没涨（不碰常驻 block 数那笔账），行距仍是 32（行首仍落在 128 字节边界上，向量化访问不受影响）。**它自己的代价是地址计算多一次异或，以及行内数据不再按原次序存放**——这一点决定了实际实现里异或的最小单位不是单个元素，而是一个固定的**块**（典型 16 字节，对应一条 128 位访存）：块内保持连续，块之间被异或打散，这样"向量化读一整行"仍然成立。Hopper 起 TMA 的描述符里直接带 swizzle 模式（把 16 字节块映射到 4 个 bank 的子组），就是把这份重排交给硬件去做（TMA 的机制在 [01-sm-internals](../execution-model/01-sm-internals.md) §3，此处回链，不重复）。
+它换掉的正是 padding 的两笔代价：容量没涨（不碰常驻 block 数那笔账），行距仍是 32（行首仍落在 128 字节边界上，向量化访问不受影响）。**它自己的代价是地址计算多一次异或，以及行内数据不再按原次序存放**——这一点决定了实际实现里异或的最小单位不是单个元素，而是一个固定的**块**（典型 16 字节，对应一条 128 位访存）：块内保持连续，块之间被异或打散，这样"向量化读一整行"仍然成立。Hopper 起 TMA 的描述符里直接带 swizzle 模式——重排由描述符声明、由硬件执行，程序员不再手写异或（TMA 的机制在 [01-sm-internals](../execution-model/01-sm-internals.md) §3，此处回链，不重复）。
 
 现代高性能 GEMM 库普遍用 swizzle 而不是 padding，理由就是上面这两笔账的差额（正文在 `40-kernels/gemm/02-shared-memory-tiling`，此处回链）。
 
@@ -312,7 +312,7 @@ Hopper 的线程块簇（thread block cluster）与分布式共享内存（DSMEM
 
 这条容易犯，是因为两个维度在源码里长得一模一样（都是方括号里的一个数），语义上却一个决定"有多少行"、一个决定"一行多长"。C 的行优先布局让**最后一个维度**才是行距。改错了那个数，程序编得过、跑得动、结果也对，只是慢。
 
-**规避**：改完之后**回代一次 §1 第三步的式子**，而不是看代码里"有没有多出一个数"。判据是 `gcd(行距, 32) = 1`，也就是行距必须是**奇数**。同一个判据顺手还能看出另一个边界：加 1 让行距变 33（奇数，好），加 2 变成 34，`gcd(34, 32) = 2` → **还残留 2 路冲突，加偶数等于没加**。
+**规避**：改完之后**回代一次 §1 第三步的式子**，而不是看代码里"有没有多出一个数"。判据是 `gcd(行距, 32) = 1`，也就是行距必须是**奇数**。同一个判据顺手还能看出另一个边界：加 1 让行距变 33（奇数，好）；加 2 变成 34，`gcd(34, 32) = 2` → 还剩 **2 路冲突**（比 32 路快 16 倍，但仍到不了无冲突）。**加偶数只能把冲突降到 `gcd`，永远降不到 1 路**——想一次归零，加的数得是奇数。
 
 ### 4.2 给本来没有冲突的 kernel 加 padding
 
@@ -324,7 +324,9 @@ Hopper 的线程块簇（thread block cluster）与分布式共享内存（DSMEM
 bank = (r × 32 + lane) mod 32 = lane        → 32 个 bank 各不相同，无冲突
 ```
 
-而另一半访问 `tile[k][c]`（`k` 是循环变量，对整个 warp 同值）是 §1 第二步的**多播**，也不收费。**这个 kernel 从头到尾没有冲突**，于是 §1 第六步那两笔代价全是净亏：容量涨 3.1%，行首不再 16 字节对齐（向量化读写失效）。更重的一笔在容量上——共享内存申请量是每 SM 常驻 block 数的约束项。公式与"想让 32 个 block 同时常驻、每 block 只剩约 7 KB"那个例子在 [01-hierarchy-overview](01-hierarchy-overview.md) §3 末，此处回链、不重推；同一条公式换个数代入就能看到它的形态：每 block 申请 74 KB 时 Hopper 上 `floor(228 ÷ 74) = 3`，能常驻 3 个 block；加 1/32 的 padding 后变成 `74 × 33/32 ≈ 76.3 KB`，`floor(228 ÷ 76.3) = 2`——**容量只涨了 3%，常驻 block 数掉了三分之一**，用来掩盖延迟的 warp 跟着少掉一批。
+而另一半访问 `tile[k][c]`（`k` 是循环变量，对整个 warp 同值）是 §1 第二步的**多播**，也不收费。**这个 kernel 从头到尾没有冲突**，于是 §1 第六步那两笔代价全是净亏：容量涨 3.1%，行首不再 16 字节对齐（向量化读写失效）。
+
+（上面这条结论带一个前提：**`blockDim.x = 32`，也就是一个 warp 恰好铺满 tile 的一整行。** block 取成 16×16 时，一个 warp 会横跨 tile 的两行——那个"对所有 lane 同值"的下标就不再同值了，两半 warp 的地址相差一个行距（32 个字），落在同一个 bank 的不同地址上，于是它从多播变成 **2 路冲突**，"从头到尾没有冲突"也就不再成立。这也是 §3 改进三那句"布局、lane 映射、数据从哪来要一起看"的具体形态。）更重的一笔在容量上——共享内存申请量是每 SM 常驻 block 数的约束项。公式与"想让 32 个 block 同时常驻、每 block 只剩约 7 KB"那个例子在 [01-hierarchy-overview](01-hierarchy-overview.md) §3 末，此处回链、不重推；同一条公式换个数代入就能看到它的形态：每 block 申请 74 KB 时 Hopper 上 `floor(228 ÷ 74) = 3`，能常驻 3 个 block；加 1/32 的 padding 后变成 `74 × 33/32 ≈ 76.3 KB`，`floor(228 ÷ 76.3) = 2`——**容量只涨了 3%，常驻 block 数掉了三分之一**，用来掩盖延迟的 warp 跟着少掉一批。
 
 **规避**：**只在确认存在 bank 冲突时才加。** 判据不是"这个 tile 是不是方阵"，而是"这一次访问的 lane 落在不同的 bank 上吗"——回代 §1 第三步的 `gcd`，或让 profiler 报一次冲突路数（profiling 的正文在 `50-performance`，此处回链）。加完之后再检查一遍占用率有没有掉档（占用率的完整判据见 [03-occupancy-and-latency-hiding](../execution-model/03-occupancy-and-latency-hiding.md)，此处回链）。
 
@@ -368,7 +370,7 @@ make 03_bank_conflict_demo
 ## 参考
 
 - NVIDIA, *CUDA C++ Programming Guide* ——「Device Memory Accesses」章节的「Shared Memory」小节：`successive 32-bit words map to successive banks`、同一 32 位字内的多个访问按多播处理（故无冲突）而不同 32 位字落在同一 bank 才是冲突、以及 `shared[base + s × tid]` 这类线性跨步访问的冲突路数（`s` 为奇数时无冲突）——**§1 第一、二、三、四步的依据**。同一章的「Larger Than 32-Bit Access」一段：64 位访问的请求被拆成两个 half-warp 请求、冲突只在 half-warp 内判定、`__shared__ double shared[32]` 按连续下标访问无冲突；128 位访问多数自带 2 路冲突（在 quarter-warp 内同 bank 的最大线程数上加 1）——**§2 末「64 位访问」一段的依据**。以上均为**复述，未逐字核对官方页面原文**；小节编号与措辞以该文最新版为准。
-- NVIDIA, *CUDA C++ Programming Guide* ——「Compute Capabilities」章节与 `cudaFuncSetSharedMemConfig` 的文档：bank 宽度可配置的架构范围（计算能力 3.x 可配 4 或 8 字节，5.0 起固定 4 字节）——§1 第一步括注与 §2 末的依据。
+- NVIDIA, *CUDA C++ Programming Guide* ——「Compute Capabilities」章节与 `cudaFuncSetSharedMemConfig` 的文档：bank 宽度可配置的架构范围（计算能力 3.x 可配 4 或 8 字节，5.0 起固定 4 字节）——**§1 第一步括注的依据**。本文的模型按 4 字节 bank 推；§2 末那段换的是元素宽度（`double` / `float2`），不是 bank 宽度。
 - NVIDIA, *CUDA C++ Best Practices Guide* ——「Shared Memory」一节：padding（`[BLOCK][BLOCK+1]`）的用法与 64 位访问在两种 bank 宽度下的差异——§3 改进一与 §2 末的佐证。（复述，未逐字核对页面原文。）
 - NVIDIA 架构白皮书：*NVIDIA H100 Tensor Core GPU Architecture*（线程块簇与 DSMEM，§3「演进」；机制正文在 [01-hierarchy-overview](01-hierarchy-overview.md) §3）、*NVIDIA Hopper Architecture Tuning Guide*（TMA 描述符的 swizzle 模式，§3 改进二）。
 - **本文没有实测数据。** 文中全部 cycles 与倍率都是**推导值**：由 §1 第一步的 bank 划分模型、§1 第二步的冲突判定规则，以及 [01-hierarchy-overview](01-hierarchy-overview.md) §1 第六步已公布的延迟量级算出，每一步算术都写在正文里。要复核它们，入口是配套程序 `code/03_bank_conflict_demo.cu`（见「编译与运行」）。
