@@ -193,7 +193,7 @@ Ampere 留下了共享内存的隔离问题：block 之间依然无法协作，�
 
 每 SM 128 个 FP32 单元、64 个常驻 warp、**228 KB 共享内存**、256 KB 寄存器文件。代表型号 H100 SXM 有 **132 个 SM**——132 × 128 = 16896，正是 §0 里那个诱人的乘法。
 
-Hopper 回应了 Ampere 留下的问题，手段是**线程块簇（thread block cluster）**：一个 cluster 最多包含 8 个 block（可移植大小；使用非可移植大小可到 16），簇内的 block 被共同调度到同一个 GPC 内的一组 SM 上，并且可以互相读写对方的共享内存——这就是**分布式共享内存（DSMEM）**，通过 `cluster.map_shared_rank()` 获得对端 block 的共享内存地址，配合簇级同步使用。SM 之间的协作第一次不再必须经过 L2。
+Hopper 回应了 Ampere 留下的问题，手段是**线程块簇（thread block cluster）**：一个 cluster 最多包含 8 个 block（可移植大小；使用非可移植大小可到 16），簇内的 block 被共同调度到同一个 GPC 内的一组 SM 上，并且可以互相读写对方的共享内存——这就是**分布式共享内存（DSMEM）**。SM 之间的协作第一次不再必须经过 L2。（DSMEM 的完整机制与它作为「扩大可控范围」这一步的意义，正文在 [20-gpu-architecture/memory-system](../memory-system/01-hierarchy-overview.md)，此处回链。）
 
 第四代 Tensor Core（`wgmma` 指令族）与 TMA（张量内存加速器）进一步把矩阵运算的操作数准备与批量数据搬运从线程的指令流中剥离：`wgmma` 由整个 warpgroup 协作发射，TMA 则由单个线程发起一大块搬运，寄存器压力因此下降——这实际上扩大了能跑满常驻 warp 数的 kernel 范围。
 
