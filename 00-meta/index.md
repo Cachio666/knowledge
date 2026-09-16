@@ -89,7 +89,29 @@
 尚未开始。
 
 ## 60-compilers
-尚未开始。
+- [mlir](../60-compilers/mlir/) —— IR 结构与方言 / tensor 与 memref / 渐进式 lowering / 编写 pass
+  - [01-ir-and-dialects](../60-compilers/mlir/01-ir-and-dialects.md)
+  - [02-tensor-vs-memref](../60-compilers/mlir/02-tensor-vs-memref.md)
+  - [03-progressive-lowering](../60-compilers/mlir/03-progressive-lowering.md)
+  - [04-writing-a-pass](../60-compilers/mlir/04-writing-a-pass.md)
+- [tvm](../60-compilers/tvm/) —— 计算与调度分离 / 调度原语与物化位置 / 两条 TIR 轨道与 tile 原语 / 自动调度
+  - [01-compute-and-schedule](../60-compilers/tvm/01-compute-and-schedule.md)
+  - [02-schedule-primitives](../60-compilers/tvm/02-schedule-primitives.md)
+  - [03-native-track-and-tile-primitives](../60-compilers/tvm/03-native-track-and-tile-primitives.md)
+  - [04-auto-scheduling](../60-compilers/tvm/04-auto-scheduling.md)
+- [inductor](../60-compilers/inductor/) —— 图捕获与 graph break / 融合与调度 / codegen 与后端 / 动态形状与重编译
+  - [01-graph-capture](../60-compilers/inductor/01-graph-capture.md)
+  - [02-fusion-scheduling](../60-compilers/inductor/02-fusion-scheduling.md)
+  - [03-codegen](../60-compilers/inductor/03-codegen.md)
+  - [04-dynamic-shapes](../60-compilers/inductor/04-dynamic-shapes.md)
+- [xla](../60-compilers/xla/) —— TensorFlow 与 JAX 的图编译 / HLO 与形状推断 / 融合 kind 与三层判据 / 布局指派与内存空间
+  - [01-hlo-and-shape-inference](../60-compilers/xla/01-hlo-and-shape-inference.md)
+  - [02-fusion](../60-compilers/xla/02-fusion.md)
+  - [03-layout-and-memory](../60-compilers/xla/03-layout-and-memory.md)
+- [auto-tuning](../60-compilers/auto-tuning/) —— 搜索空间的名义基数与有效基数 / 代价模型与排序能力 / 搜索策略与预算
+  - [01-search-space](../60-compilers/auto-tuning/01-search-space.md)
+  - [02-cost-models](../60-compilers/auto-tuning/02-cost-models.md)
+  - [03-search-algorithms](../60-compilers/auto-tuning/03-search-algorithms.md)
 
 ## 70-frameworks
 尚未开始。

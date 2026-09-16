@@ -127,3 +127,23 @@
 | MoE (Mixture of Experts) | 混合专家 | 每 token 只过一个子集的专家（`top_k` 个）。计算量 `4·tokens·top_k·d_model·d_ff`（**两个 GEMM**：up + down；SwiGLU 三投影则是 6）——**与专家总数无关**。⚠ **省的是 FLOPs，不是显存**：全部专家的参数都要驻留，**权重流量随专家数线性上涨**，所以权重流量的算术强度 `2·T·top_k/(E·esize)` 随 `E` **反比下降**，拐点批大小 `T* = I*·E·esize/(2·top_k)` 随 `E` **线性上涨**。 |
 | grouped GEMM | 分组矩阵乘 | 把变长的一批小 GEMM 合成一次调用，**N、K 相同、只有 M 变长**——所以问题归结为「M 不规整」。**按实际长度分组**的浪费只来自「`M_e` 不是 `BM` 的整数倍」（与分布无关）；**按最大专家填充**的浪费是 `1 − 均值/最大值`（均匀 ~4%、幂律 >60%）。⚠ 网格调度比填充策略重要得多：**一个专家一个 block** 只填满 `E/槽位数` 的机器，**一个 tile 一个 block** 能到 99%。 |
 | 容量因子 (capacity factor) | — | 每个专家开出的 slot 数上限。**定义与语义的正文在 `80-model-architectures/moe`**，kernel 侧只关心它带来的三种状态：正常、被截断（要 mask）、以及**`k` 个选择全被截断**——最后这种 token 前向输出恰为 0、反向梯度也恰为 0，**在本步训练里完全不存在**。 |
+| IR (Intermediate Representation) | 中间表示 | 编译器内部表示程序的形式，决定了 pass 能看见什么、能改什么。本域出现的两种具体形态：MLIR 的四层递归结构（Operation / Region / Block / Value）与 XLA 的 HLO。 |
+| SSA (Static Single Assignment) | 静态单赋值 | **每个值恰好被定义一次**，于是「值」与「定义它的那条指令」一一对应——这是「形状可以挂成指令自身的属性、不必另建值表」的前提。同一个值被定义两次不是风格问题：def-use 分析整个失效。 |
+| dialect (方言) | 方言 | MLIR 用命名空间区分**抽象层次**的机制：`arith.addf`、`linalg.matmul`、`scf.for`、`gpu.launch` 分属四个方言。**区分层次的不是结构，是 operation 的名字**——结构（Operation / Region / Block / Value）全库共用一套。 |
+| lowering / progressive lowering | 降级 / 渐进式 lowering | 把 IR 从高层表示翻译到低层表示。**关键在「渐进」**：不存在一次从顶到底的转换，存在的是一串各自只做一件小事的变换（可单独测试、单独替换），代价是**每一步都有前置条件**，且不满足时的失败方式反直觉——`linalg` 降成 `scf.for` 要求操作数已是 memref 语义，只要还有 tensor 就 "definitely fails"。 |
+| bufferization | 缓冲化 | 把 tensor 语义的 op 转成 memref 语义的 op。**它不是一次改名**：它同时决定了哪些中间结果真的要被分配出来——「物化次数」因此变成一个可数的量（数 `memref.alloc` 的个数）。 |
+| tensor semantics / memref semantics | tensor 语义 / memref 语义 | `tensor<2x3xf32>` 与 `memref<2x3xf32>` 的形状部分完全相同，差别只有一处：**存储有没有被指定**。memref 是「指向内存的**引用**」（官方定义 *Shaped reference to a region of memory*），因此**两个 memref 可以指向同一片内存**，tensor 值不能——别名是全部危险的来源。⚠「值语义 / 缓冲语义」讲得通但**不是官方引文**，引用时只引上面那两个词。 |
+| compute / schedule separation | 计算与调度分离 | 「算什么」（`@T.prim_func`）与「中间结果放不放到独立存储里」（`tvm.s_tir.Schedule`）分成两层。**默认行为反直觉：每个中间结果都被物化在根作用域**，不是被 inline 掉。 |
+| materialize / recompute | 物化 / 重算 | 本域贯穿全局的那条主线。**物化 = 为中间结果分配独立的存储**（寄存器、共享内存、全局内存都算）；**重算 = 根本不分配存储**，把计算直接替换进消费者的表达式。每一次 lowering、每一次变换、每一个 pass 都在做这个权衡。 |
+| compute_at / compute_inline | — | `s_tir.Schedule` 里管「放到哪儿」的两个方向：`compute_at`（物化，缩到某个循环内）、`compute_inline`（不物化）。**`compute_root` 不在 v0.26.0 的 API 里**——没被搬走的 block 本来就在根位置；TE 时代「三态齐备」是旧口径，不要照抄。 |
+| graph break | 图断点 / 切图 | 捕获中途做不到时**把图切断**。切出来的只是**那一段**区域改为跑普通 Python，**前后两段仍然各自被编译成图**——「整段退回 eager」是本主题最贵的误解。断点处仍存活的值成为下一张子图的输入（官方为此生成 resume function），所以切图不是丢掉前半段。官方把它定位成特性（"graph breaks are a feature"）：带断点的程序能跑，拒绝编译的程序不可用。 |
+| guard | 守卫 | 挂在 code object 上的一组布尔假设，**编译产物只有在它成立时才能复用**。内容是官方措辞的 **constant values, types, and object IDs**——既有形状与类型，也有**常量的精确值**。 |
+| TorchDynamo | — | `torch.compile` 的追踪器，用 CPython 的 **Frame Evaluation API（PEP 523）** 在**每个函数帧进入时**决定该帧编不编。**不是 `sys.settrace`**（那是行级事件，粒度与语义都不同），**也不是 `sys.monitoring`**（与 `torch.compile` 已知不兼容，注册回调会引发 graph break）。 |
+| FX graph | FX 图 | Dynamo 逐条模拟字节码、把对象包成 `VariableTracker` 之后产出的图。它是**调度阶段的输入**——图捕获本身不做任何物化决策；它到 Inductor 自己的 IR（`ComputedBuffer` 之类）之间还有一次 lowering。 |
+| fusion group | 融合组 | Inductor 调度阶段的产物，由 `SchedulerNode` 划成 `FusedSchedulerNode`。**划法就是「哪些中间结果不落内存」这个决策本身**；判据是**一串门槛**（垂直的索引逐字匹配、水平的字节阈值、全局的节点数与峰值显存门），不是一条规则。 |
+| HLO (High Level Operations) | — | XLA 与前端之间的中间表示。两条性质决定了它的形状推断长什么样：**它是 SSA 的**（每条指令恰好产生一个值，形状可挂成指令属性）、且**大部分是纯的**。 |
+| layout assignment | 布局指派 | XLA 在**融合之前**跑的阶段：约束对象沿 HLO 图创建、排序、传播，冲突时高优先级者胜，并由 **`kCopy`** 桥接不兼容的布局。⚠ 不要与方向相反的 **memory space assignment** 混为一谈——后者的目标是把值塞进 alternate memory，**且 GPU 上跑的并不是它**。 |
+| cost model | 代价模型 | 在少量实测数据上训一个模型，给没测过的配置打分。**衡量它的关键指标不是预测得多准，是排序排得多对**——搜索从来不问「这个程序跑多少毫秒」，只问「这两个里哪个更值得测」。⚠ 拿 RMSE 当合格线是这一行的典型误用：绝对值崩了（R² 变负）而排序仍可用，是常态。 |
+| search space | 搜索空间 | 「搜什么」。两级结构：**sketch**（骨架，由推导规则递归生成）+ **annotation**（低层参数，随机采样）。⚠ **融合决策在 sketch 阶段就已定死**，把它读成 annotation 层的一个开关是错的。 |
+| nominal / effective size | 名义基数 / 有效基数 | 名义基数 = 把各参数取值范围乘起来得到的数，**是个假象**（大量配置生成同一段代码，另有一批根本编译不过）；有效基数 = **等价类中可行的那部分**。⚠ 有效基数是**等价类的个数，不是配置的个数**；按名义基数估预算，最坏情况下 82% 花在无效点上。 |
+| autotuning | 自动调优 | 让机器在搜索空间里挑实现。三个部件相乘：**空间 → 代价模型 → 搜索**。⚠「多测几个候选不会让结果变差」只在候选集不变时成立——**预算单调，空间不单调**，改动候选集本身会让结果变差。 |
