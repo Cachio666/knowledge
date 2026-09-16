@@ -8,7 +8,7 @@
 |---|---|---|
 | [mlir](mlir/) | IR 结构与方言 / tensor 与 memref / 渐进式 lowering / 编写 pass | 已完成 |
 | [tvm](tvm/) | 计算与调度分离 / 调度原语与物化位置 / 两条 TIR 轨道与 tile 原语 / 自动调度 | 已完成 |
-| inductor | torch.compile 后端 / 图捕获 / codegen / 与 Triton 的关系 | 未开始 |
+| [inductor](inductor/) | 图捕获与 graph break / 融合与调度 / codegen 与后端 / 动态形状与重编译 | 已完成 |
 | xla | TensorFlow 与 JAX 的图编译 / HLO / 算子融合 | 未开始 |
 | auto-tuning | 自动调优方法 / 搜索空间设计 / 代价模型 | 未开始 |
 
