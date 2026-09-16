@@ -1036,27 +1036,28 @@ def b9_decode_ai():
     print(f"    每生成一个 token（batch = 1）：")
     print(f"      FLOPs = 4·S·d_head·heads_q        （QKᵀ 与 PV 各 2·S·d·heads_q）")
     print(f"      字节  = 2·S·d_head·heads_kv·esize （K 与 V 各读一遍）")
-    print(f"      ⟹ AI = 4·S·d·h_q / (2·S·d·h_kv·esize) = 2 / (esize · r)，"
-          f"r = heads_kv/heads_q")
-    print(f"         = 1/r（fp16，esize = {esize}）—— **S 与 d 都被约掉了**")
+    print(f"      ⟹ AI = 4·S·d·h_q / (2·S·d·h_kv·esize) = 2·r / esize，"
+          f"r = heads_q/heads_kv（GQA 的**群组大小**，即每个 KV 头被几个 Q 头共用）")
+    print(f"         = r（fp16，esize = {esize}）—— **AI 在数值上就等于群组大小**，"
+          f"S 与 d 都被约掉了")
     print()
     S, d, h_q = 4096, D_HEAD, 32
     print(f"    具体数（S = {S}，d_head = {d}，heads_q = {h_q}，batch = 1）：")
     print(f"    {'heads_kv':>10}{'r':>8}{'AI':>8}{'KV 字节/token':>15}"
           f"{'时间@3350GB/s':>15}{'FLOPs/token':>14}{'算力时间':>12}")
     for h_kv in (32, 8, 1):
-        r = h_kv / h_q
-        ai = 2.0 / (esize * r)
+        r = h_q / h_kv
+        ai = 2.0 * r / esize
         kvb = 2.0 * S * d * h_kv * esize
         fl = 4.0 * S * d * h_q
         t_mem = kvb / (H100_BW_GBps * 1e9)
         t_cmp = fl / (H100_FP16_TFLOPS * 1e12)
         print(f"    {h_kv:>10}{r:>8.3f}{ai:>8.1f}{kvb / 1e6:>12.1f}MB"
               f"{t_mem * 1e6:>12.1f}µs{fl / 1e6:>11.1f}M{t_cmp * 1e9:>10.1f}ns")
-        check(f"heads_kv={h_kv}：AI = 1/r = {1 / r:.1f}（S 与 d 无关）",
-              close(ai, 1 / r, 1e-12), f"{ai:.2f}")
+        check(f"heads_kv={h_kv}：AI = r = {r:.1f}（S 与 d 无关）",
+              close(ai, float(r), 1e-12), f"{ai:.2f}")
     h_kv, r = 32, 1.0
-    ai = 2.0 / (esize * r)
+    ai = 2.0 * r / esize
     i_fp16 = H100_FP16_TFLOPS * 1e12 / (H100_BW_GBps * 1e9)
     reach = min(H100_FP16_TFLOPS, H100_BW_GBps * ai / 1e3)
     print("    同一台机器上的 prefill 对照（单 head，整段序列一次算完）：")
@@ -1073,7 +1074,7 @@ def b9_decode_ai():
                       / naive_bytes(4096, D_HEAD, esize), 1), 120.5, 1e-3))
     check("decode 的每 token 字节随 S 线性增长，AI 却不变（S=32768 仍是 1.0）",
           close(2.0 * 32768 * D_HEAD * 32 * esize / 1e6, 536.9, 1e-3)
-          and close(2.0 / (esize * (32 / 32)), 1.0, 1e-12),
+          and close(2.0 * (32 / 32) / esize, 1.0, 1e-12),
           "536.9 MB/token @ 160.3 µs")
     print()
     print(f"    MHA 的 decode：AI = {ai:.1f} FLOP/byte，只有 I*(FP16) = {i_fp16:.1f} 的 "

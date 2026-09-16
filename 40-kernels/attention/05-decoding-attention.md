@@ -21,8 +21,8 @@ updated: 2026-09-16
 
 # decode 阶段的 attention：GQA/MQA、split-KV 与 paged KV
 
-> 一句话：decode 每个 token 只算**一行** query，于是算术强度塌到 `AI = 1/r`
-> （`r = heads_kv/heads_q`）——**与序列长度和 head 维度都无关**，MHA 时只有 `I*`(FP16) 的 0.34%。
+> 一句话：decode 每个 token 只算**一行** query，于是算术强度塌到 `AI = r`
+> （`r = heads_q/heads_kv`）——**与序列长度和 head 维度都无关**，MHA 时只有 `I*`(FP16) 的 0.34%。
 > 于是三件事成了主线：**GQA/MQA 按比例砍 KV 读取字节**、**split-KV 补并行度**、
 > **paged KV 的代价在间接寻址的延迟而不在碎片**。
 
@@ -44,7 +44,7 @@ updated: 2026-09-16
 那个 295 倍不是巧合（`make verify` §B9）：
 
 ```text
-AI = 4·S·d·h_q / (2·S·d·h_kv·esize) = 2/(esize·r) = 1/r     （fp16，esize = 2）
+AI = 4·S·d·h_q / (2·S·d·h_kv·esize) = 2·r/esize = r     （fp16，esize = 2）
 访存时间 ÷ 算力时间 = I* / AI = 295.4 / 1.0 = 295.4
 ```
 
@@ -57,7 +57,7 @@ decode 的算术强度**不随序列长度变化**——序列变长，FLOPs 与
 
 | 手段 | 动的是 | 效果 |
 |---|---|---|
-| GQA / MQA | `r = heads_kv/heads_q` | KV 字节 ∝ `r`（MQA 是 1/32） |
+| GQA / MQA | `r = heads_q/heads_kv` | KV 字节 ∝ `1/r`（MQA 时 `r` = 32，KV 字节只剩 1/32） |
 | split-KV | 并行度 | 不动 AI，把空转的 SM 用起来 |
 | paged KV | 显存管理 | **不动字节数**，代价挪到延迟上 |
 
@@ -65,7 +65,8 @@ decode 的算术强度**不随序列长度变化**——序列变长，FLOPs 与
 
 ### 1.1 GQA / MQA：按比例砍 KV 读取字节
 
-`heads_q` 个 query 头共享 `heads_kv` 个 KV 头，`rep = heads_q/heads_kv` 个 query 头共用一份 KV。
+`heads_q` 个 query 头共享 `heads_kv` 个 KV 头，即 `r = heads_q/heads_kv` 个 query 头共用一份 KV
+（这就是文献里的**群组大小** `r`，本文全篇用它，不再另起符号）。
 **它不改变任何一条算术式子**——`make verify` §A4 在 `heads_q=8` 上验证了这一点：
 
 ```text
@@ -77,7 +78,7 @@ heads_kv = 1（复制 8 份）：                                             4.
 **只改「一份 KV 服务几个 query 头」，不改算式。** 收益直接是字节数
 （`make verify` §B8，`S=4096`、`d=128`、`h_q=32`、batch=1）：
 
-| `heads_kv` | `r = heads_kv/heads_q` | KV 字节 | 相对 MHA |
+| `heads_kv` | `r = heads_q/heads_kv` | KV 字节 ∝ `1/r` | 相对 MHA |
 |---|---|---|---|
 | 32 | 1.000 | 67.1 MB | 1.000 |
 | 16 | 0.500 | 33.6 MB | 0.500 |
@@ -242,7 +243,7 @@ grid = batch × heads_q            （未切 KV 时）
 **现象**：拿 prefill 的直觉去看 decode——「矩阵更大，硬件利用率更高」。
 于是把「支持长上下文」当成性能优化来宣传。
 
-**成因**：decode 的 `AI = 1/r` 里，`S` 在分子分母**同时出现**
+**成因**：decode 的 `AI = r` 里，`S` 在分子分母**同时出现**
 （`4·S·d·h_q` 与 `2·S·d·h_kv·esize`），被约掉了（§0 的推导）。
 所以序列长度只改变**绝对时间**（线性），不改变**性质**（`make verify` §B9 的三行）：
 
@@ -317,7 +318,7 @@ make verify
 ```
 
 它对应本文的是 §A4（GQA/MQA 的等价性）、§A5（split-KV 的合并）、
-§B8（KV 流量比）、§B9（`AI = 1/r` 与 295.4 倍）、§B10（页表与间接寻址的延迟）、
+§B8（KV 流量比）、§B9（`AI = r` 与 295.4 倍）、§B10（页表与间接寻址的延迟）、
 §C7（decode 的并行度）、§C8（页内对齐与布局）。
 
 ## 6. 小结与延伸
@@ -326,7 +327,7 @@ make verify
 
 三条可独立复用的结论：
 
-1. **`AI = 2/(esize·r) = 1/r`（fp16），与 `S`、`d`、batch 都无关**。
+1. **`AI = 2·r/esize = r`（fp16），与 `S`、`d`、batch 都无关**。
    MHA 时 AI = 1.0，只有 `I*`(FP16) 的 0.34%；访存时间是算力时间的 295.4 倍。
    长上下文只让绝对时间线性变长，不改变这个比值。
 2. **GQA/MQA 按 `heads_kv/heads_q` 线性砍 KV 读取字节**，**不改任何一条算式**
