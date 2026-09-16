@@ -10,7 +10,7 @@
 | 二级/三级目录 | `kebab-case`，无编号 | `memory-system` |
 | 文档文件 | `NN-kebab-case.md`，两位数，域内主题内唯一 | `02-coalescing-and-cache-line.md` |
 | 代码文件 | `NN_snake_case.ext`，`NN` 与对应文档相同 | `02_coalescing_demo.cu` · `01_format_probe.py` |
-| 代码辅助模块 | 无编号，放在需要它的 `code/` 目录内 | `code/fpbits.py` · `code/specs.py` |
+| 代码辅助模块 | 无编号，放在需要它的 `code/` 目录内 | `code/fpbits.py` · `code/specs.py` · `code/verify.py` |
 | 目录索引 | 固定名 `README.md` | — |
 | 非知识文档 | 前缀下划线 `_`，表示"不是知识内容" | `_template.md` |
 | 设计与规划工件 | 放 `docs/`，不进 16 个一级域 | `docs/superpowers/specs/` |
@@ -43,6 +43,37 @@
 - 只放从来源抄来的数，**不放推导值**；找不到可靠来源的项不写进来，改记为 `UNSOURCED`。
 
 由此文档的数字分三类，**禁止把推导写成「实测」**：**规格值**（来自 `specs.py`，带来源）、**推导值**（程序算出，可复核）、**引用值**（外部来源的实测，须注明「本仓库不复核其测量口径」）。
+
+**当交付物是 `.cu` 内核、而写作环境没有 CUDA 工具链时，`code/` 采用「双轨」形态。**
+`40-kernels` 的全部主题即此形态（设计规格 §1.3：本机 macOS 无 `nvcc`）。约定是——
+
+- **编号程序仍是 `.cu`**（内核本体），「编号即外键」不变：**文档数 = 编号 `.cu` 数**；
+- `code/verify.py` 是**非编号辅助模块**，在**没有工具链的机器上**验证该主题**可推导**的部分；
+- `Makefile` 提供两个入口：`make run`（`nvcc`，需真实 GPU）与 `make verify`（`python3`，本机可跑）。
+
+`verify.py` **必须含三类断言**，缺一不可：
+
+| 类 | 内容 |
+|---|---|
+| **A 算法正确性** | 用 numpy 写参考实现，与文档所述算法逐元素比对，打印最大误差与判定 |
+| **B 代价模型** | 按文档给出的公式算 SMEM 占用 / 寄存器估算 / 访存字节 / 算术强度 / 与 roofline 拐点的比值，打印数值与判定 |
+| **C 边界与反例** | §4 声称「会出问题」的输入必须**真的跑出问题**——断言的是「失败行为成立」，不是「成功」 |
+
+**`verify.py` 的产出是推导，不是实测**——它跑的是算术与 numpy，不碰硬件。
+因此 `.cu` 内核的运行结果本仓库没有，此类文档的 §5「实测数据」**整节省略**
+（从 §4 直接进「编译与运行」小节）。
+
+**前沿架构档位单列。** 需要 `sm_90a` / `sm_100a` 的内核**不混进默认 `TARGETS`**
+（否则在 sm_80 机器上 `make` 直接失败），改用独立目标与**显式** `-arch`：
+
+```makefile
+TARGETS          := 01_naive_gemm 02_tiled_gemm     # 进 all / run
+HOPPER_TARGETS   := 04_wgmma_gemm                   # make hopper，需 -arch=sm_90a
+BLACKWELL_TARGETS:= 05_tcgen05_persistent_gemm      # make blackwell，需 -arch=sm_100a
+```
+
+注意 `sm_90a` / `sm_100a` 是 "accelerated" 变体：为它编出的 cubin **跑不了 `sm_90`**，反之亦然。
+这不是「向后兼容」的问题，而是**精确架构限定**。
 
 **没有配套代码的文档不单独存在。** 若某主题确实不需要代码，则该主题下所有文档都不建 `code/`，正文也不出现指向 `code/` 的链接。
 
