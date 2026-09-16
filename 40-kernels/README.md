@@ -57,11 +57,23 @@ make run        # 需远程 Linux：编译并运行全部 .cu 内核
 | 档位 | Makefile 目标 | 内容 |
 |---|---|---|
 | sm_80 可移植 | `TARGETS`（进 `make` / `make run`） | 朴素 / 分块 / 寄存器分块 / `cp.async` / warp shuffle |
-| sm_90a | `make hopper` | `wgmma`、warp specialization、TMA |
+| sm_90a | `make hopper` | `wgmma`、warp specialization |
 | sm_100a | `make blackwell` | `tcgen05`、TMEM |
 
+**逐条指令的 ISA 下限**（不要自己重推，`20-gpu-architecture` 已入库）：
+
+| 特性 | ISA 下限 |
+|---|---|
+| `cp.async` | `sm_80` |
+| **TMA（`cp.async.bulk`）** | **`sm_90`** ← **不是 `sm_90a`** |
+| FP8 / `cluster` | `sm_90` |
+| `wgmma` | `sm_90a` |
+| `tcgen05` / TMEM | `sm_100a` |
+
 前沿档**不混进默认 `TARGETS`**——否则在 A100 上 `make` 直接失败。
-`sm_90a` / `sm_100a` 是 "accelerated" 变体，为它编出的 cubin **跑不了 `sm_90`**。
+`sm_90a` / `sm_100a` 是 "accelerated" 变体，为它编出的 cubin **跑不了 `sm_90`**；
+**但反方向可以**——为 `sm_90` 编出的 cubin 能在 H100 上正常加载运行。
+不要写成「两者不兼容」。
 
 ### 本域数字的口径
 
