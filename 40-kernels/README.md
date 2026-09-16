@@ -6,10 +6,10 @@
 
 | 主题 | 内容 | 状态 |
 |---|---|---|
-| [gemm](gemm/) | 朴素 → 共享内存分块 → 寄存器分块 → tensor core 与异步流水 → persistent kernel 与 tcgen05 | 进行中 |
-| [attention](attention/) | attention 的计算形态 / flash attention 与在线 softmax / warp specialization 与变体 / 解码阶段 kernel | 未开始 |
+| [gemm](gemm/) | 朴素 → 共享内存分块 → 寄存器分块 → tensor core 与异步流水 → persistent kernel 与 tcgen05 → split-K 与 Stream-K | 已完成 |
+| [attention](attention/) | attention 的计算形态 / flash attention 与在线 softmax / flash attention 反向 / warp specialization 与变体 / 解码阶段 kernel | 进行中 |
 | [reduce-scan](reduce-scan/) | 树形归约 / warp shuffle 与多级归约 / Hillis-Steele 与 Blelloch 扫描 / 跨 block 与确定性 | 未开始 |
-| [softmax-normalization](softmax-normalization/) | 数值稳定 softmax / 在线 softmax 与重标定 / LayerNorm·RMSNorm 与 Welford | 未开始 |
+| [softmax-normalization](softmax-normalization/) | 数值稳定 softmax / 在线 softmax 与重标定 / LayerNorm·RMSNorm 与 Welford | 已完成 |
 | [elementwise-fusion](elementwise-fusion/) | 访存受限算子的上界 / 融合与流量 / 向量化访存与 grid-stride | 未开始 |
 | [moe-kernels](moe-kernels/) | MoE 的计算形态 / grouped GEMM / 路由与 permute·unpermute | 未开始 |
 
