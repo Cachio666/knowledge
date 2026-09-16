@@ -471,11 +471,13 @@ def b3_fusion_traffic():
     print(f"           本例落在模型甲那一侧；N ≲ 2^20、k = 4 时 (k+1) 份只有 "
           f"{mib(5 * (1<<20) * ESIZE_F32):.0f} MiB，就未必了。")
     print(f"      ② 真实比值落在 (1, k) 之间，不是一个端点。")
-    lo, hi = SP.END_TO_END_FUSION_SPEEDUP_RANGE_EXTERNAL
-    print(f"         外部报道的**端到端**收益 {lo}×~{hi}×（**引用值，本仓库不复核")
-    print(f"         其测量口径**；且一手来源本次未定位，见 specs.py 的 UNSOURCED）")
-    print(f"         正落在这个区间里——它比 k 小，是因为（a）中间结果常能留在 L2，")
-    print(f"         （b）端到端里还有别的部分没被融合。")
+    print(f"         实际观察到的收益远低于 k，原因有两层：")
+    print(f"           （a）中间结果常能留在 L2（模型乙把比值拉向 1）；")
+    print(f"           （b）端到端里还有别的部分没被融合（Amdahl 再稀释一次）。")
+    print(f"         ⚠ 本程序**不打印**「实际收益是几倍」的具体区间：")
+    print(f"           检索不到可引的一手来源（不同工具与负载的说法从 10~20% 到")
+    print(f"           1.5~2× 都有，跨度大到不构成可引用的区间）。见 specs.py 的 UNSOURCED。")
+    print(f"           能算的是**判据**，不是区间。")
     print()
     print("    → 正文**禁止**写成「上界趋于 2」，也禁止写成「融合越多越快」。")
 
