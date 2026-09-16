@@ -1,7 +1,7 @@
 # 实施进度表
 
-> 最后更新：2026-09-15
-> 进度：8 / 61 主题完成
+> 最后更新：2026-09-16
+> 进度：14 / 61 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -26,12 +26,12 @@
 - [ ] cutlass
 
 ## 40-kernels
-- [ ] gemm
-- [ ] attention
-- [ ] reduce-scan
-- [ ] softmax-normalization
-- [ ] elementwise-fusion
-- [ ] moe-kernels
+- [x] gemm
+- [x] attention
+- [x] reduce-scan
+- [x] softmax-normalization
+- [x] elementwise-fusion
+- [x] moe-kernels
 
 ## 50-performance
 - [ ] profiling-tools

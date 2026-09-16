@@ -54,7 +54,36 @@
 尚未开始。
 
 ## 40-kernels
-尚未开始。
+- [gemm](../40-kernels/gemm/) —— 朴素 → 共享内存分块 → 寄存器分块 → tensor core 与异步流水 → persistent kernel 与 tcgen05 → split-K 与 Stream-K
+  - [01-naive-gemm-and-roofline](../40-kernels/gemm/01-naive-gemm-and-roofline.md)
+  - [02-shared-memory-tiling](../40-kernels/gemm/02-shared-memory-tiling.md)
+  - [03-register-tiling-and-occupancy](../40-kernels/gemm/03-register-tiling-and-occupancy.md)
+  - [04-tensor-core-and-async-pipeline](../40-kernels/gemm/04-tensor-core-and-async-pipeline.md)
+  - [05-persistent-kernel-and-tcgen05](../40-kernels/gemm/05-persistent-kernel-and-tcgen05.md)
+  - [06-split-k-and-stream-k](../40-kernels/gemm/06-split-k-and-stream-k.md)
+- [attention](../40-kernels/attention/) —— attention 的计算形态 / flash attention 与在线 softmax / flash attention 反向 / warp specialization 与变体 / 解码阶段 kernel
+  - [01-attention-as-a-kernel](../40-kernels/attention/01-attention-as-a-kernel.md)
+  - [02-flash-attention](../40-kernels/attention/02-flash-attention.md)
+  - [03-flash-attention-backward](../40-kernels/attention/03-flash-attention-backward.md)
+  - [04-warp-specialization-and-variants](../40-kernels/attention/04-warp-specialization-and-variants.md)
+  - [05-decoding-attention](../40-kernels/attention/05-decoding-attention.md)
+- [reduce-scan](../40-kernels/reduce-scan/) —— 树形归约 / warp shuffle 与多级归约 / Hillis-Steele 与 Blelloch 扫描 / 跨 block 与确定性
+  - [01-reduction-algorithms](../40-kernels/reduce-scan/01-reduction-algorithms.md)
+  - [02-warp-shuffle-and-hierarchy](../40-kernels/reduce-scan/02-warp-shuffle-and-hierarchy.md)
+  - [03-scan-algorithms](../40-kernels/reduce-scan/03-scan-algorithms.md)
+  - [04-multi-block-and-determinism](../40-kernels/reduce-scan/04-multi-block-and-determinism.md)
+- [softmax-normalization](../40-kernels/softmax-normalization/) —— 数值稳定 softmax / 在线 softmax 与重标定 / LayerNorm·RMSNorm 与 Welford
+  - [01-softmax-stability](../40-kernels/softmax-normalization/01-softmax-stability.md)
+  - [02-online-softmax](../40-kernels/softmax-normalization/02-online-softmax.md)
+  - [03-normalization-fusion](../40-kernels/softmax-normalization/03-normalization-fusion.md)
+- [elementwise-fusion](../40-kernels/elementwise-fusion/) —— 访存受限算子的上界 / 融合与流量 / 向量化访存与 grid-stride
+  - [01-memory-bound-limit](../40-kernels/elementwise-fusion/01-memory-bound-limit.md)
+  - [02-fusion-and-traffic](../40-kernels/elementwise-fusion/02-fusion-and-traffic.md)
+  - [03-vectorized-and-grid-stride](../40-kernels/elementwise-fusion/03-vectorized-and-grid-stride.md)
+- [moe-kernels](../40-kernels/moe-kernels/) —— MoE 的计算形态 / grouped GEMM / 路由与 permute·unpermute
+  - [01-moe-compute-pattern](../40-kernels/moe-kernels/01-moe-compute-pattern.md)
+  - [02-grouped-gemm](../40-kernels/moe-kernels/02-grouped-gemm.md)
+  - [03-permute-and-unpermute](../40-kernels/moe-kernels/03-permute-and-unpermute.md)
 
 ## 50-performance
 尚未开始。
