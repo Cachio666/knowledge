@@ -1019,7 +1019,7 @@ def b8_gqa_traffic():
         b = kv_bytes(h)
         print(f"    {h:>10}{h / h_q:>8.3f}{b / 1e6:>10.1f}MB{h / h_q:>11.3f}"
               f"{b / 1e6:>12.1f}MB")
-        check(f"heads_kv={h}：流量 = MHA 的 {h / h_q:.3f}（= heads_kv/heads_q）",
+        check(f"heads_kv={h}：流量 = MHA 的 {h / h_q:.3f}（= 1/r）",
               close(b / base, h / h_q, 1e-12), f"{b / base:.4f}")
     print()
     print(f"    MQA（heads_kv = 1）把 KV 流量压到 1/{h_q} = {1 / h_q:.4f}，"
@@ -1092,7 +1092,7 @@ def b9_decode_ai():
           f"{i_fp16:.1f}/{ai:.1f}")
     check("MHA decode 的访存时间是算力时间的 295 倍（= I*/AI）",
           close(ratio, i_fp16 / ai, 1e-9) and ratio > 200, f"{ratio:.1f}×")
-    print(f"    ⟹ 这个比值**与 S、d、batch 都无关**（都约掉了），只看 heads_kv/heads_q。")
+    print(f"    ⟹ 这个比值**与 S、d、batch 都无关**（都约掉了），只看 1/r（GQA 群组大小的倒数）。")
     print(f"      要动它，只有三条路：减 KV 头数（GQA/MQA，§B8）、减 KV 的位宽（量化）、")
     print(f"      或把 KV 读的**次数**降下来（prefix caching 一类）。")
 

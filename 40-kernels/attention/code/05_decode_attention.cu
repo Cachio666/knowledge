@@ -6,11 +6,11 @@
 //
 //   ① **memory-bound 到极端。** 每生成一个 token：
 //        FLOPs = 4·S·d·heads_q，字节 = 2·S·d·heads_kv·esize
-//        ⟹ AI = 2/(esize·r) = 1/r（fp16），r = heads_kv/heads_q
+//        ⟹ AI = 2·r/esize = r（fp16），r = heads_q/heads_kv（GQA 的群组大小）
 //      **S 与 d 都被约掉了**。MHA（r=1）的 AI = 1.0，只有 I*(FP16)=295.4 的
 //      0.34%；访存时间是算力时间的 295 倍（verify.py §B9，推导值）。
 //
-//   ② **GQA/MQA 直接按比例削流量**：KV 字节 ∝ heads_kv/heads_q，
+//   ② **GQA/MQA 直接按比例削流量**：KV 字节 ∝ 1/r，
 //      MQA（heads_kv=1）是 1/32（verify.py §B8）。减少的是**读取**字节，
 //      不是 FLOPs——分数照样要对每个 KV 位置算一遍。
 //
@@ -195,7 +195,7 @@ int main(int argc, char** argv)
                 2.0 * (double)seq * d * hkv * 2 / 1e6);
     const double r = (double)hkv / hq;
     const double ai = 2.0 / (2.0 * r);
-    std::printf("    ⟹ AI = 2/(esize·r) = 1/r = %.2f FLOP/byte（**S 与 d 都约掉了**）\n", ai);
+    std::printf("    ⟹ AI = 2·r/esize = r = %.2f FLOP/byte（**S 与 d 都约掉了**）\n", ai);
     std::printf("       I*(FP16, H100) = 295.4 ⟹ decode 只到它的 %.2f%%\n", ai / 295.4 * 100);
     std::printf("       访存时间 ÷ 算力时间 = I*/AI = %.1f 倍\n", 295.4 / ai);
     std::printf("    每 token 时间（推导值）= %.1f MB ÷ 3350 GB/s = %.1f µs\n\n",

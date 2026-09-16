@@ -78,17 +78,19 @@ heads_kv = 1（复制 8 份）：                                             4.
 **只改「一份 KV 服务几个 query 头」，不改算式。** 收益直接是字节数
 （`make verify` §B8，`S=4096`、`d=128`、`h_q=32`、batch=1）：
 
-| `heads_kv` | `r = heads_q/heads_kv` | KV 字节 ∝ `1/r` | 相对 MHA |
+| `heads_kv` | `r = heads_q/heads_kv` | KV 字节 | 相对 MHA |
 |---|---|---|---|
-| 32 | 1.000 | 67.1 MB | 1.000 |
-| 16 | 0.500 | 33.6 MB | 0.500 |
-| 8 | 0.250 | 16.8 MB | 0.250 |
-| 4 | 0.125 | 8.4 MB | 0.125 |
-| 2 | 0.062 | 4.2 MB | 0.062 |
-| **1（MQA）** | 0.031 | **2.10 MB** | **0.031** |
+| 32（MHA） | 1 | 67.1 MB | 1.000 |
+| 16 | 2 | 33.6 MB | 0.500 |
+| 8 | 4 | 16.8 MB | 0.250 |
+| 4 | 8 | 8.4 MB | 0.125 |
+| 2 | 16 | 4.2 MB | 0.062 |
+| **1（MQA）** | **32** | **2.10 MB** | **0.031** |
+
+（`r` 越大表示越多的 query 头共用一份 KV，KV 字节越少。）
 
 **注意减少的是「读取」字节，不是 FLOPs**：注意力分数照样要对着每个 KV 位置算一遍，
-这些 KV 只是被 `rep` 个 query 头共用（读一次、用 `rep` 次）。
+这些 KV 只是被 `r` 个 query 头共用（读一次、用 `r` 次）。
 这与 GEMM 里「提高数据复用」是同一件事——**复用度上去了，搬运量就下来了**。
 
 ### 1.2 split-KV：把空转的 SM 用起来
@@ -226,7 +228,7 @@ grid = batch × heads_q            （未切 KV 时）
    这是 [02 篇](02-flash-attention.md) 那条递推在推理侧的形态。
 3. **GQA / MQA（§1.1）**：把 `heads_kv` 降下来，直接砍字节数。
    这是**模型层面**的决定，kernel 只是受益方——但 kernel 必须知道
-   「`rep` 个 query 头共用一份 KV」，不然会把它重复读 `rep` 遍。
+   「`r` 个 query 头共用一份 KV」，不然会把它重复读 `r` 遍。
 4. **paged KV（§1.3）**：显存管理必需的形态；kernel 侧要接受页表的间接寻址，
    并把页表**预取**进流水。
 5. **prefill/decode 分离调度**：两者的 AI 差 120 倍（120.5 对 1.0），
@@ -301,7 +303,7 @@ make 05_decode_attention
 ./05_decode_attention 4096 128 32 8 16
 ```
 
-程序会打印：decode 的算术强度账（AI `= 1/r` 与它与 `I*` 的比值）、
+程序会打印：decode 的算术强度账（AI `= r` 与它与 `I*` 的比值）、
 GQA/MQA 的流量表、并行度表（未切 / 切 KV 的 grid）、paged KV 的字节与延迟账，
 以及 split-KV 合并与单次计算的一致性。
 
@@ -323,14 +325,14 @@ make verify
 
 ## 6. 小结与延伸
 
-全文一条主线：**decode 的瓶颈是「每 token 要读多少 KV 字节」，而这个量由 `heads_kv/heads_q` 唯一决定。**
+全文一条主线：**decode 的瓶颈是「每 token 要读多少 KV 字节」，而这个量由 `1/r` 唯一决定（`r` 是群组大小）。**
 
 三条可独立复用的结论：
 
 1. **`AI = 2·r/esize = r`（fp16），与 `S`、`d`、batch 都无关**。
    MHA 时 AI = 1.0，只有 `I*`(FP16) 的 0.34%；访存时间是算力时间的 295.4 倍。
    长上下文只让绝对时间线性变长，不改变这个比值。
-2. **GQA/MQA 按 `heads_kv/heads_q` 线性砍 KV 读取字节**，**不改任何一条算式**
+2. **GQA/MQA 按 `1/r` 线性砍 KV 读取字节**，**不改任何一条算式**
    （`make verify` §A4 的误差在 `1e-16` 量级）。MQA 是 `heads_kv = 1` 的极端，压到 1/32。
 3. **paged KV 的代价在间接寻址的延迟，不在碎片**：页表占 0.0015%、
    页内碎片占 0.049%，而一次页表查询的 400~800 周期与一个 tile 的计算（约 504 周期）同量级
@@ -350,7 +352,7 @@ make verify
   MQA（`heads_kv = 1`）的出处。
 - Ainslie, Lee-Thorp, de Jong, Zemlyanskiy, Lebrón, Sanghai, *GQA: Training Generalized
   Multi-Query Transformer Models from Multi-Head Checkpoints*, EMNLP 2023 ——
-  GQA 的出处；本文 §1.1 的 `rep` 记号与它一致。
+  GQA 的出处；本文 §1.1 的群组大小 `r` 与它一致。
 - Kwon, Li, Zhuang, Sheng, Zheng, Yu, Gonzalez, Zhang, Stoica, *Efficient Memory Management
   for Large Language Model Serving with PagedAttention*, SOSP 2023 ——
   paged KV 的出处；本文 §1.3 只讨论它对 kernel 侧的影响。

@@ -244,7 +244,7 @@ S 是**每个 head 私有**的：32 个 head 各自有一个 `S×S` 的矩阵，
    把「搬数据」与「算」拆到不同的 warpgroup，让 wgmma 连续发射；
    变体（滑窗 / ALiBi / softcap）只改分块范围或 exp 的输入，不改结构。
 5. **decode（[05 篇](05-decoding-attention.md)）**。每 token 只算一行 query，
-   形态完全变了：AI `= 1/r`（与 S 和 d 都无关），瓶颈从「S 矩阵」变成「KV cache 的读取」。
+   形态完全变了：AI `= r`（与 S 和 d 都无关），瓶颈从「S 矩阵」变成「KV cache 的读取」。
 
 每一步的必要性都能用同一把尺子量：**这一版的绝对字节数是多少，AI 是多少**。
 
