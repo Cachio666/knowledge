@@ -4,11 +4,11 @@
 
 ## 本域覆盖什么
 
-| 主题 | 内容 |
-|---|---|
-| pytorch | autograd / dispatch 机制 / aten / 自定义算子 / torch.compile |
-| tensorflow | graph 与 eager / XLA 集成 / custom op / SavedModel |
-| jax | jit / vmap / pmap / sharding / 与 PyTorch 的心智差异 |
+| 主题 | 内容 | 状态 |
+|---|---|---|
+| [pytorch](pytorch/) | dispatch 与 aten / autograd / 张量内存模型 / 自定义算子与编译入口 | 已完成 |
+| [tensorflow](tensorflow/) | graph 与 eager / XLA 集成 / custom op / SavedModel | 未开始 |
+| [jax](jax/) | jit / vmap / pmap / sharding / 与 PyTorch 的心智差异 | 未开始 |
 
 ## 与其他域的关系
 
