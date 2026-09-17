@@ -123,7 +123,7 @@
   - [01-graph-and-eager](../70-frameworks/tensorflow/01-graph-and-eager.md)
   - [02-control-flow-and-xla](../70-frameworks/tensorflow/02-control-flow-and-xla.md)
   - [03-custom-ops-and-export](../70-frameworks/tensorflow/03-custom-ops-and-export.md)
-- [jax](../70-frameworks/jax/) —— jit 与追踪 / 变换（vmap） / 分片与心智差异
+- [jax](../70-frameworks/jax/) —— jit 与追踪（cache key） / 变换（vmap 与 jaxpr） / 分片与心智差异
   - [01-jit-and-tracing](../70-frameworks/jax/01-jit-and-tracing.md)
   - [02-transformations](../70-frameworks/jax/02-transformations.md)
   - [03-sharding-and-differences](../70-frameworks/jax/03-sharding-and-differences.md)
