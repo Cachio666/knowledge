@@ -8,7 +8,7 @@
 |---|---|---|
 | [pytorch](pytorch/) | dispatch 与 aten / autograd / 张量内存模型 / 自定义算子与编译入口 | 已完成 |
 | [tensorflow](tensorflow/) | graph 与 eager（TraceType） / 控制流与 XLA / 自定义算子与导出 | 已完成 |
-| [jax](jax/) | jit / vmap / pmap / sharding / 与 PyTorch 的心智差异 | 未开始 |
+| [jax](jax/) | jit 与追踪（cache key） / 变换（vmap 与 jaxpr） / 分片与心智差异 | 已完成 |
 
 ## 与其他域的关系
 
