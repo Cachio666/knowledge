@@ -26,8 +26,8 @@ import sys
 # 口径
 # ===========================================================================
 
-VERSIONS_BOUND = ("2.6.0", "2.7.1", "2.13.0")
-UNCOVERED = "2.8 – 2.12"
+VERSIONS_BOUND = ("2.6.0", "2.7.1", "2.8.0", "2.11.0", "2.13.0")
+UNCOVERED = "2.9 / 2.10 / 2.12"
 
 _STATE = {"n": 0, "A": 0, "C": 0, "fail": []}
 
@@ -412,9 +412,9 @@ def main():
     print("      它跑的是本文件自己的参考实现与手写期望值，不碰任何框架、不碰硬件。")
     print("      编号程序（01–04）在装了 torch 的环境里跑真系统，那才是本机实测值。")
     print()
-    print(f"版本绑定：本主题的实测基线锚在 torch {VERSIONS_BOUND[0]} / "
-          f"{VERSIONS_BOUND[1]} / {VERSIONS_BOUND[2]}（本机三个解释器）；")
-    print(f"          **{UNCOVERED} 本机测不到，不声称覆盖**。")
+    print("版本绑定：本主题的实测基线锚在 torch %s（本机五个解释器）；"
+          % " / ".join(VERSIONS_BOUND))
+    print(f"          **{UNCOVERED} 本机没有解释器，不声称覆盖**。")
     print(f"          python3 = {sys.version.split()[0]}（本文件的唯一测量条件）")
 
     run_A()

@@ -11,17 +11,17 @@
   可读的只有 `include/c10/**/*.h`（定义层）+ Python 层 + 实测行为。
 
 ★ 版本坐标（★ 本项目最重要的约束）：
-  本机只有 2.6.0 / 2.7.1 / 2.13.0 三个解释器，**跨了 7 个 minor**——
   **本机实际有五个装了 torch 的解释器**（2.6.0 / 2.7.1 / 2.8.0 / 2.11.0 / 2.13.0）——
-  计划只列了三个，漏了 base conda 那个（见 MEASURED_VERSIONS 的订正说明）。
-  **2.9 / 2.10 / 2.12 本机没有解释器，这四个 minor 不声称覆盖。**
+  计划只列了三个，漏掉的是 base conda 的 2.11.0 与系统 python3 的 2.8.0
+  （详见 MEASURED_VERSIONS 的订正说明）。
+  **2.9 / 2.10 / 2.12 本机没有解释器，这三个 minor 不声称覆盖。**
   凡引「行号」一律是 **2.13.0 的行号**（2.6/2.7 的行号不同，见 VERSION_LINE_SHIFT）。
 
 UNSOURCED（查不到一手来源，**正文不使用**）：
   · 「Dynamo 的一次 guard 校验耗时 xx 微秒」——本机只能测「重编译发生了几次」，
     **测不到 guard 的逐次开销**（这是编译器的内部计数，不是可分离的计时对象）。
   · 「`torch._C._dispatch_*` 函数一共 67 个」——计划里给过这个数，
-    本机按 `"dispatch" in name` 数出来是 **68 / 68 / 70**（2.6.0 / 2.7.1 / 2.13.0），
+    本机按 `"dispatch" in name` 数出来是 **68 / 68 / 68 / 69 / 70**（2.6.0 / 2.7.1 / 2.8.0 / 2.11.0 / 2.13.0），
     **数不出 67 这个口径**，故正文改用本程序实际数出的口径与数字。
 """
 
@@ -29,7 +29,7 @@ UNSOURCED（查不到一手来源，**正文不使用**）：
 # 版本锚点
 # ---------------------------------------------------------------------------
 
-# 本机已安装并可 import torch 的三个解释器（探测顺序见 code/Makefile）
+# 本机已安装并可 import torch 的五个解释器（探测顺序见 code/Makefile）
 # 来源：本机实测 `import torch; torch.__version__`（2026-09-17）
 # ★★ 订正（2026-09-17 实施时实测，两次）：本机其实有**五个**装了 torch 的解释器——
 #   计划 §0.4 只列了三个（它只扫了 `envs/*/bin/python`），漏掉的是：
@@ -140,7 +140,7 @@ LIBRARY_LEAKED_TYPENAMES = {
     "2.13.0": ("Any", "Callable", "Sequence", "TypeVar", "Union"),
 }
 
-# 来源：本机 `torch.library.define` / `impl` 的 `inspect.signature`（三版一致）
+# 来源：本机 `torch.library.define` / `impl` 的 `inspect.signature`（五版一致）
 SIG_DEFINE = "(qualname, schema, *, lib=None, tags=())"
 SIG_IMPL = "(qualname, types, func=None, *, lib=None)"
 
@@ -148,7 +148,7 @@ SIG_IMPL = "(qualname, types, func=None, *, lib=None)"
 # 本机实测基线表（与文档 §5 逐行一致）
 # ---------------------------------------------------------------------------
 
-# 测量条件：三个解释器各跑一遍 `04_custom_ops.py --probe`（2026-09-17），
+# 测量条件：五个解释器各跑一遍 `make run`（2026-09-17），
 # 语义见 04 号程序的 §B；本表是**真 torch 实测**（版本见 KEY），不是推导。
 #
 # 表 1：一次表达式触发的 `__torch_dispatch__` 拦截次数
@@ -184,7 +184,7 @@ COMPOSITE_INVISIBLE = [
     ("aten.sum.default(非连续)", "aten.sum.default", "kernel"),
 ]
 
-# 表 3：mode 与子类 __torch_dispatch__ 的顺序（实测，三版一致）
+# 表 3：mode 与子类 __torch_dispatch__ 的顺序（实测，五版一致）
 # 观测：两者同时在栈上时，调用序列以 mode 开头
 MEASURED_DISPATCH_ORDER = ["mode", "subclass"]
 
@@ -192,11 +192,11 @@ MEASURED_DISPATCH_ORDER = ["mode", "subclass"]
 # autograd（文档 02）
 # ---------------------------------------------------------------------------
 
-# 来源：本机 `torch/autograd/__init__.py` 源码行（三版都有这一行，行号不同，见 VERSION_LINE_SHIFT）
+# 来源：本机 `torch/autograd/__init__.py` 源码行（各版本都有这一行，行号不同，见 VERSION_LINE_SHIFT）
 RETAIN_GRAPH_SOURCE = "if retain_graph is None: retain_graph = create_graph"
 
-# 来源：本机实跑 `torch.inference_mode` 下 `torch.func.jvp`（**四版**逐版本实测）
-# ★ 四版**不一致**：2.6.0 / 2.7.1 / **2.11.0** 静默返回全零，2.13.0 正确。
+# 来源：本机实跑 `torch.inference_mode` 下 `torch.func.jvp`（**五版**逐版本实测）
+# ★ 五版里**不一致**：2.6.0 / 2.7.1 / 2.8.0 / 2.11.0 静默返回全零，2.13.0 正确。
 # ⚠ 变更点**只能定位到 2.11 与 2.13 之间**——2.12 本机没有解释器，**不得声称是 2.12 改的**。
 #   （2.8.0 实测也是「全零」，所以变更点被夹在 2.11 与 2.13 之间，不是 2.8。）
 FORWARD_AD_IN_INFERENCE_MODE = {
@@ -268,13 +268,13 @@ ERR_VIEW_INCOMPATIBLE = (
 # 自定义算子（文档 04）
 # ---------------------------------------------------------------------------
 
-# 来源：本机实跑（三版一致）
+# 来源：本机实跑（五版一致）
 ERR_CUSTOM_OP_NO_MUTATES = "custom_op() missing 1 required keyword-only argument: 'mutates_args'"
 ERR_CUSTOM_OP_NO_ANNOTATION = (
     "infer_schema(func): Parameter x must have a type annotation. Got func with signature (x)"
 )
 # impl_abstract → register_fake 的改名：**发的是 FutureWarning**（不是 DeprecationWarning），
-# 2.6.0 / 2.7.1 / 2.13.0 三版都还在发
+# 五个版本都还在发
 IMPL_ABSTRACT_RENAME_WARNING = (
     "`torch.library.impl_abstract` was renamed to `torch.library.register_fake`. "
     "Please use that instead; we will remove `torch.library.impl_abstract`"
@@ -297,7 +297,7 @@ DYN_GUARD_BASELINE = [
 # 来源：本机实跑 `torch._dynamo.explain`（0 graph break 的小函数）
 DYN_EXPLAIN_OK = "Graph Count: 1 Graph Break Count: 0"
 
-# 来源：本机 `hasattr(torch, "while_loop")` / `"while_loop" in torch.__all__`（四版一致）
+# 来源：本机 `hasattr(torch, "while_loop")` / `"while_loop" in torch.__all__`（五版一致）
 # ★ 「PyTorch 没有 while 版结构化控制流」是错的：
 #   torch.while_loop **存在**，docstring 逐字：「while_loop is a structured control flow
 #   operator. It preserves the loop semantic across the torch.compile and torch.export.」
