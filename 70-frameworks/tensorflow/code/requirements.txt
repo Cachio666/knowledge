@@ -1,0 +1,5 @@
+# 70-frameworks/tensorflow 的编号程序**只需要这些**。
+#
+# ★ 刻意不列 tensorflow：本机没有 TF，编号程序也不 import 它
+#   （见 Makefile 头部的说明）。这里列上它反而会让人以为要装。
+numpy>=2.0

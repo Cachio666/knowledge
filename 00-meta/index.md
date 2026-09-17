@@ -114,7 +114,16 @@
   - [03-search-algorithms](../60-compilers/auto-tuning/03-search-algorithms.md)
 
 ## 70-frameworks
-尚未开始。
+- [pytorch](../70-frameworks/pytorch/) —— dispatch 与 aten / autograd / 张量内存模型 / 自定义算子与编译入口
+  - [01-dispatch-and-aten](../70-frameworks/pytorch/01-dispatch-and-aten.md)
+  - [02-autograd](../70-frameworks/pytorch/02-autograd.md)
+  - [03-tensor-memory-model](../70-frameworks/pytorch/03-tensor-memory-model.md)
+  - [04-custom-operators](../70-frameworks/pytorch/04-custom-operators.md)
+- [tensorflow](../70-frameworks/tensorflow/) —— graph 与 eager（TraceType） / 控制流与 XLA / 自定义算子与导出
+  - [01-graph-and-eager](../70-frameworks/tensorflow/01-graph-and-eager.md)
+  - [02-control-flow-and-xla](../70-frameworks/tensorflow/02-control-flow-and-xla.md)
+  - [03-custom-ops-and-export](../70-frameworks/tensorflow/03-custom-ops-and-export.md)
+- jax（未开始）
 
 ## 80-model-architectures
 尚未开始。
