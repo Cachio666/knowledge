@@ -140,7 +140,12 @@ x + 1                             →  ['aten.add.Tensor']           1 次
 | 再换 shape 到 `(8,)` 调 1 次 | **2** | 6 |
 | 再把 dtype 换成 `float64` 调 1 次 | **3** | 9 |
 
-**模型：guard 固化的假设是 `(shape, dtype)`；每出现一个新的组合就多一张图。** 这与本域主线（TF 的 `TraceType`、JAX 的 cache key）是同一个东西的三种写法——三者**默认都对 shape 敏感**。
+**模型：guard 固化的假设是 `(shape, dtype)` + Python 标量值；本算例里每出现一个新的组合就多一张图。**
+**⚠ 但这不是通例，别读成「N 个 shape 就重编译 N 次」**：`torch.compile` 的 `dynamic` 默认是 `None`、
+`automatic_dynamic_shapes` 默认是 `True`——先按静态形状编一次，guard 失败后**自动把变化的那些维
+标成 dynamic** 再编一次，**此后同维的新 shape 命中同一张动态图**。
+**所以重编译次数的期望是 O(变化的维度数)，不是 O(不同形状数)**（正文在 [60-compilers/inductor/04](../../60-compilers/inductor/04-dynamic-shapes.md)；
+本篇 §3 的算例只做了一个 shape 变化，**测不出这个区别**）。 这与本域主线（TF 的 `TraceType`、JAX 的 cache key）是同一个东西的三种写法——三者**默认都对 shape 敏感**。
 
 ### 3.2 Python 标量会被**按值**固化
 
