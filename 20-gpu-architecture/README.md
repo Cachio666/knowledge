@@ -6,11 +6,11 @@
 
 | 主题 | 内容 | 状态 |
 |---|---|---|
-| [execution-model](execution-model/) | SM 内部结构 / warp 与 SIMT / 分支发散 / 占用率与延迟隐藏 | 已完成 |
+| [execution-model](execution-model/) | SM 结构 / SIMT 与发散 / 占用率与延迟隐藏 | 已完成 |
 | [memory-system](memory-system/) | 存储层次 / 访存合并 / 共享内存 bank 冲突 | 已完成 |
 | [tensor-core](tensor-core/) | MMA 原语与 tile 形状 / fragment 布局 / wgmma 与流水 / tcgen05 与 TMEM / 2:4 结构化稀疏 | 已完成 |
 | [interconnect](interconnect/) | 带宽口径 / 拓扑与 bisection / 拓扑受限的集合通信 / 标称与可达的差距 | 已完成 |
-| [architecture-evolution](architecture-evolution/) | 跨代横向对比与规律提炼。**规格明细归各机制主题**（如逐代 SM 规格在 `execution-model`），本主题只做横向比较与趋势归纳，不重复罗列规格 | 已完成 |
+| [architecture-evolution](architecture-evolution/) | 能力断点 / 跨代趋势 / 架构不变量 | 已完成 |
 
 ## 代码约定
 

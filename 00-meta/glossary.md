@@ -110,23 +110,10 @@
 | online softmax | 在线 softmax | 用**运行最大值 `m` 与运行和 `l`** 递推，把 softmax 从「需要先看完整行」变成**一遍流式**：`m_new = max(m_old, 块内 max)`、`l_new = l_old·exp(m_old−m_new) + Σexp(x−m_new)`、`O_new = O_old·exp(m_old−m_new) + P·V`。合并算子 `⊕` 构成**半群**，任意分组/顺序给同一数学结果——这是分块流水与 attention 能分块的依据。⚠ **`m_old ≤ m_new` 恒成立**，rescale 因子恒 ≤ 1，写反会溢出。 |
 | Welford 算法 | — | 单遍算均值与方差：`mean += d/n`、`M2 += d·(x−mean_new)`。**它真正的比较对象是 `Σx²−nμ²`**（后者在大均值下灾难性抵消、会算出**负方差**），**不是两遍法**——大均值下两遍法反而略优（Welford 的均值是逐项递推，会撞上「更新量被 `|mean|` 的 ulp 吞掉」）。 |
 
-## 训练与推理系统
+## 编译器与图优化
 
 | 英文 | 中文 | 说明 |
 |---|---|---|
-| autograd | 自动微分 | 依据计算图自动求导的机制。**反向图是在前向时建的**（留什么见 saved tensors 条，挂点见 `grad_fn` 条）。⚠ 三条常被记反：**只有 `backward()` 写 `.grad`（且是累加），`torch.autograd.grad()` 只返回、不写**；**`retain_graph` 的默认值不是 `False`，而是 `create_graph`**（源码 `if retain_graph is None: retain_graph = create_graph`；因为 `create_graph` 默认 `False`，实践中才表现为 `False`）；**判叶子必须用形式判据**（见 `is_leaf` 条），口语的「用户创建的」在 view 上会给出相反答案。 |
-| KV cache | 键值缓存 | 自回归解码时缓存历史 token 的 K/V，避免重复计算。 |
-| continuous batching | 连续批处理 | 在请求级别动态进出批次，而非等待整批完成。 |
-| PagedAttention | 分页注意力 | 将 KV cache 按页管理，消除显存碎片。 |
-| speculative decoding | 投机解码 | 用小模型草拟、大模型验证，减少解码步数。 |
-| ZeRO | — | 将优化器状态、梯度、参数分片到各卡的显存优化方案。 |
-| FSDP (Fully Sharded Data Parallel) | 全分片数据并行 | ZeRO 思想在 PyTorch 中的实现。 |
-| all-reduce | 全规约 | 集合通信原语：所有参与者的数据求和后广播给所有人。 |
-| flash attention | — | 用在线 softmax 分块，**不物化 `S×S` 矩阵**。收益不是「提高了算术强度」，而是**绝对字节数从 O(S²) 降到 O(S·d)**（S=16384 时 65 倍）。⚠ 朴素 attention 的 AI **渐近于 `d` 且随 S 上升**，不要照抄「S² 太大所以 memory-bound」。 |
-| GQA / MQA | 分组/多查询注意力 | 多个 query 头共用一份 KV，**群组大小 `r = heads_q/heads_kv`**（文献惯例；MHA 时 `r=1`，MQA 是 `heads_kv=1` 即 `r=heads_q`）。decode 阶段**算术强度在数值上就等于 `r`**（fp16），**与序列长度和 head 维度都无关**——所以长上下文只让绝对时间线性变长，不改变瓶颈性质。 |
-| MoE (Mixture of Experts) | 混合专家 | 每 token 只过一个子集的专家（`top_k` 个）。计算量 `4·tokens·top_k·d_model·d_ff`（**两个 GEMM**：up + down；SwiGLU 三投影则是 6）——**与专家总数无关**。⚠ **省的是 FLOPs，不是显存**：全部专家的参数都要驻留，**权重流量随专家数线性上涨**，所以权重流量的算术强度 `2·T·top_k/(E·esize)` 随 `E` **反比下降**，拐点批大小 `T* = I*·E·esize/(2·top_k)` 随 `E` **线性上涨**。 |
-| grouped GEMM | 分组矩阵乘 | 把变长的一批小 GEMM 合成一次调用，**N、K 相同、只有 M 变长**——所以问题归结为「M 不规整」。**按实际长度分组**的浪费只来自「`M_e` 不是 `BM` 的整数倍」（与分布无关）；**按最大专家填充**的浪费是 `1 − 均值/最大值`（均匀 ~4%、幂律 >60%）。⚠ 网格调度比填充策略重要得多：**一个专家一个 block** 只填满 `E/槽位数` 的机器，**一个 tile 一个 block** 能到 99%。 |
-| 容量因子 (capacity factor) | — | 每个专家开出的 slot 数上限。**定义与语义的正文在 `80-model-architectures/moe`**，kernel 侧只关心它带来的三种状态：正常、被截断（要 mask）、以及**`k` 个选择全被截断**——最后这种 token 前向输出恰为 0、反向梯度也恰为 0，**在本步训练里完全不存在**。 |
 | IR (Intermediate Representation) | 中间表示 | 编译器内部表示程序的形式，决定了 pass 能看见什么、能改什么。本域出现的两种具体形态：MLIR 的四层递归结构（Operation / Region / Block / Value）与 XLA 的 HLO。 |
 | SSA (Static Single Assignment) | 静态单赋值 | **每个值恰好被定义一次**，于是「值」与「定义它的那条指令」一一对应——这是「形状可以挂成指令自身的属性、不必另建值表」的前提。同一个值被定义两次不是风格问题：def-use 分析整个失效。 |
 | dialect (方言) | 方言 | MLIR 用命名空间区分**抽象层次**的机制：`arith.addf`、`linalg.matmul`、`scf.for`、`gpu.launch` 分属四个方言。**区分层次的不是结构，是 operation 的名字**——结构（Operation / Region / Block / Value）全库共用一套。 |
@@ -147,6 +134,13 @@
 | search space | 搜索空间 | 「搜什么」。两级结构：**sketch**（骨架，由推导规则递归生成）+ **annotation**（低层参数，随机采样）。⚠ **融合决策在 sketch 阶段就已定死**，把它读成 annotation 层的一个开关是错的。 |
 | nominal / effective size | 名义基数 / 有效基数 | 名义基数 = 把各参数取值范围乘起来得到的数，**是个假象**（大量配置生成同一段代码，另有一批根本编译不过）；有效基数 = **等价类中可行的那部分**。⚠ 有效基数是**等价类的个数，不是配置的个数**；按名义基数估预算，最坏情况下 82% 花在无效点上。 |
 | autotuning | 自动调优 | 让机器在搜索空间里挑实现。三个部件相乘：**空间 → 代价模型 → 搜索**。⚠「多测几个候选不会让结果变差」只在候选集不变时成立——**预算单调，空间不单调**，改动候选集本身会让结果变差。 |
+| `torch.compile(dynamic=…)` / `automatic_dynamic_shapes` | 动态形状开关 | ⚠ 方向必须写准：**`dynamic` 默认是 `None`（不是 `False`）**，且 **`automatic_dynamic_shapes` 默认 `True`**——先按**静态**形状编一次，guard 失败后**自动把变化的那些维标成 dynamic** 再编一次，此后新形状命中同一张动态图。**所以「N 个不同 shape 就重编译 N 次」是错的；重编译次数的期望是 O(变化的维度数)。** ⚠ **`dynamic=True` 不是「打开动态形状的开关」**：官方把它标成 *"(Not recommended)"*、*"error prone"*，归在 *"for testing only"*——那个需求**默认就已满足**；提前声明要用 `mark_dynamic` 逐维**用户标注**（官方推荐）。 |
+
+## 深度学习框架
+
+| 英文 | 中文 | 说明 |
+|---|---|---|
+| autograd | 自动微分 | 依据计算图自动求导的机制。**反向图是在前向时建的**（留什么见 saved tensors 条，挂点见 `grad_fn` 条）。⚠ 三条常被记反：**只有 `backward()` 写 `.grad`（且是累加），`torch.autograd.grad()` 只返回、不写**；**`retain_graph` 的默认值不是 `False`，而是 `create_graph`**（源码 `if retain_graph is None: retain_graph = create_graph`；因为 `create_graph` 默认 `False`，实践中才表现为 `False`）；**判叶子必须用形式判据**（见 `is_leaf` 条），口语的「用户创建的」在 view 上会给出相反答案。 |
 | dispatch (dispatcher) | 分发 | 框架里「**按 key 分发的调度层**」。一次 `a + b` 恰好 **1 次** `__torch_dispatch__` 拦截，而 `+a`、已同 dtype 的 `a.float()`、`a.shape` 是 **0 次**——⚠ **「0 次」有两种成因，别混**：`a.shape` 是**根本没进 dispatcher**，`+a` / `a.float()` 是**进了但被内联展开**，判据是两条观测通道的**差集**。⚠ 数层数要按**实际算子**数，不能按脑子里的数学运算数：一维 `a @ b` 走的是 `aten.dot.default`，不是 mm/matmul。 |
 | dispatch key / DispatchKeySet | 分发键 / 分发键集合 | keyset **是一个 64 位整数**，且**不是 1 key = 1 bit**（低位是 backend bits、高位是 functionality bits），backend 上限 **16**。⚠ **「张量子类就会有 `Python` key」是错的**——只有**覆盖了 `__torch_dispatch__`** 的子类才会被加上 `Python` 与 `PythonTLSSnapshot`，空子类不会。 |
 | `__torch_dispatch__` / TorchDispatchMode | 算子级拦截 / 分发模式 | 两者拦的都是 **aten 层的算子**。`TorchDispatchMode` **不是 keyset 里的一位**，而是**线程局部栈**（叠加时后进先出），且进/出 mode 本身有成本（本机实测：进/出 6.4 μs，裸 `a + b` 0.9 μs）——**它是诊断工具，不是生产路径**。⚠ 两者同时在栈上时**顺序是 `['mode', 'subclass']`，即 mode 先**；这条的唯一依据是实测（源码里讲到顺序的那条注释只在 2.13.0 存在，且讲的是 C++ `Fake` key 的位置）。⚠ 在子类的 `__torch_dispatch__` 里直接 `func(*args)` 会**无限递归**（用 `as_subclass` 拆包**同样**递归），要 `with torch._C._DisableTorchDispatch():`。 |
@@ -165,5 +159,21 @@
 | `pmap` / `pjit` / `shard_map` | — | 多设备那条路的三代写法，换的一直是「**谁来把假设写下来**」。`pmap` **已被官方劝退**（docstring 首句 *Old way of doing parallel map*），且**现在就是用 `jit()` + `shard_map()` 实现的**；`pjit` **已并入 `jax.jit`**（落点很实：`jax.jit` 的返回类型就叫 `pjit.JitWrapped`）；`shard_map` 与 `jit` 的自动分片 **complementary to, and composable with**。可数的那笔账：同一个全局求和，自动分片由**分区器插 1 个 `psum`**、`shard_map` 由**用户写 1 个**——差别只在假设由谁写。 |
 | `lax.cond` / `scan` / `while_loop` | 结构化控制流 | **值相关的 Python 控制流在 JAX 里直接失败**，替代是这一套。`lax.cond` 的**谓词可以是 traced 值**（分支选择在设备上、运行时发生——与 TF 的 `tf.cond` 同一设计，代价是**两支都进图**）；⚠ **`while_loop` 不是反向模式可微的**（反向要**静态有界**的迭代次数），要反传就用 `scan` / `fori_loop`。 |
 | SavedModel | — | 图离开进程时的落地格式。⚠ **「SavedModel 已被废弃」是过度概括**：`tf.saved_model.save` 在 v2.21.0 源码里**没有任何 `@deprecated`**，而且 **Keras 3 的 `Model.export()` 默认格式就是它**（`format="tf_saved_model"`）；被取代的是「把它当作 Keras 模型的**保存 / 再训练**格式」这件事（那用 `.keras`）。⚠ **导出 = 图 + 签名一起落地**：载入后**不产生任何追踪**，但形状假设被冻住（要留余量就用 `None` 维）。 |
-| `torch.compile(dynamic=…)` / `automatic_dynamic_shapes` | 动态形状开关 | ⚠ 方向必须写准：**`dynamic` 默认是 `None`（不是 `False`）**，且 **`automatic_dynamic_shapes` 默认 `True`**——先按**静态**形状编一次，guard 失败后**自动把变化的那些维标成 dynamic** 再编一次，此后新形状命中同一张动态图。**所以「N 个不同 shape 就重编译 N 次」是错的；重编译次数的期望是 O(变化的维度数)。** ⚠ **`dynamic=True` 不是「打开动态形状的开关」**：官方把它标成 *"(Not recommended)"*、*"error prone"*，归在 *"for testing only"*——那个需求**默认就已满足**；提前声明要用 `mark_dynamic` 逐维**用户标注**（官方推荐）。 |
 | `torch.library.custom_op` / `tf.custom_gradient` | 自定义算子入口 | PyTorch：`custom_op` 有三条硬约束——`mutates_args` 是 **keyword-only 且无默认值**、被包装函数**必须有类型标注**（schema 由它推导）、**返回的是 `CustomOpDef` 对象不是函数**（有 `register_kernel` / `register_fake`，**没有** `register_impl`）；自定义算子在 eager 上**与内置算子同层数**（1 次拦截）——注册是**交出契约**，不是绕开 dispatch。TF：官方次序是**先试着用现有 Python 算子组合，不行才写自定义 op**；`tf.custom_gradient` 是**给已有的组合换反向**，不是注册新 op。 |
+
+## 训练与推理系统
+
+| 英文 | 中文 | 说明 |
+|---|---|---|
+| KV cache | 键值缓存 | 自回归解码时缓存历史 token 的 K/V，避免重复计算。 |
+| continuous batching | 连续批处理 | 在请求级别动态进出批次，而非等待整批完成。 |
+| PagedAttention | 分页注意力 | 将 KV cache 按页管理，消除显存碎片。 |
+| speculative decoding | 投机解码 | 用小模型草拟、大模型验证，减少解码步数。 |
+| ZeRO | — | 将优化器状态、梯度、参数分片到各卡的显存优化方案。 |
+| FSDP (Fully Sharded Data Parallel) | 全分片数据并行 | ZeRO 思想在 PyTorch 中的实现。 |
+| all-reduce | 全规约 | 集合通信原语：所有参与者的数据求和后广播给所有人。 |
+| flash attention | — | 用在线 softmax 分块，**不物化 `S×S` 矩阵**。收益不是「提高了算术强度」，而是**绝对字节数从 O(S²) 降到 O(S·d)**（S=16384 时 65 倍）。⚠ 朴素 attention 的 AI **渐近于 `d` 且随 S 上升**，不要照抄「S² 太大所以 memory-bound」。 |
+| GQA / MQA | 分组/多查询注意力 | 多个 query 头共用一份 KV，**群组大小 `r = heads_q/heads_kv`**（文献惯例；MHA 时 `r=1`，MQA 是 `heads_kv=1` 即 `r=heads_q`）。decode 阶段**算术强度在数值上就等于 `r`**（fp16），**与序列长度和 head 维度都无关**——所以长上下文只让绝对时间线性变长，不改变瓶颈性质。 |
+| MoE (Mixture of Experts) | 混合专家 | 每 token 只过一个子集的专家（`top_k` 个）。计算量 `4·tokens·top_k·d_model·d_ff`（**两个 GEMM**：up + down；SwiGLU 三投影则是 6）——**与专家总数无关**。⚠ **省的是 FLOPs，不是显存**：全部专家的参数都要驻留，**权重流量随专家数线性上涨**，所以权重流量的算术强度 `2·T·top_k/(E·esize)` 随 `E` **反比下降**，拐点批大小 `T* = I*·E·esize/(2·top_k)` 随 `E` **线性上涨**。 |
+| grouped GEMM | 分组矩阵乘 | 把变长的一批小 GEMM 合成一次调用，**N、K 相同、只有 M 变长**——所以问题归结为「M 不规整」。**按实际长度分组**的浪费只来自「`M_e` 不是 `BM` 的整数倍」（与分布无关）；**按最大专家填充**的浪费是 `1 − 均值/最大值`（均匀 ~4%、幂律 >60%）。⚠ 网格调度比填充策略重要得多：**一个专家一个 block** 只填满 `E/槽位数` 的机器，**一个 tile 一个 block** 能到 99%。 |
+| 容量因子 (capacity factor) | — | 每个专家开出的 slot 数上限。**定义与语义的正文在 `80-model-architectures/moe`**，kernel 侧只关心它带来的三种状态：正常、被截断（要 mask）、以及**`k` 个选择全被截断**——最后这种 token 前向输出恰为 0、反向梯度也恰为 0，**在本步训练里完全不存在**。 |

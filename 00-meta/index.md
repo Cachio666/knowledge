@@ -34,13 +34,13 @@
   - [01-hierarchy-overview](../20-gpu-architecture/memory-system/01-hierarchy-overview.md)
   - [02-coalescing-and-cache-line](../20-gpu-architecture/memory-system/02-coalescing-and-cache-line.md)
   - [03-shared-memory-bank-conflict](../20-gpu-architecture/memory-system/03-shared-memory-bank-conflict.md)
-- [tensor-core](../20-gpu-architecture/tensor-core/) —— MMA 原语 / fragment 布局 / wgmma / tcgen05 与 TMEM / 结构化稀疏
+- [tensor-core](../20-gpu-architecture/tensor-core/) —— MMA 原语与 tile 形状 / fragment 布局 / wgmma 与流水 / tcgen05 与 TMEM / 2:4 结构化稀疏
   - [01-mma-primitive](../20-gpu-architecture/tensor-core/01-mma-primitive.md)
   - [02-fragment-layout](../20-gpu-architecture/tensor-core/02-fragment-layout.md)
   - [03-wgmma-and-pipeline](../20-gpu-architecture/tensor-core/03-wgmma-and-pipeline.md)
   - [04-tcgen05-and-tmem](../20-gpu-architecture/tensor-core/04-tcgen05-and-tmem.md)
   - [05-structured-sparsity](../20-gpu-architecture/tensor-core/05-structured-sparsity.md)
-- [interconnect](../20-gpu-architecture/interconnect/) —— 带宽口径 / 拓扑与 bisection / 拓扑受限的集合通信 / 标称与可达
+- [interconnect](../20-gpu-architecture/interconnect/) —— 带宽口径 / 拓扑与 bisection / 拓扑受限的集合通信 / 标称与可达的差距
   - [01-bandwidth-conventions](../20-gpu-architecture/interconnect/01-bandwidth-conventions.md)
   - [02-topology-and-bisection](../20-gpu-architecture/interconnect/02-topology-and-bisection.md)
   - [03-collectives-on-topology](../20-gpu-architecture/interconnect/03-collectives-on-topology.md)
@@ -104,7 +104,7 @@
   - [02-fusion-scheduling](../60-compilers/inductor/02-fusion-scheduling.md)
   - [03-codegen](../60-compilers/inductor/03-codegen.md)
   - [04-dynamic-shapes](../60-compilers/inductor/04-dynamic-shapes.md)
-- [xla](../60-compilers/xla/) —— TensorFlow 与 JAX 的图编译 / HLO 与形状推断 / 融合 kind 与三层判据 / 布局指派与内存空间
+- [xla](../60-compilers/xla/) —— HLO 与形状推断 / 融合 kind 与三层判据 / 布局指派与内存空间
   - [01-hlo-and-shape-inference](../60-compilers/xla/01-hlo-and-shape-inference.md)
   - [02-fusion](../60-compilers/xla/02-fusion.md)
   - [03-layout-and-memory](../60-compilers/xla/03-layout-and-memory.md)

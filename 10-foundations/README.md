@@ -4,11 +4,11 @@
 
 ## 本域覆盖什么
 
-| 主题 | 内容 |
-|---|---|
-| floating-point | IEEE754 格式、舍入模式、误差累积、次正规数 |
-| numerical-linear-algebra | 矩阵计算、条件数、数值稳定性、迭代求解 |
-| performance-models | roofline 模型、算术强度、Amdahl 定律、延迟-带宽模型 |
+| 主题 | 内容 | 状态 |
+|---|---|---|
+| [floating-point](floating-point/) | IEEE754 格式 / 舍入与误差模型 / 求和与 FMA / 低精度格式 | 已完成 |
+| [numerical-linear-algebra](numerical-linear-algebra/) | 范数与条件数 / GEMM 误差 / 分解稳定性 / 迭代法 | 已完成 |
+| [performance-models](performance-models/) | roofline 模型 / Amdahl 扩展性 / 实测 roofline | 已完成 |
 
 ## 代码约定
 
