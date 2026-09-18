@@ -475,8 +475,13 @@ SPARSE_SPEEDUP_OBSERVED = (
                                    "小 CNN GEMM 无加速", (1.0, 1.67)),
 )
 # 来源：三条独立来源，见正文「参考」小节
-# 口径：**都是端到端或逐层的实测倍数**，不是算力倍数。理论 2x 在真实模型上
-#       普遍只拿到 1.2x~1.6x。
+# 口径：**三行分属两种口径，不得混称**——第 1 行是「各层」（层级）、第 3 行是「内核级」、
+#       第 2 行是「端到端」。它们都不是算力倍数，是实测倍数。
+#       ⚠ 理论 2x 在真实模型上要分两档说：**层级/内核级约 1.3x–1.7x**；
+#         **端到端约 1.2x**，且**小 batch 可能低于 1x**（PyTorch 官方教程
+#         BERT-base/SQuAD bs=4 实测 0.71x，更慢）。
+#       把「层级/内核级」的区间说成「端到端」是**不同口径混称**——这是本条注释
+#       此前犯过的错（见 130-quantization/sparsity-and-distillation 的跨域订正）。
 
 SPARSE_WHITEPAPER_QUOTE = (
     "Speedups that 2:4 sparse matrix multiplications achieve over dense "
