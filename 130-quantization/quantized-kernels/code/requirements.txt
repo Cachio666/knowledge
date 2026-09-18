@@ -1,0 +1,5 @@
+torch>=2.8   # 由 Makefile 的探测提供（**不靠 pip 装**）：要的是本机某个已装 torch 的解释器
+             # ⚠ 这个下限是**对齐选择**、不是依赖：三个编号程序用到的四样东西
+             #   （_convert_weight_to_int4pack_for_cpu / _weight_int4pack_mm_for_cpu /
+             #    _weight_int8pack_mm / float8_e4m3fn 的 torch.mm）**在 2.6.0 上就全部存在**。
+             # verify.py 只用标准库 —— **本主题连 numpy 都不需要**。
