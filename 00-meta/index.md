@@ -144,7 +144,37 @@
 尚未开始。
 
 ## 130-quantization
-尚未开始。
+
+- [numerical-formats](../130-quantization/numerical-formats/) —— fp16 / bf16 / tf32 / fp8 / int8 / int4 / nvfp4
+  - [01-fp8-family](../130-quantization/numerical-formats/01-fp8-family.md)
+  - [02-e8m0-and-mx](../130-quantization/numerical-formats/02-e8m0-and-mx.md)
+  - [03-bf16-fp16-tf32](../130-quantization/numerical-formats/03-bf16-fp16-tf32.md)
+  - [04-integer-formats](../130-quantization/numerical-formats/04-integer-formats.md)
+- [theory](../130-quantization/theory/) —— 量化误差分析 / scale 与 zero-point / outlier 问题
+  - [01-error-bounds](../130-quantization/theory/01-error-bounds.md)
+  - [02-granularity](../130-quantization/theory/02-granularity.md)
+  - [03-outliers-and-propagation](../130-quantization/theory/03-outliers-and-propagation.md)
+- [ptq](../130-quantization/ptq/) —— 训练后量化 / 校准方法 / GPTQ / AWQ / SmoothQuant
+  - [01-calibration](../130-quantization/ptq/01-calibration.md)
+  - [02-gptq](../130-quantization/ptq/02-gptq.md)
+  - [03-awq-and-smoothquant](../130-quantization/ptq/03-awq-and-smoothquant.md)
+  - [04-rounding](../130-quantization/ptq/04-rounding.md)
+- [qat](../130-quantization/qat/) —— 量化感知训练 / 伪量化 / 梯度近似
+  - [01-ste](../130-quantization/qat/01-ste.md)
+  - [02-fake-quant-and-lsq](../130-quantization/qat/02-fake-quant-and-lsq.md)
+  - [03-pact-and-comparison](../130-quantization/qat/03-pact-and-comparison.md)
+- [quantized-kernels](../130-quantization/quantized-kernels/) —— 量化算子实现（正文在本域，回链 40-kernels）
+  - [01-w8a8](../130-quantization/quantized-kernels/01-w8a8.md)
+  - [02-w4a16-packing](../130-quantization/quantized-kernels/02-w4a16-packing.md)
+  - [03-kernel-design](../130-quantization/quantized-kernels/03-kernel-design.md)
+- [kv-cache-quantization](../130-quantization/kv-cache-quantization/) —— KV cache 量化（正文在本域，回链 120-inference）
+  - [01-kv-cache-basics](../130-quantization/kv-cache-quantization/01-kv-cache-basics.md)
+  - [02-kivi-asymmetry](../130-quantization/kv-cache-quantization/02-kivi-asymmetry.md)
+  - [03-low-bit-and-engines](../130-quantization/kv-cache-quantization/03-low-bit-and-engines.md)
+- [sparsity-and-distillation](../130-quantization/sparsity-and-distillation/) —— 结构化与非结构化稀疏 / 知识蒸馏
+  - [01-sparsity-granularity](../130-quantization/sparsity-and-distillation/01-sparsity-granularity.md)
+  - [02-pruning-criteria](../130-quantization/sparsity-and-distillation/02-pruning-criteria.md)
+  - [03-distillation](../130-quantization/sparsity-and-distillation/03-distillation.md)
 
 ## 140-papers
 尚未开始。

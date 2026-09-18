@@ -326,7 +326,7 @@ make 05_norms_and_condition
 
 接着往下走的两条线。**算法侧**：[03-matrix-factorization-stability](03-matrix-factorization-stability.md) 讲分解本身的稳定性——不选主元 LU 的真实失败模式、Cholesky 与 `eigvalsh` 在 `λ_min ≈ u·λ_max` 上的判定矛盾、以及 flops 计数为什么不能跨实现预测时间。**精度侧**：[04-iterative-methods](04-iterative-methods.md) 讲迭代精化——它把「精度问题」转换成「`κ·u` 够不够小」的问题，也正因为如此，它的收益完全由本文的 κ 决定。
 
-跨域的两处落点。`κ` 在量化里的意义见 [130-quantization/theory](../../130-quantization/theory.md)（正文在本域，回链该域）：量化误差是**结构性地**落在最坏方向还是随机方向上，决定了 κ 是否真的会咬人。在混合精度训练里，则是 [04-iterative-methods](04-iterative-methods.md) 把 κ 与「低精度计算 + 高精度主权重」直接对应起来。
+跨域的两处落点。`κ` 在量化里的意义见 [130-quantization/theory](../../130-quantization/theory/)（正文在本域，回链该域）：量化误差是**结构性地**落在最坏方向还是随机方向上，决定了 κ 是否真的会咬人。在混合精度训练里，则是 [04-iterative-methods](04-iterative-methods.md) 把 κ 与「低精度计算 + 高精度主权重」直接对应起来。
 
 ## 参考
 

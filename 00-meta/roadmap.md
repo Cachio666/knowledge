@@ -1,7 +1,7 @@
 # 实施进度表
 
 > 最后更新：2026-09-17
-> 进度：22 / 61 主题完成
+> 进度：29 / 61 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -86,13 +86,13 @@
 - [ ] serving-infra
 
 ## 130-quantization
-- [ ] numerical-formats
-- [ ] theory
-- [ ] ptq
-- [ ] qat
-- [ ] quantized-kernels
-- [ ] kv-cache-quantization
-- [ ] sparsity-and-distillation
+- [x] numerical-formats
+- [x] theory
+- [x] ptq
+- [x] qat
+- [x] quantized-kernels
+- [x] kv-cache-quantization
+- [x] sparsity-and-distillation
 
 ## 140-papers
 （无固定二级结构，按需追加）

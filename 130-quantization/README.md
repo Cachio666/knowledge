@@ -4,15 +4,15 @@
 
 ## 本域覆盖什么
 
-| 主题 | 内容 |
-|---|---|
-| numerical-formats | fp16 / bf16 / tf32 / fp8 / int8 / int4 / nvfp4 |
-| theory | 量化误差分析 / scale 与 zero-point / outlier 问题 |
-| ptq | 训练后量化 / 校准方法 / GPTQ / AWQ / SmoothQuant |
-| qat | 量化感知训练 / 伪量化 / 梯度近似 |
-| quantized-kernels | 量化算子实现（正文在本域，回链 40-kernels） |
-| kv-cache-quantization | KV cache 量化（正文在本域，回链 120-inference） |
-| sparsity-and-distillation | 结构化与非结构化稀疏 / 知识蒸馏 |
+| 主题 | 内容 | 状态 |
+|---|---|---|
+| [numerical-formats](numerical-formats/) | fp16 / bf16 / tf32 / fp8 / int8 / int4 / nvfp4 | 已完成 |
+| [theory](theory/) | 量化误差分析 / scale 与 zero-point / outlier 问题 | 已完成 |
+| [ptq](ptq/) | 训练后量化 / 校准方法 / GPTQ / AWQ / SmoothQuant | 已完成 |
+| [qat](qat/) | 量化感知训练 / 伪量化 / 梯度近似 | 已完成 |
+| [quantized-kernels](quantized-kernels/) | 量化算子实现（正文在本域，回链 40-kernels） | 已完成 |
+| [kv-cache-quantization](kv-cache-quantization/) | KV cache 量化（正文在本域，回链 120-inference） | 已完成 |
+| [sparsity-and-distillation](sparsity-and-distillation/) | 结构化与非结构化稀疏 / 知识蒸馏 | 已完成 |
 
 ## 与其他域的关系
 
