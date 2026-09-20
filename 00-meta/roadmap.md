@@ -20,10 +20,10 @@
 - [x] architecture-evolution
 
 ## 30-gpu-programming
-- [ ] cuda
-- [ ] triton
-- [ ] ptx-sass
-- [ ] cutlass
+- [ ] cuda (进行中)
+- [ ] triton (进行中)
+- [ ] ptx-sass (进行中)
+- [ ] cutlass (进行中)
 
 ## 40-kernels
 - [x] gemm
