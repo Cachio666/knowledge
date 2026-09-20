@@ -1,7 +1,7 @@
 # 实施进度表
 
 > 最后更新：2026-09-20
-> 进度：33 / 65 主题完成
+> 进度：34 / 65 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -20,7 +20,7 @@
 - [x] architecture-evolution
 
 ## 30-gpu-programming
-- [ ] cuda (进行中)
+- [x] cuda
 - [ ] triton (进行中)
 - [ ] ptx-sass (进行中)
 - [ ] cutlass (进行中)

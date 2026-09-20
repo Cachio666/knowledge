@@ -1,0 +1,50 @@
+# 30-gpu-programming/cuda 的第三方依赖
+#
+# ★ 只有一个：**numpy**。启用方式：`python3 -m pip install -r requirements.txt`
+#
+# ── numpy 在本主题里干什么（不是装饰，三个程序都在用）──────────────────────
+#   · 01_sync_contract.py  §B 的代价模型用 **int64 数组**：
+#       - `np.array([...], dtype=np.int64)` 统计 7 个文件里那行表达式的出现次数
+#         （`occ_arr.sum() == 7`、`(occ_arr == 1).all()`）；
+#       - 超发倍率用 int64/int64 的 float64 除法复核。
+#       ★ 选 int64 不是随便挑的：**numpy 的整型除法 `//` 与 C 一样是截断除法**，
+#         与 01 自己实现的 `_ev`（C 语义求值器）同口径。用 `int(a/b)` 会在
+#         |a/b| > 2**53 时丢精度 —— 这正是 01 的 A.2 那条断言钉住的点。
+#   · 02_stream_dag.py     A.5b 用 **bool 矩阵的幂**独立求传递闭包：
+#       `R = R | (R @ R)` —— numpy 在 bool dtype 上的 `@` 就是**布尔半环**
+#       （乘 = 与、加 = 或）。它与集合式的 `reachability()`（邻接表上的不动点迭代）
+#       是两条不同的算法，两者必须给出同一个可达关系。
+#   · 03_graph_capture.py  变体表用 `int8` 码表（合法 = 1 / 失效 = -1）**逐格**比对；
+#       省下的宿主动作数用 int64 数组差算。
+#
+# ── 本主题**明确不需要**的东西（写出来是为了让「没装」不等于「忘了写」）────────
+#   · **不需要 torch / triton / numba / cuda-python** —— 一个都不 import。
+#     `make lint` 用 `ast` 对这条做**机械检查**（含 `specs.py`，含 `import_module`
+#     这类动态导入）；注释与 docstring 里出现这些词不算违规。
+#   · **不需要 GPU、不需要 CUDA 工具链、不需要 nsight / ncu** —— 本机是 Apple M1 Pro，
+#     无 GPU、无 nvcc / cuobjdump / nvdisasm / ptxas / ncu。**本目录不写 `.cu`**：
+#     连语法都无法验证的 `.cu` 只是无法反驳的文本。
+#   · **不需要网络** —— 只有 `make anchors` 这个**可选**目标需要（它 `curl` 官方文档
+#     再抽取语义锚点）。`make run` 完全离线。
+#
+# ── 但需要两棵**外部源码树**（不是仓库里的目录，是本主题的真值来源）──────────
+#   本域的代码形态是「**真值来自外部真实工件**」：
+#     · CUDA_TRAINING_SERIES —— NVIDIA 官方训练系列（**B 级来源**：厂商材料，不是规范）。
+#       程序读 exercises/hw2、hw5、hw10、hw13 下的真实 `.cu` 文件；
+#       行号、逐字行内容、sha256 前 16 位都记在 `specs.py` 里并逐条核对。
+#     · CUDA_LEARNING —— 目标环境 **Tesla T4 / sm_75（Turing）**（其 README 第 16–17 行），
+#       **没有** bf16 / TF32 / cp.async / TMA / warp-specialization（第 22 行）。
+#       只用于 C2/C3 的**误报回归**。
+#   ★ 两棵树的版本标识：
+#     · cuda-training-series 是 git 仓库，无 release tag ⇒ 用提交号 + 每个文件的 sha256；
+#     · cuda-learning **不是 git 仓库** ⇒ 只能用文件 sha256。
+#   路径探测见 `Makefile` 的说明；找不到时程序以**可操作的错误信息**退出。
+#
+# ── 本机的运行条件（写进文档「编译与运行」小节的测量条件）──────────────────
+#   python3 = 3.13.5；numpy = 2.4.4（三个程序都在输出里打印实际版本）
+#   ★ 本主题**不产出任何实测性能数字**：无 GPU。全部数字是**推导值**
+#     （本仓库程序算出，可复核）或**引用值**（外部工件的数字，带路径与行号）。
+#   ★ 三个程序都用**固定输入**（hw13 的 N=500000/threads=512 等来自源文件）
+#     ⇒ 输出逐字节可复现。
+
+numpy>=2.0

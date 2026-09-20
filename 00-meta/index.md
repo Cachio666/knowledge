@@ -51,7 +51,10 @@
   - [03-invariants](../20-gpu-architecture/architecture-evolution/03-invariants.md)
 
 ## 30-gpu-programming
-尚未开始。
+- [cuda](../30-gpu-programming/cuda/) —— 线程层次与同步契约 / 流与事件的依赖 DAG / 内存管理与 CUDA Graph
+  - [01-thread-hierarchy-and-sync](../30-gpu-programming/cuda/01-thread-hierarchy-and-sync.md)
+  - [02-streams-and-events](../30-gpu-programming/cuda/02-streams-and-events.md)
+  - [03-memory-and-graphs](../30-gpu-programming/cuda/03-memory-and-graphs.md)
 
 ## 40-kernels
 - [gemm](../40-kernels/gemm/) —— 朴素 → 共享内存分块 → 寄存器分块 → tensor core 与异步流水 → persistent kernel 与 tcgen05 → split-K 与 Stream-K
