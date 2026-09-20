@@ -52,6 +52,7 @@
 
 ## 30-gpu-programming
 
+
 - [cuda](../30-gpu-programming/cuda/) —— 线程层次与同步契约 / 流与事件的依赖 DAG / 内存管理与 CUDA Graph
   - [01-thread-hierarchy-and-sync](../30-gpu-programming/cuda/01-thread-hierarchy-and-sync.md)
   - [02-streams-and-events](../30-gpu-programming/cuda/02-streams-and-events.md)
@@ -65,6 +66,10 @@
   - [01-ptx-as-virtual-isa](../30-gpu-programming/ptx-sass/01-ptx-as-virtual-isa.md)
   - [02-warp-level-execution](../30-gpu-programming/ptx-sass/02-warp-level-execution.md)
   - [03-memory-and-sass-gap](../30-gpu-programming/ptx-sass/03-memory-and-sass-gap.md)
+- [cutlass](../30-gpu-programming/cutlass/) —— CuTe layout 代数 / 层次化 tiling / swizzle 与 collective
+  - [01-layout-algebra](../30-gpu-programming/cutlass/01-layout-algebra.md)
+  - [02-hierarchical-tiling](../30-gpu-programming/cutlass/02-hierarchical-tiling.md)
+  - [03-swizzle-and-collective](../30-gpu-programming/cutlass/03-swizzle-and-collective.md)
 
 ## 40-kernels
 - [gemm](../40-kernels/gemm/) —— 朴素 → 共享内存分块 → 寄存器分块 → tensor core 与异步流水 → persistent kernel 与 tcgen05 → split-K 与 Stream-K

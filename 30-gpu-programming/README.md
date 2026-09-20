@@ -12,7 +12,7 @@
 | [cuda](cuda/) | 线程组织与同步契约 / 流与事件 / 内存管理与 CUDA Graph | **已完成**（3 篇） |
 | [triton](triton/) | 块级程序模型 / 边界掩码 / layout 泄漏 / 归约的跨 warp 代价 | **已完成**（4 篇） |
 | [ptx-sass](ptx-sass/) | PTX 作为虚拟 ISA / warp 级执行 / 访存计数与 PTX→SASS 落差 | **已完成**（3 篇） |
-| [cutlass](cutlass/) | CuTe layout 代数 / 层次化 tiling / swizzle 与 collective | 进行中 |
+| [cutlass](cutlass/) | CuTe layout 代数 / 层次化 tiling / swizzle 与 collective | **已完成**（3 篇） |
 
 **统一主线**：
 

@@ -1,0 +1,57 @@
+# 30-gpu-programming/cutlass 的第三方依赖
+#
+# ★ 只有一个：**numpy**。启用方式：`python3 -m pip install -r requirements.txt`
+#
+# ── numpy 在本主题里干什么（不是装饰，三个程序都在用）──────────────────────
+#   · 01_layout_algebra.py  B 类的「地址空洞」统计用 **int64 数组**：
+#       `np.array([cosize - size for ...], dtype=np.int64)` 一次算完整个 layout 池，
+#       再 `arr.max()` 找最坏的那个。
+#       ★ 选 int64 不是随便挑的：这些量是**小整数计数**，用浮点会给
+#         「423」这种整数染上本不必要的近似口径（本程序用 `==` 直接断言）。
+#   · 02_tiling_decompose.py  B 类的重名统计用 **numpy 的 `unique(..., return_counts=True)`**
+#       复核本仓库自己用 `collections.Counter` 数出来的那两个数
+#       （93 个不同的 `procedural_name()`、最多的一个出现 6 次）——
+#       **两条不同的计数路径必须给出同一个答案**。
+#   · 03_swizzle_probe.py  「非平凡比例」的闭式复核用 int64 数组：
+#       `(np.array(...) != np.arange(size)).sum()` 与逐点循环**两条路径**比对。
+#
+# ── 本主题**明确不需要**的东西（写出来是为了让「没装」不等于「忘了写」）────────
+#   · **不需要 torch / triton / numba / cuda-python** —— 一个都不 import。
+#     `make lint` 用 `ast` 对这条做**机械检查**（含 `specs.py` / `meta_falsify.py` /
+#     `mutate.py`，含 `import_module` 这类动态导入）；注释与 docstring 里出现这些词
+#     不算违规。
+#   · **不需要 GPU、不需要 CUDA 工具链、不需要 nsight / ncu** —— 本机是 Apple M1 Pro，
+#     无 GPU、无 nvcc / cuobjdump / nvdisasm / ptxas / ncu。
+#     ★ **本目录不写 `.cu`**：没有 `ptxas` 就连语法都无法验证。
+#   · **不需要网络** —— 本主题**没有** `make anchors` 之类的联网目标：
+#     真值是**本机的一棵 CUTLASS 源码树**，全程离线。
+#   · ★★ **不要照抄 `cutlass/pyproject.toml` 的 `dependencies`（6 条）。**
+#     它列出了 `cuda-python` / `networkx` / `numpy` / `pydot` / `scipy` / `treelib`，
+#     而其中 **networkx / pydot / treelib / cuda-python 本机都没装**，
+#     本主题用到的两个子包（`pycute` / `cutlass_library`）**依然全部导入成功** ——
+#     说明那些依赖是**懒加载**的，只有生成器的 CLI 路径才需要。
+#     ⇒ 本文件只写**实测需要**的那一条。（计划 §0.7 C2 已核实这一点。）
+#
+# ── 但需要一棵**外部源码树**（不是仓库里的目录，是本主题的真值来源）──────────
+#   本域的代码形态是「**真值来自外部真实工件**」：
+#     · CUTLASS 4.8.0 源码树（**B 级来源：NVIDIA 自己的实现，不是规范**）。
+#       本目录读它、也**真的 import 并跑**它自带的两个纯 Python 参考实现：
+#         python/pycute/          （零第三方依赖）
+#         python/cutlass_library/
+#   ★ 版本标识（**四处来源不一致，程序会把四处都打印出来**）：
+#       include/cutlass/version.h  = 4.8.0   ← **基准**
+#       CHANGELOG.md 首条          = 4.8.0（2026-08-25）
+#       git describe --tags        = v4.8.0dev-2-gdc45f979
+#       pyproject.toml 的 version  = 4.2.0.0 ← **陈旧，落后三个次版本**
+#   ★ 路径探测见 `Makefile` 的 `cutlass-path` 目标与 `specs.CUTLASS_CANDIDATES`；
+#     找不到时**以可操作的错误信息退出**（rc=2），**不静默跳过对拍**。
+#
+# ── 本机的运行条件（写进文档「编译与运行」小节的测量条件）──────────────────
+#   python3 = 3.13.5；numpy = 2.4.4（三个程序都在输出里打印实际版本）
+#   ★ 本主题的数字分两类，**没有一类叫「GPU 实测」**：
+#     **本机实测值**（真跑 CUTLASS 4.8.0 自带的 Python 参考实现 ——
+#       测量条件是 **CUTLASS 的版本**，不是 GPU 型号）、
+#     **推导值**（本仓库自己实现的那份参照实现算出的、以及与工件对拍的统计）。
+#   ★ 三个程序都用**固定输入** ⇒ 输出逐字节可复现（除解释器与 numpy 版本号）。
+
+numpy>=2.0
