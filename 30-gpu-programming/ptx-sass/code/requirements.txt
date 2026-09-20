@@ -1,0 +1,42 @@
+# 30-gpu-programming/ptx-sass 的第三方依赖
+#
+# ★ 只有一个：**numpy**。启用方式：`python3 -m pip install -r requirements.txt`
+#
+# ── numpy 在本主题里干什么（不是装饰，三个程序都在用）──────────────────────
+#   · 01_virtual_isa.py  §B 的「`.reg` 声明量 vs 实际触及量」用 **int64 数组**装表：
+#       `arr[:, 0] >= arr[:, 1]` 与 `.sum()` 一次算完全部片段；
+#       ★ 选 int64 不是随便挑的：这三个量都是**小整数计数**，用浮点会引入
+#         「8/6 = 1.3333333...」这种本不必要的近似口径（本程序用 round(..., 4) 断言）。
+#   · 02_warp_execution.py  A 类对拍的三条路径里有两条是 numpy：
+#       `vals.reshape(-1, 32).sum(axis=1)`（分段求和）与 `np.array_equal`（逐元素比对）。
+#       ★ 它**与解释器走的不是同一条路**：解释器是逐 lane 的 5 轮 `+`，
+#         numpy 是它自己的分段归约实现 —— 这正是 A 类断言的全部意义。
+#   · 03_smem_and_sass.py  A 类路径②：把解释器给出的**字节地址**做
+#       `words = addr//4; bank = words % 32`，逐 bank 数「不同 word 的个数」。
+#       它与 `ptxsub.max_bank_conflict`（纯 Python 字典版）**无共同代码**。
+#
+# ── 本主题**明确不需要**的东西（写出来是为了让「没装」不等于「忘了写」）────────
+#   · **不需要 torch / triton / numba / cuda-python** —— 一个都不 import。
+#     `make lint` 用 `ast` 对这条做**机械检查**（含 `specs.py` / `ptxsub.py`，
+#     含 `import_module` 这类动态导入）；注释与 docstring 里出现这些词不算违规。
+#   · **不需要 GPU、不需要 CUDA 工具链、不需要 nsight / ncu** —— 本机是 Apple M1 Pro，
+#     无 GPU、无 nvcc / cuobjdump / nvdisasm / ptxas / ncu。
+#     ★ **本目录不写 `.cu`**：没有 `ptxas` 就连语法都无法验证，
+#       而一份无法反驳的 `.cu` 对本库没有价值（要的是**推导链**）。
+#   · **不需要 CUTLASS / CUDA 的源码树**（与同域的 `cuda` / `cutlass` 主题不同）：
+#     三个源仓库里的 `.ptx` / `.sass` / `.cubin` / `.fatbin` **共 0 个**，
+#     本主题**没有**实现类工件可对拍，真值只有 **PTX ISA 的原文**（A 级）。
+#   · **不需要网络** —— 只有 `make anchors` 这个**可选**目标需要（它重新下载 ISA 原文，
+#     在**原始字节**上重新计数、重新抽取 9 条引文、重新定位章节号）。
+#     `make run` 完全离线，且**逐字节可复现**（所有输入都是固定常量与固定随机种子）。
+#
+# ── 本机的运行条件（写进文档「编译与运行」小节的测量条件）──────────────────
+#   python3 = 3.13.5；numpy = 2.4.4（三个程序都在输出里打印实际版本）
+#   ★ 本主题**没有任何 GPU 数字**，也没有任何时间/带宽数字。
+#     三类数字：**规格值**（`specs.ISA` 的 ISA 引文，A 级）、
+#     **推导值**（三个程序当场算出：11/304/3、29/32、gcd 规则……）、
+#     **模型值**（`ptxsub` 这个解释器的计数：发射数、活跃 lane-指令数、bank 路数）。
+#     按 CONTRIBUTING 第 63 行的四类口径，**没有一类叫「实测」** ——
+#     本机既没有 GPU，也没有任何真实 PTX 工具链。
+
+numpy>=2.0
