@@ -51,6 +51,7 @@
   - [03-invariants](../20-gpu-architecture/architecture-evolution/03-invariants.md)
 
 ## 30-gpu-programming
+
 - [cuda](../30-gpu-programming/cuda/) —— 线程层次与同步契约 / 流与事件的依赖 DAG / 内存管理与 CUDA Graph
   - [01-thread-hierarchy-and-sync](../30-gpu-programming/cuda/01-thread-hierarchy-and-sync.md)
   - [02-streams-and-events](../30-gpu-programming/cuda/02-streams-and-events.md)
@@ -60,6 +61,10 @@
   - [02-masking-and-boundaries](../30-gpu-programming/triton/02-masking-and-boundaries.md)
   - [03-layout-and-leaks](../30-gpu-programming/triton/03-layout-and-leaks.md)
   - [04-reduction-cost](../30-gpu-programming/triton/04-reduction-cost.md)
+- [ptx-sass](../30-gpu-programming/ptx-sass/) —— PTX 作为虚拟 ISA / warp 级执行 / 访存计数与 PTX→SASS 落差
+  - [01-ptx-as-virtual-isa](../30-gpu-programming/ptx-sass/01-ptx-as-virtual-isa.md)
+  - [02-warp-level-execution](../30-gpu-programming/ptx-sass/02-warp-level-execution.md)
+  - [03-memory-and-sass-gap](../30-gpu-programming/ptx-sass/03-memory-and-sass-gap.md)
 
 ## 40-kernels
 - [gemm](../40-kernels/gemm/) —— 朴素 → 共享内存分块 → 寄存器分块 → tensor core 与异步流水 → persistent kernel 与 tcgen05 → split-K 与 Stream-K
