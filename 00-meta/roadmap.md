@@ -1,7 +1,7 @@
 # 实施进度表
 
-> 最后更新：2026-09-17
-> 进度：29 / 65 主题完成
+> 最后更新：2026-09-20
+> 进度：30 / 65 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -34,7 +34,7 @@
 - [x] moe-kernels
 
 ## 45-kernel-lifecycle
-- [ ] requirement-discovery
+- [x] requirement-discovery
 - [ ] operator-design
 - [ ] implementation
 - [ ] convergence-and-tuning

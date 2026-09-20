@@ -86,7 +86,10 @@
   - [03-permute-and-unpermute](../40-kernels/moe-kernels/03-permute-and-unpermute.md)
 
 ## 45-kernel-lifecycle
-尚未开始。
+- [requirement-discovery](../45-kernel-lifecycle/requirement-discovery/) —— 从 config 推算子清单 / roofline 判定 / 优化价值排序
+  - [01-model-to-operator-inventory](../45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md)
+  - [02-roofline-verdict](../45-kernel-lifecycle/requirement-discovery/02-roofline-verdict.md)
+  - [03-optimization-priority](../45-kernel-lifecycle/requirement-discovery/03-optimization-priority.md)
 
 ## 50-performance
 尚未开始。
