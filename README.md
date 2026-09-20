@@ -21,6 +21,7 @@
 | `20-gpu-architecture` | SM 与执行模型、存储层次、Tensor Core、互联、架构演进 |
 | `30-gpu-programming` | CUDA、Triton、PTX/SASS、CUTLASS |
 | `40-kernels` | GEMM、attention、reduce、softmax、融合算子、MoE kernel |
+| `45-kernel-lifecycle` | 算子全生命周期：需求发掘、算子设计、实现验证、收敛与调优 |
 | `50-performance` | profiling 工具、瓶颈定位、调优实战 |
 | `60-compilers` | MLIR、TVM、Inductor、XLA、自动调优 |
 | `70-frameworks` | PyTorch、TensorFlow、JAX |
@@ -51,6 +52,7 @@
       ▼
 40-kernels            GEMM → attention → reduce / softmax / 融合算子
       │
+      ├──────────────► 45-kernel-lifecycle  从模型发布到算子收敛的流程（横切）
       ├──────────────► 50-performance   瓶颈定位与调优（横切，随时可读）
       │
       ▼

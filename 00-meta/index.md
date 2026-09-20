@@ -85,6 +85,9 @@
   - [02-grouped-gemm](../40-kernels/moe-kernels/02-grouped-gemm.md)
   - [03-permute-and-unpermute](../40-kernels/moe-kernels/03-permute-and-unpermute.md)
 
+## 45-kernel-lifecycle
+尚未开始。
+
 ## 50-performance
 尚未开始。
 
