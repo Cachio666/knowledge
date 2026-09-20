@@ -181,8 +181,8 @@ head("§A  算法正确性：四组约束的逐条判定与手算一致")
 
 sub("A.1  ★ 寄存器预算的真实上限是 **248**，不是 255")
 print(f"    MAX_REGISTERS_PER_THREAD = {REG_LIMIT_RAW}；分配粒度 = {REG_GRAN}")
-print(f"    ⇒ 上取整到 8 的倍数后 ≤ {REG_LIMIT_RAW} 的最大值是 {REG_LIMIT_EFFECTIVE}"
-      f"（{REG_LIMIT_EFFECTIVE + REG_GRAN} = 256 > {REG_LIMIT_RAW} ⇒ 不可达）")
+print(f"    ⇒ 上取整到 {REG_GRAN} 的倍数后 ≤ {REG_LIMIT_RAW} 的最大值是 {REG_LIMIT_EFFECTIVE}"
+      f"（下一档 {REG_LIMIT_EFFECTIVE + REG_GRAN} > {REG_LIMIT_RAW} ⇒ 那一档不可达）")
 check("A.1 ★ 有效上限 == 248（不是 255）", REG_LIMIT_EFFECTIVE == 248,
       f"{REG_LIMIT_EFFECTIVE}")
 check("A.1 ★ 250 会被取整成 256 ⇒ **非法**（手算：不能只比 250 ≤ 255）",
@@ -322,8 +322,8 @@ NAIVE_ACCEPTS = 250 <= REG_LIMIT_RAW                       # 朴素：250 ≤ 25
 TRUE_VERDICT = regs_padded(250) <= REG_LIMIT_EFFECTIVE     # 真实：取整到 256 ⇒ 非法
 print(f"    反驳点：需求 250 个寄存器时——")
 print(f"      朴素判据（直接比 255）：250 ≤ {REG_LIMIT_RAW} ⇒ **合法**")
-print(f"      真实判据（按 {REG_GRAN} 取整）：ceil8(250) = {regs_padded(250)}"
-      f" ≤ {REG_LIMIT_EFFECTIVE} ⇒ **非法**")
+print(f"      真实判据（按 {REG_GRAN} 取整）：ceil{REG_GRAN}(250) = {regs_padded(250)}"
+      f" > {REG_LIMIT_EFFECTIVE} ⇒ **非法**")
 check("B.2 ★★ 反驳点：朴素判据接受 250、真实判据拒绝它（⇒ 分配粒度不可省）",
       NAIVE_ACCEPTS is True and TRUE_VERDICT is False,
       f"朴素 {NAIVE_ACCEPTS} / 真实 {TRUE_VERDICT}")
