@@ -98,6 +98,10 @@
   - [01-reference-first](../45-kernel-lifecycle/implementation/01-reference-first.md)
   - [02-verification-matrix](../45-kernel-lifecycle/implementation/02-verification-matrix.md)
   - [03-debug-order](../45-kernel-lifecycle/implementation/03-debug-order.md)
+- [convergence-and-tuning](../45-kernel-lifecycle/convergence-and-tuning/) —— 基准测量卫生 / 显著性判定 / 收敛与停止
+  - [01-benchmark-hygiene](../45-kernel-lifecycle/convergence-and-tuning/01-benchmark-hygiene.md)
+  - [02-significance](../45-kernel-lifecycle/convergence-and-tuning/02-significance.md)
+  - [03-convergence](../45-kernel-lifecycle/convergence-and-tuning/03-convergence.md)
 
 ## 50-performance
 尚未开始。
