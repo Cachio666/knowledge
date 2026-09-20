@@ -38,6 +38,45 @@ import specs as SP
 FAILED = []
 
 
+# ===========================================================================
+# L. ★★ 常量字面量的**结构守卫**（在**任何使用之前**）
+# ===========================================================================
+#
+# ★ 见 02 篇 §L 的同名段：粒度是**叶子**（元组/字典里每一个字面量都算一个），
+#   且必须在使用之前 —— 否则字典的**键**被改错时抛的是 `KeyError`（harness 异常，假捕获），
+#   而不是干净 FAIL。本主题 §0 的模型守卫是本段的第一个实例。
+def literal_guard(pairs):
+    bad = [(n, got, want) for n, got, want in pairs if got != want]
+    if bad:
+        print("[FAIL] L ★★ 常量字面量逐格钉住（结构守卫：在任何使用之前）")
+        for n, got, want in bad:
+            print(f"       {n}\n         得到 {got}\n         期望 {want}")
+        print("  ✗ 1 条断言失败：常量字面量守卫（后续分析全都依赖它，**不继续**）")
+        sys.exit(1)
+    print(f"  ── L  结构守卫：{len(pairs)} 个容器常量的**逐格字面量**在使用之前已钉住")
+
+
+literal_guard([
+    ("COMPUTE_SANITIZER_TOOLS", SP.COMPUTE_SANITIZER_TOOLS,
+     ("memcheck", "racecheck", "initcheck", "synccheck")),
+    ("COMPUTE_SANITIZER_MEMCHECK_SCOPE", SP.COMPUTE_SANITIZER_MEMCHECK_SCOPE,
+     ("out_of_bounds", "misaligned", "hardware_exception",
+      "malloc_free_misuse", "cuda_api_error", "memory_leak")),
+    ("COMPUTE_SANITIZER_RACECHECK_HAZARDS", SP.COMPUTE_SANITIZER_RACECHECK_HAZARDS,
+     ("WAW", "WAR", "RAW")),
+    ("COMPUTE_SANITIZER_SYNCHECK_INTRINSICS", SP.COMPUTE_SANITIZER_SYNCHECK_INTRINSICS,
+     ("__syncthreads", "__syncwarp")),
+    ("COMPUTE_SANITIZER_SYNCHECK_REPORTS", SP.COMPUTE_SANITIZER_SYNCHECK_REPORTS,
+     ("divergent_threads_in_block", "divergent_threads_in_warp", "invalid_arguments")),
+    ("DEBUG_LAYER_SUBHYPOTHESES", SP.DEBUG_LAYER_SUBHYPOTHESES,
+     {"layout": 2, "copy": 3, "compute": 6, "edges": 2}),
+    ("DEBUG_LAYER_PRIORS", SP.DEBUG_LAYER_PRIORS,
+     {"layout": 0.40, "copy": 0.25, "compute": 0.22, "edges": 0.13}),
+    ("PYTORCH_NONDETERMINISTIC_OPS", SP.PYTORCH_NONDETERMINISTIC_OPS,
+     ("index_add_", "scatter_add_", "bincount")),
+])
+
+
 def check(name, cond, detail=""):
     print(f"    [{'OK  ' if cond else 'FAIL'}] {name}" + (f"   {detail}" if detail else ""))
     if not cond:

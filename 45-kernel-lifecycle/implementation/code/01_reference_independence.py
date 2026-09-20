@@ -44,6 +44,60 @@ import specs as SP
 FAILED = []
 
 
+# ===========================================================================
+# L. ★★ 常量字面量的**结构守卫**（在**任何使用之前**）
+# ===========================================================================
+#
+# ★ 见 02 篇 §L 的同名段：粒度是**叶子**（元组/字典里每一个字面量都算一个），
+#   且必须在使用之前 —— 否则字典的**键**被改错时抛的是 `KeyError`（harness 异常，
+#   假捕获），而不是干净 FAIL（见本篇 §1.5 的三态）。
+def literal_guard(pairs):
+    bad = [(n, got, want) for n, got, want in pairs if got != want]
+    if bad:
+        print("[FAIL] L ★★ 常量字面量逐格钉住（结构守卫：在任何使用之前）")
+        for n, got, want in bad:
+            print(f"       {n}\n         得到 {got}\n         期望 {want}")
+        print("  ✗ 1 条断言失败：常量字面量守卫（后续分析全都依赖它，**不继续**）")
+        sys.exit(1)
+    print(f"  ── L  结构守卫：{len(pairs)} 个容器常量的**逐格字面量**在使用之前已钉住")
+
+
+def precondition(name, cond, detail=""):
+    """**先判结构、再索引**：跨程序引用另一个模块的常量时，键集合必须先验。
+
+    ★ 为什么必须有这一段：本篇 §C.3 会 `SP.VLLM_DEFAULT_TOLERANCES[d]` 索引取值，
+      而那个常量的**归属**是 02 篇。若它的**键**被改错，这里会抛 `KeyError` ——
+      那是 **harness 异常**（假捕获），不是断言失败。**叶子级变异测试实测抓到了这一条。**
+    """
+    if not cond:
+        print(f"[FAIL] L ★★ {name}   {detail}")
+        print("  ✗ 1 条断言失败：跨程序引用的**结构前置条件**（不继续）")
+        sys.exit(1)
+    print(f"  ── L  {name}")
+
+
+precondition("跨程序引用 `VLLM_DEFAULT_TOLERANCES`（**归属 02 篇**）的键集合",
+             set(("float16", "float32", "float64")) <= set(SP.VLLM_DEFAULT_TOLERANCES),
+             f"本篇 §C.3 只索引 float16/float32/float64 三格；该表共 "
+             f"{len(SP.VLLM_DEFAULT_TOLERANCES)} 格")
+
+
+literal_guard([
+    ("REFERENCE_SELECTION_ORDER", SP.REFERENCE_SELECTION_ORDER,
+     ("cpu_fp64", "cpu_fp32", "existing_framework_op", "naive_numpy")),
+    ("VLLM_IR_NATIVE_IMPL_ROLES", SP.VLLM_IR_NATIVE_IMPL_ROLES,
+     ("semantic_definition", "default_implementation", "test_baseline")),
+    ("VLLM_IR_DISPATCH_CONSISTENCY_TOLERANCE", SP.VLLM_IR_DISPATCH_CONSISTENCY_TOLERANCE,
+     (0.0, 0.0)),
+    ("UNSOURCED", SP.UNSOURCED, (
+        "spec_d_tolerance_table_source_page", "spec_d_int8_tolerance_row",
+        "vllm_bf16_atol_two_readings_disagree",
+        "real_world_shared_reference_escaped_bug",
+        "debug_layer_priors_and_costs_measured",
+        "cold_start_times_belong_to_tuning_topic")),
+])
+
+
 def check(name, cond, detail=""):
     print(f"    [{'OK  ' if cond else 'FAIL'}] {name}" + (f"   {detail}" if detail else ""))
     if not cond:

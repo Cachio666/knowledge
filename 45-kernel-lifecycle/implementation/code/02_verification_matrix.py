@@ -42,6 +42,54 @@ import specs as SP
 FAILED = []
 
 
+# ===========================================================================
+# L. ★★ 常量字面量的**结构守卫**（在**任何使用之前**）
+# ===========================================================================
+#
+# ★ 为什么必须在使用之前：下面 §A.1 会 `SP.VLLM_DEFAULT_TOLERANCES[d]` **索引取值**。
+#   如果字典的**键**被改错，那一行会抛 `KeyError` —— 那是 **harness 异常**（假捕获），
+#   不是「断言失败」（见 01 篇 §1.5 的三态）。
+#   ⇒ **先钉住结构，再使用它。**
+#
+# ★ 粒度是**叶子**，不是常量名：元组/字典/嵌套结构里**每一个字面量**都算一个待钉住的叶子。
+#   本主题的叶子级变异测试（151 个叶子）正是靠这一段把 3 条 harness 异常转成干净 FAIL、
+#   并抓出 `ARXIV_2607_16228_MEDIAN_TIGHTENING_RANGE` 那两条**只被 print** 的叶子的。
+
+def literal_guard(pairs):
+    bad = [(n, got, want) for n, got, want in pairs if got != want]
+    if bad:
+        print("[FAIL] L ★★ 常量字面量逐格钉住（结构守卫：在任何使用之前）")
+        for n, got, want in bad:
+            print(f"       {n}\n         得到 {got}\n         期望 {want}")
+        print("  ✗ 1 条断言失败：常量字面量守卫（后续分析全都依赖它，**不继续**）")
+        sys.exit(1)
+    print(f"  ── L  结构守卫：{len(pairs)} 个容器常量的**逐格字面量**在使用之前已钉住")
+
+
+literal_guard([
+    ("VLLM_DEFAULT_TOLERANCES", SP.VLLM_DEFAULT_TOLERANCES, {
+        "float64": (1e-8, 1e-8), "float32": (1e-5, 1.3e-6),
+        "float16": (1e-3, 1e-3), "bfloat16": (1e-3, 1.6e-2),
+        "float8_e4m3fn": (1e-1, 1e-1), "float8_e5m2": (2e-1, 2e-1),
+        "int8": (1.0, 0.0)}),
+    ("SPEC_D_TOLERANCE_TABLE", SP.SPEC_D_TOLERANCE_TABLE, {
+        "fp64_ref_vs_fp32_kernel": (1e-8, 1e-5),
+        "fp64_ref_vs_fp16_kernel": (1e-3, 1e-2),
+        "fp64_ref_vs_bf16_kernel": (1e-3, 5e-2)}),
+    ("ARXIV_2606_20128_ILLUSION_SOURCES", SP.ARXIV_2606_20128_ILLUSION_SOURCES,
+     ("shape", "dtype", "tolerance")),
+    ("ARXIV_2606_20128_BOUNDARY_SHAPES", SP.ARXIV_2606_20128_BOUNDARY_SHAPES,
+     (1, 3, 7, 256, 1025)),
+    ("ARXIV_2606_20128_GPUS", SP.ARXIV_2606_20128_GPUS,
+     ("RTX 3060", "A10", "L40S", "A100 SXM4", "H100 NVL")),
+    ("ARXIV_2607_16228_MEDIAN_TIGHTENING_RANGE",
+     SP.ARXIV_2607_16228_MEDIAN_TIGHTENING_RANGE, (100, 200)),
+    ("ARXIV_2607_16228_CALIBRATION_RULE", SP.ARXIV_2607_16228_CALIBRATION_RULE, "p95_x_1.5"),
+    ("ARXIV_2606_20128_REFERENCE_PRECISION", SP.ARXIV_2606_20128_REFERENCE_PRECISION,
+     "fp64_cpu"),
+])
+
+
 def check(name, cond, detail=""):
     print(f"    [{'OK  ' if cond else 'FAIL'}] {name}" + (f"   {detail}" if detail else ""))
     if not cond:
