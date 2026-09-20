@@ -55,6 +55,11 @@
   - [01-thread-hierarchy-and-sync](../30-gpu-programming/cuda/01-thread-hierarchy-and-sync.md)
   - [02-streams-and-events](../30-gpu-programming/cuda/02-streams-and-events.md)
   - [03-memory-and-graphs](../30-gpu-programming/cuda/03-memory-and-graphs.md)
+- [triton](../30-gpu-programming/triton/) —— 块级程序模型 / 边界掩码 / layout 泄漏 / 归约的跨 warp 代价
+  - [01-block-program-model](../30-gpu-programming/triton/01-block-program-model.md)
+  - [02-masking-and-boundaries](../30-gpu-programming/triton/02-masking-and-boundaries.md)
+  - [03-layout-and-leaks](../30-gpu-programming/triton/03-layout-and-leaks.md)
+  - [04-reduction-cost](../30-gpu-programming/triton/04-reduction-cost.md)
 
 ## 40-kernels
 - [gemm](../40-kernels/gemm/) —— 朴素 → 共享内存分块 → 寄存器分块 → tensor core 与异步流水 → persistent kernel 与 tcgen05 → split-K 与 Stream-K
