@@ -10,7 +10,7 @@
 |---|---|---|
 | [requirement-discovery](requirement-discovery/) | 从模型规格读出算子清单 / roofline 判定 / 优化价值排序 | 已建成（3 篇 / 3 程序） |
 | [operator-design](operator-design/) | 接口契约 / 数值设计 / 分块与边界 | 已建成（3 篇 / 3 程序） |
-| [implementation](implementation/) | 参考实现先行 / 验证矩阵 / 调试顺序 | 未开始 |
+| [implementation](implementation/) | 参考实现先行 / 验证矩阵 / 调试顺序 | 已建成（3 篇 / 3 程序） |
 | [convergence-and-tuning](convergence-and-tuning/) | 基准测量 / 显著性判定 / 收敛与停止 | 未开始 |
 
 **统一主线**：

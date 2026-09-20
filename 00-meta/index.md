@@ -94,6 +94,10 @@
   - [01-interface-contract](../45-kernel-lifecycle/operator-design/01-interface-contract.md)
   - [02-numerical-design](../45-kernel-lifecycle/operator-design/02-numerical-design.md)
   - [03-tiling-and-boundaries](../45-kernel-lifecycle/operator-design/03-tiling-and-boundaries.md)
+- [implementation](../45-kernel-lifecycle/implementation/) —— 参考实现先行 / 验证矩阵 / 调试顺序
+  - [01-reference-first](../45-kernel-lifecycle/implementation/01-reference-first.md)
+  - [02-verification-matrix](../45-kernel-lifecycle/implementation/02-verification-matrix.md)
+  - [03-debug-order](../45-kernel-lifecycle/implementation/03-debug-order.md)
 
 ## 50-performance
 尚未开始。
