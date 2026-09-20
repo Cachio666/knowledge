@@ -29,6 +29,7 @@
 """
 
 import math
+import struct
 import random
 import sys
 
@@ -450,6 +451,42 @@ def run_A():
           set(SPECS.FP8_FORMATS) == set(c[0] for c in CASES_FP8))
     check("A", "specs 的 FP8_NAN_CODES 覆盖了全部四个变体",
           set(SPECS.FP8_NAN_CODES) == set(c[0] for c in CASES_FP8))
+
+    sub("A1d ★ bf16 的中点舍入探针：specs 的值必须被**独立实现**复现")
+    # ⚠ 这一段是 2026-09-20 补的。`specs.RNE_MIDPOINT_PROBE` 此前是**死常量**——
+    #   全库没有任何程序引用它，于是它里面的错值（`expect: 1.0`）在建成验收里不可见。
+    #   订正记录见 `docs/superpowers/plans/2026-09-20-kernel-lifecycle-domain.md` §E。
+    def _bf16_rne(x):
+        """fp32 → bf16 的 round-to-nearest-ties-to-even，纯整数位操作（不碰 torch）。"""
+        u = struct.unpack("<I", struct.pack("<f", x))[0]
+        mant = (u >> 16) & 0x7F          # bf16 的 7 位尾数
+        if mant & 1:                      # 奇数 ⇒ 进位到偶
+            return struct.unpack("<f", struct.pack("<I", (u & 0xFFFF0000) + 0x10000))[0]
+        return struct.unpack("<f", struct.pack("<I", u & 0xFFFF0000))[0]
+
+    for expr, d in sorted(SPECS.RNE_TIE_CASES.items()):
+        x = eval(expr)                    # 表达式来自 specs，求值等价于手算
+        got = _bf16_rne(x)
+        check("A", "bf16 RNE：%s = %r → %r" % (expr, x, got),
+              abs(got - d["expect"]) < 1e-12,
+              "独立实现得 %r，specs 记 %r" % (got, d["expect"]))
+        # ★ 真正区分两条规则的那一格：下界为**偶**时 RNE 取偶、half-up 进位
+        if abs(d["expect"] - d["half_up_would_give"]) > 1e-15:
+            check("A", "★ %s 能区分 RNE 与 round-half-up（RNE→%r，half-up→%r）"
+                  % (expr, d["expect"], d["half_up_would_give"]),
+                  True)
+        else:
+            check("A", "⚠ %s **分不出** RNE 与 round-half-up（两者都给 %r）——"
+                  "它只能证明「舍入到中点的一侧」，不能证明「取偶」"
+                  % (expr, d["expect"]), True)
+    # 中点本身要能被独立验证（否则上面两格可能只是「值恰好对上」）
+    for expr in SPECS.RNE_TIE_CASES:
+        x = eval(expr)
+        u = struct.unpack("<I", struct.pack("<f", x))[0]
+        lo = struct.unpack("<f", struct.pack("<I", u & 0xFFFF0000))[0]
+        hi = struct.unpack("<f", struct.pack("<I", (u & 0xFFFF0000) + 0x10000))[0]
+        check("A", "%s = %r 确实是 bf16 相邻两数 %r 与 %r 的中点"
+              % (expr, x, lo, hi), abs((lo + hi) / 2 - x) < 1e-15)
 
     sub("A2  NaN / Inf 码字集合从位域独立构造")
     for (name, e, m, bias, has_inf, fnuz, mx, smin, snorm, eps) in CASES_FP8:
