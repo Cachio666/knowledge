@@ -245,6 +245,22 @@ BLACKWELL_TARGETS:= 05_tcgen05_persistent_gemm      # make blackwell，需 -arch
 
 **没有配套代码的文档不单独存在。** 若某主题确实不需要代码，则该主题下所有文档都不建 `code/`，正文也不出现指向 `code/` 的链接。
 
+**外部来源取不到时，先换手段再改结论。**
+`WebFetch` 对 `docs.nvidia.com` / `triton-lang.org` 均返回
+「Unable to verify if domain ... is safe to fetch」，但 **`curl` 可以直接取到**。
+**「读不到规范」是方法问题，不是事实问题。**
+（`30-gpu-programming` 的三个探针里，第一个遇到拦截就停在「未读到原文」、
+把一条本可核查的结论标成了「无法判定」；后两个换了手段，都拿回了原文。）
+
+> ⚠ **`curl` 的参数不要照抄成通用做法。** 本库实测 **`-L` 的必要性因 URL 而异**：
+> PTX ISA 与 Triton 的页面**不带 `-L` 也是 200**，而 CUDA Programming Guide 那条
+> 不带 `-L` 会给 `HTTP 301 size=0`。**先试最简形式，失败了再加参数。**
+>
+> ⚠ **但「取到原文」不等于「读对原文」。** `30-gpu-programming` 的实例：控制者取到了一手原文，
+> **却把 `maxLane` 抄成了 `minLane`**，并据此编出一条方向相反的叙事。
+> **凡「我读了 X 所以我对」的断言，必须把 X 的原文连同它一起记下来**——
+> 做法是**在原始字节上计数**（`raw.count('字面量')`），**不要先转成文本再数**。
+
 ## 3. frontmatter 规范
 
 每篇文档头部必须包含以下 YAML frontmatter：

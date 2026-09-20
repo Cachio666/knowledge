@@ -12,10 +12,14 @@
 | normalization | LayerNorm / RMSNorm / QK-norm / pre-post 位置之争 |
 | positional-encoding | RoPE / ALiBi / 相对位置 / 长度外推方法 |
 
+> ★ **本域的 README 存在，但主题目录一个都没有**——上表五个主题尚无目录，
+> 引用它们时按总设计 §4 的**前向声明**处理。
+
 ## 与其他域的关系
 
 - **上游**：`70-frameworks`（模型用框架实现）。
 - **下游**：`40-kernels`（attention 变体直接决定 kernel 设计）、`100-parallelism`（MoE 引出专家并行）、`120-inference`（KV cache 的大小由架构决定）。
-- **横切**：注意力变体的 kernel 实现在 `40-kernels/attention`，本域只讲架构层面的取舍。
+- **横切**：注意力变体的 kernel 实现在 `40-kernels/attention`，本域只讲架构层面的取舍；
+  这些结构**落成 kernel 要用的语言与抽象层**（CUDA / Triton / PTX-SASS / CuTe）正文在 `30-gpu-programming`，本域只回链。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)

@@ -31,6 +31,14 @@
 | Tensor Core | 张量核心 | 做 MMA 的专用单元。**「每 SM 几个 tensor core」不是可靠指标**——NVIDIA 每代都在改「一个 tensor core」的定义，数量从 Volta 的 8 降到 Ampere 的 4 而算力翻倍。稳定的量是 **FP16 FMA/clock/SM**。 |
 | warp shuffle | 线程束内交换 | `__shfl_down_sync` / `__shfl_up_sync` / `__shfl_xor_sync`，在 warp **内部**按 lane 索引搬运寄存器值。**永不跨 warp**（与 `width` 无关）。`width` 改变的是 warp **内部**的段划分；源 lane 越出本段时**静默返回调用者自己的值**——后果是归约结果**无声偏大**，且触发条件是 `offset ≥ width`，倍数**恰为 `2^超界步数`**。写成「跨 warp 读」会让排错方向整个跑偏。 |
 | `__syncwarp` | 线程束内屏障 | warp 内交换必须用它，**不能用 `__syncthreads()`**。后者是**块级**屏障，其到达计数在 PTX 层面按 warp 计（一条 lane 到达即整个 warp 记到），因此**不能强制已发散的 lane 收敛**，也**不提供 warp 内 lane 之间的顺序保证**。分歧在**两代硬件上是相反的失败模式**：Volta 之前按 warp 记账 → 可能**提前释放**（静默读到未写完的共享内存）；Volta 起按线程强制 → **挂死**。 |
+| lane（lane ID） | 通道编号 | warp 内线程的编号，0–31。`mma.sync` 的 lane→元素映射、`shfl.sync` 的 lane 寻址、bank 冲突里「哪个 lane 访问哪个 bank」都建立在它上面。⚠ 本表别处（`fragment`、`ldmatrix` 两条）已经在用这个词而从未定义过。 |
+| CTA (Cooperative Thread Array) | 线程块阵列 | **与 `thread block` 同指不同名**（PTX / CUTLASS 文档用这个名字）。⚠ 它不是另一种东西，也不是「块的数组」——`CTA shape` 就是 thread block 的形状。本库正文里两个名字混用。 |
+| legacy default stream | 传统默认流 | CUDA 的**隐式**默认流（stream 0）。它与**同一 `CUcontext` 内所有其它流**同步，用 `cudaStreamNonBlocking` 建的流除外。⚠ 「同步」的两半不等价：入边数 **O(流数)**、出边数 **O(后续动作数)**——它是一条**星形栅栏**，不是「两条阻塞流之间互相同步」。 |
+| stream capture | 流捕获 | 把一段流上动作**录成**一张图（`cudaGraph_t`）的过程，之后可实例化并重放。⚠ capture 期间被捕获的流**不是一条能执行的队列**——「不许做的事」（同步、落在 legacy 流上的动作等）一违规即 `cudaErrorStreamCaptureInvalidated`，且**一次违规废掉的是所有关联的图**。 |
+| CUDA Graph | — | 把宿主侧的**发起动作**录成一张图、一次提交的机制。⚠ 它省的是**宿主侧动作数**，**不是** kernel 执行次数——`8:1` 这类比值是动作数之比，**不能读成「加速倍数」**。 |
+| PTX (Parallel Thread Execution) | — | NVIDIA 的**虚拟 ISA**，由 `ptxas` 编译成 SASS。PTX ISA 文档是**规范**（可引章节号），`ptxas` 与 SASS 是**某实现**。⚠ PTX 的寄存器是**声明的名字**（`.reg .b32 %r<8>`），不是硬件配额——声明量与实际触及量可以任意不等，且与 SASS 上的物理寄存器数没有可比关系。 |
+| SASS | — | GPU 的**物理 ISA**，即 `ptxas` 输出的机器码。⚠ 它是**某实现的产物，不是规范**；本库关于 SASS 的事实一律是转述或来自反汇编，本机无 `nvdisasm`，**一个 SASS 字节都没有观测过**。 |
+| block-level program | 块级程序 | Triton 的编程模型：程序作用在**块（张量）**上，而不是单个线程上。⚠ 块内每个元素归哪个线程管**由编译器决定**，源码里不写；`layout conversion` 与「归约跨 warp」这些代价，正是从那个不写的决定里长出来的。 |
 
 ## 存储层次
 
@@ -127,6 +135,7 @@
 | Blelloch scan | — | Brent-Kung 形态（up-sweep + down-sweep）：work `2n−2`、**depth `2·log n`**。**两者 depth 都是 Θ(log n) 但差一倍，不是「相同」**——临界并行度 `p* = n·(1 − 2/log n)` 逼近元素数 `n` 本身，即**只有在并行度几乎等于元素数时 Hillis-Steele 才反超，且优势只有 5%~10%**。 |
 | online softmax | 在线 softmax | 用**运行最大值 `m` 与运行和 `l`** 递推，把 softmax 从「需要先看完整行」变成**一遍流式**：`m_new = max(m_old, 块内 max)`、`l_new = l_old·exp(m_old−m_new) + Σexp(x−m_new)`、`O_new = O_old·exp(m_old−m_new) + P·V`。合并算子 `⊕` 构成**半群**，任意分组/顺序给同一数学结果——这是分块流水与 attention 能分块的依据。⚠ **`m_old ≤ m_new` 恒成立**，rescale 因子恒 ≤ 1，写反会溢出。 |
 | Welford 算法 | — | 单遍算均值与方差：`mean += d/n`、`M2 += d·(x−mean_new)`。**它真正的比较对象是 `Σx²−nμ²`**（后者在大均值下灾难性抵消、会算出**负方差**），**不是两遍法**——大均值下两遍法反而略优（Welford 的均值是逐项递推，会撞上「更新量被 `|mean|` 的 ulp 吞掉」）。 |
+| speedup | 加速比 | 优化前后的比值。⚠ **必须分列「单 kernel」与「端到端」两种口径**（`45-kernel-lifecycle/README.md` §数字口径 第 4 条）——同一份测量里两个数可以差一个数量级，混用即「同名不同指」。⚠ 本库多处拿到的只是**动作数 / 调用次数**之比，那不是加速比。 |
 
 ## 编译器与图优化
 
@@ -153,6 +162,7 @@
 | nominal / effective size | 名义基数 / 有效基数 | 名义基数 = 把各参数取值范围乘起来得到的数，**是个假象**（大量配置生成同一段代码，另有一批根本编译不过）；有效基数 = **等价类中可行的那部分**。⚠ 有效基数是**等价类的个数，不是配置的个数**；按名义基数估预算，最坏情况下 82% 花在无效点上。 |
 | autotuning | 自动调优 | 让机器在搜索空间里挑实现。三个部件相乘：**空间 → 代价模型 → 搜索**。⚠「多测几个候选不会让结果变差」只在候选集不变时成立——**预算单调，空间不单调**，改动候选集本身会让结果变差。 |
 | `torch.compile(dynamic=…)` / `automatic_dynamic_shapes` | 动态形状开关 | ⚠ 方向必须写准：**`dynamic` 默认是 `None`（不是 `False`）**，且 **`automatic_dynamic_shapes` 默认 `True`**——先按**静态**形状编一次，guard 失败后**自动把变化的那些维标成 dynamic** 再编一次，此后新形状命中同一张动态图。**所以「N 个不同 shape 就重编译 N 次」是错的；重编译次数的期望是 O(变化的维度数)。** ⚠ **`dynamic=True` 不是「打开动态形状的开关」**：官方把它标成 *"(Not recommended)"*、*"error prone"*，归在 *"for testing only"*——那个需求**默认就已满足**；提前声明要用 `mark_dynamic` 逐维**用户标注**（官方推荐）。 |
+| layout conversion | 布局转换 | 块级程序里某个值的**线程/寄存器分布**需要改变时，编译器插入的转换。⚠ 它**不是一个数**：有**免费**的转换（官方原话 `which is free`），也有要经共享内存**写一遍读一遍**（`2 × 元素数 × 字节宽`）加 barrier 的——同一行源码只差一个 `order` 就跨过这条线。⚠ 与 XLA 的 `layout assignment` **不是同一件事**：那是**选布局**的编译期阶段，这是**执行那次改布局**的代价。 |
 
 ## 深度学习框架
 

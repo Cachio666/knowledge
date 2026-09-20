@@ -29,7 +29,7 @@
 ## 与其他域的关系
 
 - **上游**：无。本域是全库最底层，`prerequisites` 为空。
-- **下游**：`20-gpu-architecture`（延迟-带宽模型）、`40-kernels`（roofline 判断算子性质）、`90-training`（混合精度与数值稳定性）、`130-quantization`（误差分析）。
+- **下游**：`20-gpu-architecture`（延迟-带宽模型）、`30-gpu-programming`（浮点格式与 roofline 口径是写 CUDA / Triton 的前提）、`40-kernels`（roofline 判断算子性质）、`90-training`（混合精度与数值稳定性）、`130-quantization`（误差分析）。
 - **横切**：`performance-models` 中的 roofline 模型（正文在本域，回链 `40-kernels`）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)
