@@ -90,6 +90,10 @@
   - [01-model-to-operator-inventory](../45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md)
   - [02-roofline-verdict](../45-kernel-lifecycle/requirement-discovery/02-roofline-verdict.md)
   - [03-optimization-priority](../45-kernel-lifecycle/requirement-discovery/03-optimization-priority.md)
+- [operator-design](../45-kernel-lifecycle/operator-design/) —— 接口契约 / 数值设计 / 分块与边界
+  - [01-interface-contract](../45-kernel-lifecycle/operator-design/01-interface-contract.md)
+  - [02-numerical-design](../45-kernel-lifecycle/operator-design/02-numerical-design.md)
+  - [03-tiling-and-boundaries](../45-kernel-lifecycle/operator-design/03-tiling-and-boundaries.md)
 
 ## 50-performance
 尚未开始。
