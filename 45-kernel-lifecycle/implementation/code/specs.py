@@ -199,7 +199,7 @@ SPEC_D_TOLERANCE_TABLE_HAS_NO_SOURCE_PAGE = True
 #       02 篇正文必须出现「D 级」字样，程序断言这两个布尔为 `True`。
 
 FP16_UNIT_ROUNDOFF_U = 2.0 ** -11
-BF16_UNIT_ROUNDOFF_U = 2.0 ** -8
+BF16_UNIT_ROUNDOFF_U = 2.0 ** -8        # [A]（与上面两条同源：IEEE 754 的 p = 8）
 FP32_UNIT_ROUNDOFF_U = 2.0 ** -24
 # 来源：IEEE 754 的**单位舍入误差** `u = 2^-p`，`p` = 有效二进制位数（含隐藏位）  [A]
 #       （binary16 的 1+5+10 ⇒ p = 11；bfloat16 的 1+8+7 ⇒ p = 8；binary32 ⇒ p = 24）
@@ -276,10 +276,10 @@ ARXIV_2606_20128_BUGGY_VARIANTS_ARE_AUTHOR_SEEDED = True
 #       但论文**把话说在了前面**。本主题照抄这个做法：构造就是构造，明写。
 
 ARXIV_2607_16228_CALIBRATION_RULE = "p95_x_1.5"
-ARXIV_2607_16228_CORPUS_SIZE_OPS = 26
-ARXIV_2607_16228_MEDIAN_TIGHTENING_RANGE = (100, 200)
-ARXIV_2607_16228_ATTENTION_TRITON_FP16_TIGHTENING = 2184
-ARXIV_2607_16228_HANDPICKED_ATOL_ATTENTION_TRITON_FP16 = 5.0e-2
+ARXIV_2607_16228_CORPUS_SIZE_OPS = 26               # [C]（同下一条的来源块）
+ARXIV_2607_16228_MEDIAN_TIGHTENING_RANGE = (100, 200)   # [C]（同上）
+ARXIV_2607_16228_ATTENTION_TRITON_FP16_TIGHTENING = 2184   # [C]（同上）
+ARXIV_2607_16228_HANDPICKED_ATOL_ATTENTION_TRITON_FP16 = 5.0e-2   # [C]（同上）
 ARXIV_2607_16228_CALIBRATED_ATOL_ATTENTION_TRITON_FP16 = 2.29e-5
 # 来源：arXiv:2607.16228 *Operator-Aware Mixed-Precision Tolerance Calibration for Tensor
 #       Kernels*（D. Sarkar, 2026）  [C]（**预印本，未确认同行评审**；两次独立检索一致）
@@ -429,7 +429,7 @@ DEBUG_CHECK_BUDGET_STEPS = 8
 #       措辞必须是**前者**。`layout(2) + copy(3) + compute(6) + edges(2) = 13 > 8`。
 
 PYTORCH_ATOMICADD_IS_A_NONDETERMINISM_SOURCE = True
-PYTORCH_NONDETERMINISTIC_OPS = ("index_add_", "scatter_add_", "bincount")
+PYTORCH_NONDETERMINISTIC_OPS = ("index_add_", "scatter_add_", "bincount")   # [B]（同下一条的来源块）
 PYTORCH_NO_SIMPLE_WAY_TO_AVOID_ATOMIC_NONDETERMINISM = True
 # 来源：PyTorch 官方 *Reproducibility* 文档（randomness notes）：`atomicAdd` 会使
 #       **加法的顺序不确定**，而浮点加法不满足结合律，"can introduce different
@@ -444,7 +444,7 @@ PYTORCH_NO_SIMPLE_WAY_TO_AVOID_ATOMIC_NONDETERMINISM = True
 #       ⚠ B 级：它只支撑「**PyTorch 这么做/这么说**」。
 
 PYTORCH_DETERMINISTIC_API = "torch.use_deterministic_algorithms"
-PYTORCH_DETERMINISTIC_RAISES_RUNTIMEERROR = True
+PYTORCH_DETERMINISTIC_RAISES_RUNTIMEERROR = True    # [B]（同上）
 PYTORCH_WARN_ONLY_DOES_NOT_ENFORCE = True
 # 来源：同上（`torch.use_deterministic_algorithms(True)` 在算子无非确定性替代时
 #       **抛 `RuntimeError`**；`warn_only=True` 只发警告，**不会**真的强制；
