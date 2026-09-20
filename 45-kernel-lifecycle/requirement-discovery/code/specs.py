@@ -29,21 +29,13 @@
 #   那一份就缺 `V100` 键（本模块已逐处核对，见 §2 的注）。
 
 FLOAT16_BYTES = 2
-FLOAT32_BYTES = 4
-# 来源：IEEE 754 binary16 / binary32 的宽度（规范，[A]）
-# 口径：**存储宽度**，不是「有效位」。fp16 的 1+5+10 与 fp32 的 1+8+23 是位域，
+# 来源：IEEE 754 binary16 的宽度（规范，[A]）
+# 口径：**存储宽度**，不是「有效位」。fp16 的 1+5+10 是位域；
 #       2024/2025 年的数据中心 GPU 上**没有 fp16 存储的例外**（fp8 才有）。
-
-SM_COUNT_BY_GEN = {
-    "V100": 80,
-    "A100": 108,
-    "H100": 132,
-    "B200": 148,
-}
-# 来源：NVIDIA Volta V100 / A100 / Hopper 官方材料（[A]）；
-#       B200 的 148 **非官方直述**，由官方 FP32 峰值 75 TFLOPS 反推 + Hot Chips 2024 交叉验证
-# 口径：**数据中心 SXM 档**，不含 PCIe 档
-# 同值位置：40-kernels/{gemm,attention,elementwise-fusion,moe-kernels,reduce-scan}/code/specs.py
+# ★ **只保留本主题真正用到的那一个宽度。** `FLOAT32_BYTES = 4` 曾在这里，
+#   但三个程序一次都没引用它（02 篇的口径三件套写死了 fp16）——按本域的
+#   C6 判据（逐个改常量，`make run` 必须报错），**未被断言的常量必须删掉或补断言**，
+#   故删。需要 fp32 宽度时去 `20-gpu-architecture/tensor-core/code/specs.py` 取。
 
 HBM_BW_GBps_BY_GEN = {
     "V100": 900.0,
@@ -78,20 +70,20 @@ FP32_VECTOR_TFLOPS_DENSE = {
 #         `TFLOPS_FP32_VECTOR_DENSE`（第 314 行），值相同。**按名字搜会漏掉那一份。**
 
 TC_TFLOPS_DENSE_SPARSE = {
-    "TF32": {"A100": (156.0, 312.0), "H100": (494.5, 989.0), "B200": (1100.0, 2200.0)},
+    # 来源：NVIDIA 各代官方材料（[A]）
+    # 口径：**dense / sparse 二元组**，单位 TFLOPS。上游注释逐字警告：
+    #       「NVIDIA 产品页写的 H100 FP16 1979 TFLOPS **是带 2:4 稀疏的**，dense 只有 989.5」。
+    #       V100 的 sparse 位是 `None`——Volta 没有 2:4 结构化稀疏，**不是「未采集」**。
+    #       `None` 不是可变异的叶子，故只作为口径的一部分保留。
+    #
+    # ★★ **本模块只保留 `FP16` 一行**（本主题唯一的精度路径）。
+    #    上游表还有 `TF32` / `BF16` / `FP8` / `FP4` 四行，**与本主题无关，已裁掉**——
+    #    按本域的 C6 判据，「照抄但不使用」的部分**无法被任何断言约束**，
+    #    留着就是在变异测试里制造漏网。完整五行的表在
+    #    `20-gpu-architecture/tensor-core/code/specs.py:323`。
     "FP16": {"V100": (125.0, None), "A100": (312.0, 624.0),
              "H100": (989.5, 1979.0), "B200": (2250.0, 4500.0)},
-    "BF16": {"A100": (312.0, 624.0), "H100": (989.5, 1979.0), "B200": (2250.0, 4500.0)},
-    "FP8":  {"H100": (1979.0, 3958.0), "B200": (4500.0, 9000.0)},
-    "FP4":  {"B200": (9000.0, 18000.0)},
 }
-# 来源：NVIDIA 各代官方材料（[A]）
-# 口径：**dense / sparse 二元组**，单位 TFLOPS。注释逐字警告：
-#       「NVIDIA 产品页写的 H100 FP16 1979 TFLOPS **是带 2:4 稀疏的**，dense 只有 989.5」。
-#       V100 的 sparse 位是 `None`——Volta 没有 2:4 结构化稀疏，**不是「未采集」**。
-# 同值位置：★ **4 处**——20-gpu-architecture/tensor-core/code/specs.py:323、
-#       40-kernels/{gemm:107, attention:134, moe-kernels:98}/code/specs.py。
-#       ⚠ 本主题只取其中的 `FP16` 行；其余行**照抄但不使用**，为的是保持与上游逐字一致。
 
 ACHIEVABLE_BW_SHORTFALL_PCT_IN_REPO = (5, 15)
 # 来源：本仓库 10-foundations/performance-models/03-measuring-roofline §0——
@@ -112,14 +104,13 @@ L2_MB_H100_IN_REPO = 50
 #       **沿用它时必须保留这句限定**，且只用于量级判断，不做精确结论。
 # 同值位置：40-kernels/elementwise-fusion/code/specs.py:174、moe-kernels/code/specs.py:140
 
-KERNEL_LAUNCH_OVERHEAD_US_EXTERNAL = (3.0, 5.0)
-# 来源：外部对 CUDA 空 kernel 启动开销的对照测量（**非 NVIDIA 官方**）  [D]
-# 口径：**引用值，本仓库不复核其测量口径**。量级是「一次 kernel 启动数微秒」，
-#       随驱动版本、是否用 CUDA Graph、是否走 MPS 而变。只用作量级对照。
-#       ★ 本主题**只用它做一件事**：把「3.2% 的占比」换算成绝对时间量级，
-#         从而判断它是不是落在噪声地板下——**不用它做任何端到端结论**。
-# 同值位置：40-kernels/{gemm:198, attention:256, elementwise-fusion:182, moe-kernels:149,
-#       reduce-scan:198}/code/specs.py
+# ★ **`KERNEL_LAUNCH_OVERHEAD_US_EXTERNAL = (3.0, 5.0)` 与 `SM_COUNT_BY_GEN` 曾在这里，
+#   现已删除。**
+#   理由（C6 判据）：本主题的**任何一篇文档都没有引用它**，三个程序也没有——
+#   它的用途是「把占比换算成绝对时间量级，判断是否落在噪声地板下」，
+#   而那是 `convergence-and-tuning`（Chunk 4）的知识对象。
+#   **留着它就是给下一个主题一个「看起来已经采过源」的假象。**
+#   需要时去 `40-kernels/gemm/code/specs.py:198` 取（那里有完整口径注释）。
 
 
 # ===========================================================================
@@ -186,10 +177,10 @@ PUBLISHED_PARAM_COUNT_B = {
 #       口径。★ 本主题用 Llama 的 8.03 B 做 **01 篇 A 类的独立对照**（从 config 反算的
 #       参数量应当落在 8.03 B 上）；Qwen 的 30.5 B 只用于**量级**核对。
 
-TOKENS_PER_PARAM_RULE_OF_THUMB = None
-# 占位：本模块**不写**「每参数 20 token」这类训练口径的经验值。
-# 理由：它是**训练**侧的 Chinchilla 结论，本主题是**推理**侧，写进来就是 P9（同名不同指）。
-# 本主题在需要时说清「这是训练口径」并回链，不落成常量。
+# ★ 本模块**不写**「每参数 20 token」这类训练口径的经验值，也**不放占位常量**。
+#   理由：它是**训练**侧的 Chinchilla 结论，本主题是**推理**侧，写进来就是 P9（同名不同指）。
+#   （曾有一个 `TOKENS_PER_PARAM_RULE_OF_THUMB = None` 的占位，现已删除：
+#     **一个值为 `None` 的常量不可能被任何断言约束**，留着只会在变异测试里算成漏网。）
 
 
 # ===========================================================================
@@ -241,134 +232,132 @@ B200_RIDGE_ALT_BW_TBPS = 8.0
 #   正文必须写成「vLLM 的做法是……」「TensorRT-LLM 的做法是……」，
 #   **不得**写成「业界通常」「主流做法」。
 
-VLLM_INTEGRATION_COMPLEXITY_TIERS = (
-    # 来源：vLLM 官方文档 “Adding a New Model” / “Adding new models”  [B]
-    #       （经检索转述；本实现者未逐字读到页面原文，见 §9）
-    ("simple",   "与 vLLM 已有的某个模型结构相似"),
-    ("moderate", "标准组件，但结构独特"),
-    ("complex",  "含**新算子**——例如新的 attention 机制，此时需要在 vLLM 中"
-                 "**实现新的 attention layer / kernel**"),
-)
-# 口径：**vLLM 一家的分档方式**。P10 警告：写成「业界通常分三档」即为违规。
-#       同一份文档还有一条更强的建议：**先跑 `vllm serve <model>`**——许多 decoder 模型
-#       可以通过 Transformers 后端直接加载，**根本不需要在 vLLM 里实现**。
-#       ⇒ 「要不要写 kernel」这个问题，**先被「能不能直接加载」挡一道**。
+# ── 为什么这一节**没有散文** ───────────────────────────────────────────────
+#
+# ★★ 本模块初版把来源里的**描述性段落**整段搬了进来（三档各一段、四个新算子各一段、
+#    taxonomy 各条一段……）。那是一个**结构错误**，不是文风问题：
+#      · **程序无法计算散文**——于是它只能被 `print`，也就**不可能被断言**，
+#        在任何变异测试里都是**必然漏网**；
+#      · 它还把**已裁掉的常量**（`HIPFIRE_*` 等）掩盖在一个「看起来很充实」的模块里，
+#        让下一个主题以为这里已经采过源。
+#    **⇒ 规则：`specs.py` 只放「程序会拿去算的东西」（数、名、布尔、阈值、URL）。
+#      描述性文字归**文档**。来源里的每个**数字**仍必须落在这里（§0.6 硬规则 4），
+#      只是以**结构化字段**的形式落。**
 
+VLLM_MODEL_INTEGRATION_TIERS = ("simple", "moderate", "complex")
+# 来源：vLLM 官方文档 “Adding a New Model” / “Adding new models”  [B]（**经检索转述**）
+# 口径：**vLLM 一家**的分档方式（P10：不得写成「业界通常分三档」）。
+VLLM_TIER_NEEDS_NEW_KERNEL = "complex"
+# 口径：★ 只有这一档需要写新 kernel（含新 attention 机制那类）。
+#       01 篇 §5 判据表第 11 行就是它的机器化。
 VLLM_TRANSFORMERS_BACKEND_HINT = "vllm serve <model>"
-# 来源：同上（vLLM 官方文档）  [B]
-# 口径：它是**一个先跑再说的动作**，不是一个结论。本主题把它当作判据表的第一行输入。
+# 口径：一个**先跑再说的动作**，是判据表的第一道闸。
 
-VLLM_IR_PRIORITY_MECHANISM = {
-    # 来源：vLLM 官方文档 `vllm.ir.op` / design/vllm_ir 与 PR #33825  [B]
-    # 口径：**算子与实现分离**——`@register_op` 声明语义（带一份 `native` 参考实现），
-    #       `register_impl` 注册实现，选择靠**优先级列表**：
-    #       「**the first supported implementation is selected**」，先查静态 `supported`，
-    #       再查动态 `supports_args`。
-    "declaration_decorator": "@register_op",
-    "impl_decorator": "register_impl",
-    "selection_rule": "优先级列表中第一个 supported 且 supports_args 通过的实现",
-    "cli": "--ir-op-priority.<op_name>=<provider1>,<provider2>,...",
-    "providers": ("native", "vllm_c", "aiter", "xpu_kernels", "triton_*"),
-}
-# 口径：★ 这条回答的是本主题 §3 的问题——**「优先级选择」是显式配置项**，不是隐式的。
-#       ⚠ `native` 是保留名（原生 torch 实现），**它永远存在**，所以列表永远有兜底。
+VLLM_IR_DECLARATION_DECORATOR = "@register_op"
+VLLM_IR_IMPL_DECORATOR = "register_impl"
+VLLM_IR_PRIORITY_CLI_PREFIX = "--ir-op-priority"
+VLLM_IR_RESERVED_FALLBACK_PROVIDER = "native"
+# 来源：vLLM 官方文档 `vllm.ir.op` / `design/vllm_ir` 与 PR #33825  [B]（**经检索转述**）
+# 口径：**算子语义与实现分离**；选择规则是「**优先级列表中第一个 supported 且
+#       `supports_args` 通过的实现**」（`native` 是保留名，永远存在 ⇒ 列表永远有兜底）。
+#       ★ 01 篇 §3 的论点就是「优先级选择是一个**显式**配置项」。
 
-KIMI_K3_NEW_OPERATORS = (
-    # 来源：vLLM 官方博客 “Kimi K3 Is Here: Efficient Day-0 Support on vLLM”
-    #       （2026-07-27）与 “A Preview of Production-Scale Kimi K3 Support on vLLM”
-    #       （2026-07-22），以及 vLLM v0.28.0 的 release notes  [B]
-    # 口径：★ 这是「**一个模型发布确实会带来若干新算子**」的**具体形态**——
-    #       本主题要的不是这个列表本身，而是**列表有 4 项而不是 1 项**这个事实。
-    ("KDA prefill",
-     "FlashKDA：Moonshot AI 的 CUTLASS 实现；v0.28.0 融合进 FlashKDA prefill kernel"
-     "（#51311、#52458）"),
-    ("KDA decode",
-     "把因果卷积 + 循环状态更新 + RMSNorm **折进一次 launch**，就地更新卷积与循环状态"
-     "（#50654）——★ 与 prefill 是**两个不同的 kernel**"),
-    ("Attention Residuals",
-     "Block AttnRes：对至多 8 个缓存的块表示 + 当前块内残差做深度方向 softmax"
-     "（至多 9 个来源），单个融合 kernel 完成；Triton 通用路径 + 专用 CUDA 路径"),
-    ("MoE 新激活 SiTU",
-     "接进 MXFP4 TRTLLM-Gen 与 DeepGEMM 路径；v0.28.0 为 MegaMoE 加 SiTU（#50510）"),
+KIMI_K3_NEW_OPERATOR_NAMES = ("KDA prefill", "KDA decode", "Attention Residuals", "SiTU")
+# 来源：vLLM 官方博客（2026-07-22 / 07-27）与 vLLM v0.28.0 release notes  [B]（经检索转述）
+# 口径：★ 本主题要的不是这个列表本身，而是**它有 4 项、且 prefill 与 decode 是两项**。
+KIMI_K3_KDA_PREFILL_PRS = (51311, 52458)
+KIMI_K3_KDA_DECODE_PR = 50654
+KIMI_K3_SITU_MEGAMOE_PR = 50510
+KIMI_K3_ATTNRES_MAX_CACHED_BLOCKS = 8
+KIMI_K3_ATTNRES_MAX_SOURCES = 9
+# 口径：Block AttnRes 对**至多 8 个**缓存的块表示 + 当前块内残差做**深度方向** softmax
+#       ⇒ 至多 **9** 个来源。（01 篇 §2.2 的表里用这两个数。）
+
+KIMI_K3_PREFIX_CACHE_SEPARATED_CONCEPTS = (
+    "physical block size", "scheduler alignment", "prefix-match unit"
 )
-KIMI_K3_PREFIX_CACHE_REDESIGN = {
-    # 来源：同上（vLLM 官方博客）  [B]
-    # 口径：KDA 是**循环**的（推进一个矩阵状循环状态 + 一个短卷积状态，**不存 per-token
-    #       KV 对**），所以 vLLM 把三个原本绑在一起的概念**拆开**：
-    #       物理块大小 / 调度器对齐 / **前缀匹配单元**；命中部分块时**先拷进私有目的地
-    #       再扩展**（copy-on-write）。`VLLM_PREFIX_CACHE_RETENTION_INTERVAL` 提供
-    #       区间化保留，把 prompt 边界当检查点。
-    "separated_concepts": ("physical block size", "scheduler alignment", "prefix-match unit"),
-    "rule": "copy-on-write：命中部分块时把缓存状态拷进私有目的地再扩展",
-}
-# ★ 这一条是本主题 §0 论断的**最强实例**：「缓存层要重做」不是「加一个 kernel」，
-#   而是**三个原本耦合的概念被拆开**。它说明新模型的成本**不止于算子数**。
+# 来源：同上  [B]
+# 口径：KDA 是**循环**的（不存 per-token KV 对），所以 vLLM 把三个原本绑在一起的概念拆开。
+#       ★ 这是「新模型的成本**不止于算子数**」的证据。
+KIMI_K3_PREFIX_CACHE_RULE_IS_COPY_ON_WRITE = True
+KIMI_K3_PREFIX_CACHE_ENV_VAR = "VLLM_PREFIX_CACHE_RETENTION_INTERVAL"
 
 KIMI_K3_METADATA_BUILDER_LATENCY_US = (870, 34)
-# 来源：vLLM 官方博客（同上）  [B]
-# 口径：**batch size 1**、专用 KDA metadata builder 把「小 eager PyTorch 算子」换成
-#       融合 Triton kernel、每条序列压到一次 launch 之后，metadata 准备延迟
-#       **870 µs → 34 µs（−96%）**，端到端 DSpark 延迟改善 **6%**。
-#       ★ 这条是本主题**唯一一条来自 B 级来源的「小占比换来可测收益」的数字**。
-#       ★ **反解出的迭代长度（[E]，本库推导）**：省下 870 − 34 = **836 µs** 换来端到端
-#         **6%** ⇒ 被改善的那段总时长 ≈ 836 ÷ 0.06 ≈ **13.9 ms**。这是一次**自洽性
-#         核对**（836/13900 = 6.0%），也是本主题唯一能给出「一个 decode 迭代有多长」
-#         量级的**带来源**的推导。它把 metadata 占比钉在 870/13900 ≈ **6.3%**。
-#       ⚠ 该反解**假设 870 µs 全在关键路径上**；若不是，13.9 ms 是**上界**。
+KIMI_K3_METADATA_BUILDER_E2E_GAIN_PCT = 6
+# 来源：同上  [B]
+# 口径：**batch size 1**；metadata 准备延迟 870 µs → 34 µs；端到端 DSpark 改善 **6%**。
+#       ★ 本主题唯一一条「小占比换来可测收益」的 B 级数字。
 
-TENSORRT_LLM_TIMELINE_DECOMPOSITION = {
-    # 来源：NVIDIA/TensorRT-LLM PR #18805
-    #       “[None][feat] Decompose the nsys timeline in the perf-analyze/optimize workflows”
-    #       （作者 kaiyux）的变更说明  [B]
-    # 口径：★ 这是本主题 §2 的**一手出处**，逐条列出，**不得扩写**：
-    "motivation": (
-        "`nsys stats` 只回答「哪个 kernel 花掉的 GPU 时间最多」，"
-        "**不回答 iteration 的墙钟时间去哪了**——「those diverge the moment the GPU is not busy」。"
-        "按开销排序的 top-kernel 表「reads as a list of opportunities even when the iteration "
-        "is mostly waiting on the host」。"
-    ),
-    "products": (
-        "按 iteration 的预算分解：相对**检出的 anchor** 的时间；"
-        "**三层嵌套的 busy rung**（连同各自的 **idle 补集**）；"
-        "**compute-absent 时间**拆成 **launch-starved / blocking / dependency-stalled**；"
-        "kernel 类别分解；**暴露出来的集合通信时间**拆成 transfer 与 jitter wait。"
-    ),
-    "share_definition": (
-        "`kernel_ledger.py` 的 `share_pct` 与 `enumerated_share_pct` 由 "
-        "`analysis/nsys_analysis` 的 **interval-union time** 定义，`kern_sum` **只作显式兜底**。"
-    ),
-    "overlap_warning": (
-        "流之间**重叠**会同时改变**排序**与**百分比**——所以分解优先于 `kern_sum`。"
-    ),
-    "gate": (
-        "`headroom_verdict` 成为一道闸：一个 kernel 加速项**声称的加速比不得超过**"
-        "该算子**到其约束资源的距离**。"
-    ),
-    "not_recoverable": (
-        "「a launch-starved share is not recovered by a faster kernel」"
-        "——launch-starved 那一份**不会因为 kernel 更快而恢复**。"
-    ),
-    "taxonomy_file": "agent_flow/workflows/perf_analyze/assets/taxonomy_trtllm.json",
-}
-# ★ **本主题最重要的一条 B 级事实**：`headroom_verdict` 那道闸是**上游实现里真实存在的**，
-#   不是本主题编的框架。03 篇的 headroom gate 直接引自它。
-# ★ 第二重要：`launch-starved` 那一份**不可恢复**——这正是 02 节 §3 的论断。
-# ⚠ 本字典**不含**任何百分比数字。PR #18805 **没有给出各类别的百分比**，
-#   任何写「典型 decode 有 30% 是 launch-starved」的句子都是编的。
+TRTLLM_18805_SHARE_PCT_IS_INTERVAL_UNION = True
+TRTLLM_18805_KERN_SUM_IS_EXPLICIT_FALLBACK_ONLY = True
+TRTLLM_18805_HEADROOM_VERDICT_IS_A_GATE = True
+TRTLLM_18805_OVERLAP_CHANGES_RANK_AND_PCT = True
+TRTLLM_18805_TAXONOMY_FILE = ("agent_flow/workflows/perf_analyze/"
+                              "assets/taxonomy_trtllm.json")
+# 来源：NVIDIA/TensorRT-LLM PR #18805  [B]（★ **经检索转述**——本实现者只读到检索摘要，
+#       **未逐字读到 diff 原文**，故正文不得写「逐字」「原文如此」。）
+# 口径：★ `share_pct` / `enumerated_share_pct` 由 `analysis/nsys_analysis` 的
+#       **interval-union time** 定义，`kern_sum` **只作显式兜底**（且兜底要记进
+#       ledger 的 `source` 字段）。**流之间重叠会同时改变排序与百分比。**
+#       ★ `headroom_verdict` **是一道校验**：一个 kernel 加速项声称的加速比
+#       **不得超过**该算子到其约束资源的距离 —— 03 篇 §1.2 的闸直接引自它。
+# ⚠ **本模块刻意不含**（初版在这里归错过，见 §4 末的引用纪律）：
+#     · 「three nested busy rungs … their idle complements」——出处**不是**这个 PR；
+#     · 「a launch-starved share is not recovered by a faster kernel」——**两次独立检索
+#       都查不到**，已改写为推论（`NOT_RECOVERABLE_IS_DERIVED`）；
+#     · 任何**百分比**——该 PR 没有给出各类别的百分比。
 
-TENSORRT_LLM_COVERAGE_DISPOSITIONS = (
-    # 来源：NVIDIA/TensorRT-LLM PR #18825
-    #       “[None][feat] perf-optimize: add elimination and overlap questions to the
-    #        per-kernel coverage contract”（作者 kaiyux）  [B]
-    ("elimination", "能不能不做"),
-    ("faster execution", "做但更快"),
-    ("fusion", "与别的算子合并"),
-    ("overlap", "与别的流重叠"),
-)
-# 口径：每个 disposition 都要带 evidence 与 **数值化的 `gpu_busy_pct`** 验证。
-#       ★ 「cover 了所有 kernel」≠「cover 了所有时间」——这四个 disposition 才是**闭合**的
-#         处置集合（**elimination 排第一**：先问能不能不做，再问怎么更快）。
-#       ⚠ 与 PR #18805 是**两个 PR**，不要合并成一条引用。
+NSYS_COMPUTE_ABSENT_DEFINITION = "Iteration minus compute busy"
+NSYS_BUCKET_LAUNCH_STARVED = "launch-starved"
+NSYS_BUCKET_BLOCKING = "blocking"
+NSYS_BUCKET_DEPENDENCY_STALLED = "dependency-stalled"
+NSYS_BUCKETS = (NSYS_BUCKET_LAUNCH_STARVED, NSYS_BUCKET_BLOCKING, NSYS_BUCKET_DEPENDENCY_STALLED)
+NSYS_LAUNCH_STARVED_DEFINITION = "the next compute kernel had not yet been issued by the host"
+NSYS_BLOCKING_DEFINITION = ("the kernel was issued and a resolved producer finished after the "
+                            "gap began; this requires a device dependency and negative slack")
+NSYS_DEPENDENCY_STALLED_DEFINITION = ("the kernel was issued, but no resolved producer explains "
+                                      "the remaining delay")
+NSYS_RECONCILIATION = "launch-starved + blocking + dependency-stalled ~ compute-absent"
+NSYS_RESIDUAL_MS_THRESHOLD = 0.5
+NSYS_WALL_TIME_RULE = ("kernel-duration sums must be labeled only as work volume, "
+                       "never presented as wall time")
+NSYS_URL = ("https://docs.nvidia.com/nemo/megatron-bridge/nightly/skills/"
+            "nemo-mbridge-perf-nsys-analysis/SKILL.html")
+# 来源：NVIDIA NeMo Megatron Bridge 的 Nsight Systems 分析文档（`NSYS_URL`）  [B]
+# 档位：★★ **逐字**——上列各条由**两次独立检索得到同一段文字**（本实现者一次、验收者一次），
+#       故可加引号；出处已给到**文件级 URL**。
+# 口径：★ 本模块**初版**把「compute-absent 三分」记在 PR #18805 名下并标「逐字」——
+#       **那是错的归属**。三分法的可复核出处是**这篇**。PR #18805 是**另一个主体**的
+#       **另一件事**；「两个来源都涉及时间线分解」**不等于**「说的是同一句话」。
+#       ★ 配平恒等式与 0.5 ms 残差门限是本主题**最强的一条可证伪断言**（03 篇程序 §B.5）。
+#       ★ `NSYS_WALL_TIME_RULE` 与 PR 那条 `share_pct` 口径警告**同向**：
+#         kernel 时长之和**只能当工作量，不能当墙钟**。
+
+NOT_RECOVERABLE_IS_DERIVED = True
+# 来源：**本库推论（[E]）**，不是引文。
+# 口径：★★ 从 `NSYS_LAUNCH_STARVED_DEFINITION` 的**逐字定义**推出：
+#       瓶颈在「宿主**还没把它发出去**」这一侧，而「更快的 kernel」改变的是
+#       **已发出的 kernel 的执行时长**——两者不在同一侧。
+#       ⇒ launch-starved 那一份**不会被更快的 kernel 收回**。
+#       **这是推论，正文须标 [E]，不得写成「原文如此」。**
+
+TRTLLM_COVERAGE_DISPOSITIONS = ("elimination", "faster execution", "fusion", "overlap")
+# 来源：NVIDIA/TensorRT-LLM PR #18825  [B]（经检索转述）
+# 口径：★ **elimination 排第一**（先问能不能不做，再问怎么更快）。
+#       ⚠ 与 PR #18805 是**两个 PR**，不要合并引用。
+
+NOISE_THRESHOLD_RULE = "任何显著性阈值都必须连带测量条件；条件给不出，阈值不可用"
+NOISE_THRESHOLD_RULE_TAG = "E"
+# 来源：**本库对一批 D 级材料的提炼（[E]）**，不是任何一条引用值。
+# 口径：★ 它是一条**可机械判定的判据**，不是数。依据是结构性的：阈值取决于**测量方式**
+#       （是否换新进程、是否用 CUDA Graph、warmup 多长、平台是否受 DPM/热限），
+#       **换条件就换档** ⇒「阈值是多少」没有无条件的答案。
+#       ★★ 因此本主题**不保留任何噪声带数值**：`HIPFIRE_*`（会话内 A/B 噪声带、
+#         graph capture 两档离散度、speed gate 容差）与 `KERNEL_LAUNCH_OVERHEAD_US_EXTERNAL`
+#         已**整体移除**——它们是 `convergence-and-tuning`（Chunk 4）的知识对象，
+#         在本主题三个程序里 0 引用，无法被断言约束。
+#         正文只保留**一条定性的 [D] 级观察**（「关掉 graph capture 反而更稳」），
+#         标 D 级、单一项目、未被独立复现，且**不给数字**。
 
 
 # ===========================================================================
@@ -437,68 +426,22 @@ VLLMCPP_CEILING_DERIVED = {
 
 
 # ===========================================================================
-# 6. 跨架构的计时方差（**C 级：arXiv 预印本，未确认同行评审**）
+# 6. （已移除）跨架构的计时方差
 # ===========================================================================
-
-ARXIV_2607_02541 = {
-    # 来源：arXiv:2607.02541
-    #       “Static PTX Metrics Track Structural Kernel Regressions but Miss Semantic Ones”
-    #       （**预印本，本实现者未核实其是否通过同行评审**）  [C]
-    "gpus": ("RTX 3060", "A10", "L40S", "A100 SXM4", "H100 NVL"),
-    "finding": (
-        "同一份结构性改动（correct → buggy 对）的**静态**指标差（Δregs、Δinstrs）"
-        "在五类 GPU 上**完全相同**，而**实测** Δperf% **不同**。"
-    ),
-    "table4": (
-        "同一次结构性改动在 **L40S 上 +9.4%**、在 **A100 SXM4 上 −50%**。"
-    ),
-    "attribution": (
-        "原文归因于**亚毫秒尺度**下**每次 launch 的方差**支配了那几条件的指令差异；"
-        "五类里有**四类**落在零的 ±20% 以内，**A100 SXM4 被共享宿主机的启动方差支配**。"
-    ),
-    "conclusion": (
-        "静态 PTX 门是可移植的**预筛**；此尺度下的**实测运行时间差**"
-        "**不是**可移植的替代品。"
-    ),
-}
-# ★ 本主题引用它的**唯一目的**：支撑「**单机测出的加速比不可跨架构迁移**」。
-# ⚠ 标注时必须写明**预印本**；且必须写明 **±20% / 四类**这两个限定，
-#   否则会退化成「跨架构完全不可比」这种更强的、原文不支持的断言。
-# ⚠ 原文说 A100 SXM4 是「shared-host」——**共享宿主机的启动方差**是它的条件，
-#   不是「A100 这个架构不行」。
+#
+# ★ **`ARXIV_2607_02541`（L40S +9.4% / A100 SXM4 −50%）曾在这里，现已删除。**
+#   理由（C6 判据 + 范围）：本主题**三篇文档一篇都没有引用它**，三个程序也没有。
+#   它支撑的论断是「**单机测出的加速比不可跨架构迁移**」——那是**测量方法学**的结论，
+#   属 `convergence-and-tuning`（Chunk 4）的知识对象，不是「需求发掘」的。
+#   **留在这里只会让 Chunk 4 以为它已经采过源了。**
+#   需要时按这个编号去 `docs/superpowers/plans/2026-09-20-kernel-lifecycle-domain.md`
+#   §0.7.G 取（那里有完整的口径与限定：**预印本**、四类落在 ±20% 内、A100 SXM4 是
+#   shared-host 的启动方差）。
 
 
 # ===========================================================================
-# 7. 显著性阈值与秩映射（**D 级经验值 + 本库的秩映射**）
+# 7. 秩映射（**本库的 [E] 级映射，不是来源值**）
 # ===========================================================================
-
-HIPFIRE_WITHIN_SESSION_NOISE_PCT_GFX1100 = (10, 15)
-# 来源：warpfront/hipfire，`docs/methodology/perf-benchmarking.md`  [D]
-# 口径：★★ **条件极具体，必须连条件一起写**：
-#       · 平台 **gfx1100**（Radeon 7900 XTX）；
-#       · 这是**同一会话内**做代码改动 A/B 的噪声带，**不是**通用噪声带；
-#       · 成因：**DPM 状态**（时钟在前 ~5 s 持续负载里爬）、**热余量**、**固件版本**；
-#       · 因此该文档要求**换新进程跑**。
-#       ⚠ 该文档举的例子是「同一个 shell 会话里改代码重测得到的 +8% 赢，
-#         落在噪声之内」——**这是 ±10–15% 这条的具体用法**，不是另一条阈值。
-
-HIPFIRE_GRAPH_CAPTURE_SPREAD_PCT = (1.5, 3.0)
-HIPFIRE_GRAPH_CAPTURE_OFF_SPREAD_PCT = 0.1
-# 来源：同上（同一份方法论文档）  [D]
-# 口径：★★ 原文：**`HIPFIRE_VERIFY_GRAPH=0` gives ~0.1% spread versus 1.5–3% with graph
-#       capture on** ——这是**两档不同条件**的数。
-#       ⚠ **不得混成一句「噪声带 ±1–3%」**：合并后既不是 graph on 的档，
-#         也不是 graph off 的档，而且丢掉了「条件决定档位」这个唯一的结论。
-#       ※ 注意方向：**关掉 graph capture 反而更稳**（0.1% < 1.5–3%）。
-#         直觉上「用 CUDA Graph 更确定」是**错的**——本档的数是反直觉的。
-
-HIPFIRE_SPEED_GATE_TOLERANCE_PCT = 5
-# 来源：同上（`scripts/speed-gate.sh`，以及 DFlash 的 gate）  [D]
-# 口径：**相对已提交基线**的容差 **±5%**；pre-commit hook 在 diff 触及 kernel /
-#       dispatch / forward-pass 文件时自动跑 `--fast`。
-#       ⚠ **不得写成「收益 <5% 不值得做」**——原文**没有**这句话。
-#         原文说的事实是「容差 ±5%」与「改变规范 bench 超过 5% 的 flag 才默认开启」。
-#         「不值得投入」是本库的**推论**，须标 [E] 并写明它是推论。
 
 EFFORT_RANK_MAPPING = {
     # ★ 本库的**秩映射**（[E]，不是来源值）：把来源里的**档名**映射成正数，
@@ -510,14 +453,6 @@ EFFORT_RANK_MAPPING = {
     "HIGH": 3.0,
     "VERY HIGH": 4.0,
 }
-GAIN_BELOW_NOISE_IS_NOT_WORTH_IT = True
-# 来源：**本库的推论**（[E]），由 HIPFIRE_SPEED_GATE_TOLERANCE_PCT 与
-#       HIPFIRE_WITHIN_SESSION_NOISE_PCT_GFX1100 推出。
-# 口径：⚠ **它是推论，不是引用值。** 正文写法必须是
-#       「由 ±5% 的 gate 容差**可以推论**……」而不是「研究表明 <5% 不值得做」。
-#       且推论**只在 gfx1100 那一档的测量条件上成立**——换平台，噪声带不同，阈值就不同。
-
-
 # ===========================================================================
 # 8. (占位) 本主题不使用的常量
 # ===========================================================================
@@ -536,45 +471,50 @@ GAIN_BELOW_NOISE_IS_NOT_WORTH_IT = True
 #   本模块的正文常量里出现；它们要么被删掉，要么被换成了有来源的说法。
 
 UNSOURCED = (
+    # ── 本清单的口径 ───────────────────────────────────────────────────────
+    # ★ 每一项是一个**稳定标识符**（不是散文）。三个程序对本元组做**逐条比对**
+    #   （01 篇 §D.8），所以改任何一个标识符都会让 `make run` 失败。
+    # ★ §0.6 硬规则 5：**不得「既保留数字又记 UNSOURCED」**——本清单里的每一项
+    #   都**没有**出现在本模块的正文常量里。
+
     # 1. hipfire 的「冷设置 warmup=24 比 warmup=128 的读数偏低约 12%」
-    #    状态：**本次检索未找到**。检索到的 `docs/methodology/perf-benchmarking.md` 里，
-    #    与 warmup 有关的只有 `--warmups`（bench 默认 **10** 次丢弃）与
-    #    `HIPFIRE_DPM_WARMUP_SECS=10`；`128` 在检索片段里只作为 `--max-tokens 128`
-    #    出现，**不是 warmup 计数**。检索到的最近的量是 **~10%** 的
-    #    「probe `gen tok/s` 与 bench `gen_tok_s` 的残差」，而它的成因是
-    #    **daemon 的 per-token 开销（JSONL 流式、detokenize、停止条件检查）**，
-    #    **与 warmup 无关**。
-    #    处置：**不写进正文**。
+    #    状态：**检索未找到**。那篇方法论文档里与 warmup 有关的只有 `--warmups`
+    #    （bench 默认 **10** 次丢弃）与 `HIPFIRE_DPM_WARMUP_SECS=10`；`128` 在检索片段里
+    #    只作为 `--max-tokens 128` 出现，**不是 warmup 计数**。最近的一个量是 **~10%** 的
+    #    「probe `gen tok/s` 与 bench `gen_tok_s` 的残差」，成因是 **daemon 的 per-token
+    #    开销**，**与 warmup 无关**。处置：**不写进正文**。
     "hipfire_warmup_24_vs_128_12pct",
 
     # 2. 「JIT 冷缓存首次编译 30 s–2 min；模型重载冷启动 2–5 s」
-    #    状态：**本次未复核**（本主题的三个编号程序不涉及冷启动，该论断属
-    #    `convergence-and-tuning` 主题）。**本主题不引用**，留给该主题去核。
+    #    状态：**未复核**（本主题三个程序不涉及冷启动，该论断属
+    #    `convergence-and-tuning`）。处置：本主题不引用，留给该主题去核。
     "cold_start_time_scales",
 
-    # 3. 「TensorRT-LLM 的时间线分解类别名（busy / idle / launch-starved / blocking /
-    #    dependency-stalled）」——**本次已核到**（PR #18805 的说明里逐字有
-    #    「three nested busy rungs … their idle complements」与
-    #    「launch-starved / blocking / dependency-stalled」）。**因此它不是 UNSOURCED**，
-    #    已写进 §4 的 `TENSORRT_LLM_TIMELINE_DECOMPOSITION`；此处仅留一行说明它已被移出。
-    #    ⚠ 但**各档的具体百分比**仍未检索到 —— 见下。
-    "trtllm_taxonomy_category_names__RESOLVED_see_section_4",
+    # 3. 「compute-absent 三档的**百分比**」（例如「launch-starved 占 30%」）
+    #    状态：**未找到**。两处出处（NeMo Megatron Bridge 的 NSYS 分析文档与
+    #    TRT-LLM PR #18805）**都定义了档位、都没有给出任何百分比**。
+    #    处置：§4 **刻意不含任何百分比**；正文不得出现这类句子。
+    "compute_absent_per_category_pct",
 
-    # 4. TensorRT-LLM 时间线分解里**各档的百分比**（例如「launch-starved 占 30%」）
-    #    状态：**未找到**。PR #18805 定义了这些档，但检索片段里**没有任何一个百分比**。
-    #    处置：§4 的字典**刻意不含数字**；正文不得出现这类百分比。
-    "trtllm_per_category_percentages",
-
-    # 5. Qwen3-30B-A3B 的**共享专家**规格
+    # 4. Qwen3-30B-A3B 的**共享专家**规格
     #    状态：**未找到**。检索只给出 `intermediate_size: 6144`，而该字段的语义是
     #    「非 MoE 的 FFN 宽度」，**不等于共享专家的宽度**；`shared_expert_intermediate_size`
-    #    这一项在检索片段里没有出现。
-    #    后果：01 篇的 MoE 活跃参数量是**下界**（不含共享专家）。正文**必须**写明这一点。
+    #    在检索片段里没有出现。
+    #    后果：01 篇的 MoE 活跃参数量是**下界**（不含共享专家）。正文**必须**写明。
     "qwen3_30b_a3b_shared_expert_size",
 
-    # 6. 「绝大多数 kernel 在 80% 带宽处饱和」这类**编机制从句**（P4）
+    # 5. 「绝大多数 kernel 在 80% 带宽处饱和」这类**编机制从句**（P4）
     #    状态：**无来源，也测不了**。处置：不写。
     "ungrounded_bandwidth_saturation_claims",
+
+    # 6. ★★ **一处已订正的错误归属**（保留在这里是**给后来者的警告**，不是待办）：
+    #    「three nested busy rungs … their idle complements」与
+    #    「a launch-starved share is not recovered by a faster kernel」——本模块**初版**
+    #    把它们记在 TRT-LLM PR #18805 名下并标「逐字」。**两次独立检索都查不到这两处**：
+    #    前者实际出自 NeMo Megatron Bridge 的 NSYS 分析文档（现在 `NSYS_*` 一组常量里），
+    #    后者**任何出处都查不到**（已改写为 `NOT_RECOVERABLE_IS_DERIVED` 的本库推论）。
+    #    处置：**正文与 specs.py 均不得再出现这两句原文**（03 篇程序 §D.5 有断言守着）。
+    "misattributed_verbatim_quotes_in_v1",
 )
 # ★ `UNSOURCED` 是**待办清单**：上面每一项都在等一个可定位的一手来源，
 #   在它被找到之前，**正文里不得出现对应的数字**。

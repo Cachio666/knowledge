@@ -72,7 +72,7 @@ updated: 2026-09-20
 
 ### 1.2 headroom gate：**声称的加速比不得超过该算子到其约束资源的距离**
 
-这是一条**来自上游实现的闸**（**[B]**，NVIDIA/TensorRT-LLM PR #18805 的变更说明逐字记录：`headroom_verdict` 成为一道闸——「**一个 kernel 加速项声称的加速比不得超过该算子到其约束资源的距离**」）。
+这是一条**来自上游实现的闸**（**[B]，经检索转述**——NVIDIA/TensorRT-LLM PR #18805 的变更说明里有 `headroom_verdict` 这道校验：**一个 kernel 加速项声称的加速比不得超过该算子到其约束资源的距离**。⚠ 本实现者**只读到检索摘要，未逐字读到 diff 原文**，故不写「逐字」）。
 
 **它的边界是闭的**：距上界恰好 `1.300×` 时，声称 `1.300×` **通过**、声称 `1.301×` **被拒**（程序 §A.1）。
 
@@ -106,7 +106,15 @@ updated: 2026-09-20
 
 ### 1.4 kernel 没覆盖的那部分份额，**不会被更快的 kernel 恢复**
 
-这是一条**上界**，不是建议。来源同 **[B]** PR #18805，逐字：「**a launch-starved share is not recovered by a faster kernel**」。
+**先说清楚出处（本主题初版在这里归错过）**：三分法的可复核出处是 **NVIDIA NeMo Megatron Bridge 的 Nsight Systems 分析文档**（**[B]**，`docs.nvidia.com/nemo/megatron-bridge/nightly/skills/nemo-mbridge-perf-nsys-analysis/SKILL.html`），**不是** TensorRT-LLM PR #18805。逐字定义是：
+
+> · **Launch-starved** —— "the next compute kernel **had not yet been issued by the host**"
+> · **Blocking** —— "the kernel **was issued** and a resolved producer finished after the gap began; this requires a device dependency and **negative slack**"
+> · **Dependency-stalled** —— "the kernel **was issued**, but **no resolved producer explains the remaining delay**"
+
+**「那一份不会被更快的 kernel 收回」是本书从上面第一条定义推出的推论（[E]）**，**不是引文**：`Launch-starved` 的定义说瓶颈在「**宿主还没把它发出去**」，而「更快的 kernel」改变的是**已发出的 kernel 的执行时长**——两者不在同一侧。
+
+> ⚠ **本主题初版把这句话写成 PR #18805 的「逐字」引文。两次独立检索都查不到那句话——那是编引文。** 现在改成推论并标 **[E]**。`code/03_optimization_priority.py` 的 §B.4 有断言守着这一条（伪引文若被重新写回，断言失败）。
 
 **本库的算术（[E]）**：设 kernel 覆盖的份额为 `p`，把 kernel 加速到**无穷**，剩余时间 `= 1 − p`：
 
@@ -129,11 +137,18 @@ updated: 2026-09-20
 
 ### 2.1 先确认时间真的在 kernel 里
 
-TensorRT-LLM 的做法（**[B]**，PR #18805）给出的理由，逐字：
+TensorRT-LLM 的做法（**[B]，经检索转述**，PR #18805）给出的理由：
 
-> `nsys stats` 只回答「哪个 kernel 花掉的 GPU 时间最多」，「**those diverge the moment the GPU is not busy**」。按开销排序的 top-kernel 表「reads as a list of opportunities even when the iteration is mostly waiting on the host」。
+【**经检索转述**】该 PR 的动机是：`nsys stats` 只回答「哪个 kernel 花掉的 GPU 时间最多」，**不回答 iteration 的墙钟时间去哪了**——**GPU 一闲下来这两者就分道扬镳**；按开销排序的 top-kernel 表会**读起来像一张机会清单，即使这次迭代大部分时间在等宿主**。
 
-它产出的是一份**按 iteration 的预算**：相对**检出的 anchor** 的时间、**三层嵌套的 busy rung 连同各自的 idle 补集**、**compute-absent 时间**拆成 **launch-starved / blocking / dependency-stalled**、kernel 类别分解、以及**暴露出来的集合通信时间**拆成 transfer 与 jitter wait。
+它产出的是一份**按 iteration 的预算**：相对**检出的 anchor** 的时间、**compute-absent 时间**的分解、kernel 类别分解、以及**暴露出来的集合通信时间**拆成 transfer 与 jitter wait。
+
+**其中「compute-absent 的三分」这一个具体分解，逐字出处是 NeMo Megatron Bridge 的 NSYS 分析文档（[B]）**，不是这个 PR——两者的关系是「都涉及时间线分解」，**不是「说的是同一句话」**。那篇文档给出的定义与**一条恒等式**：
+
+> **`launch-starved + blocking + dependency-stalled ≈ compute-absent`**
+> 残差 **> 0.5 ms / iteration** 时**应当去查它**，而不是把它并进最大的那个桶。
+
+★ **这条恒等式是本主题唯一一条「逐字读到、且可当判据用」的分解规则**（程序 §B.5 把它的边界写成断言）。同一份文档还有一条与本篇直接相关的逐字规定：**"kernel-duration sums must be labeled only as work volume, never presented as wall time."** —— 这正是上面那句 `share_pct` 口径警告的同向表述。
 
 **`share_pct` 的定义是 `analysis/nsys_analysis` 的 **interval-union time**——`kern_sum` 只作**显式兜底**。**（同一份说明里有一条必须引用的警告：**流之间重叠会同时改变排序与百分比**。**⇒ 按 `kern_sum` 排出来的顺序与按 interval-union 排出来的顺序可以不同，而且「谁占多少」也不同。这是 P7 的一个具体形态：**两个都叫「占比」的量，作用域不同。**）
 
@@ -156,7 +171,7 @@ TensorRT-LLM 的做法（**[B]**，PR #18805）给出的理由，逐字：
 
 > ★ **这不是公式的失败，它揭示了「工作量」在真实排序里是什么形态。**
 
-文档逐字记录的理由（两句都是**引用**，不是本程序的推断）：
+文档记录的理由（**[D] 级，经检索转述**，不是本程序的推断）：
 
 - **`B`（17.9%）的修复不需要写新 kernel**：它骑在既有的 `expand_nk` loader 策略上；`VT_GGUF_GDN_NK=0` 是**同二进制的 A/B 退出开关**，`VT_CPU_REF=1` 可复现历史行为——**构造上逐字节相同**。
 - **`A`（50.4%）的修复需要一个新的打包格式**（q8_0 repack-at-load）**加一个新 kernel**。
@@ -220,20 +235,25 @@ TensorRT-LLM 的做法（**[B]**，PR #18805）给出的理由，逐字：
 
 **现象**：报一个 `+2%` 的改动，说它「有效」。
 
-**成因**：`+2%` 落在测量噪声里。本库记录的两档**不同条件**的噪声（**[D]**，hipfire 的 `docs/methodology/perf-benchmarking.md`，平台 **gfx1100 / 7900 XTX**）：
+**成因**：「噪声带」**不是一个平台常数**——它由**测量方式**决定：是否换新进程、是否用 CUDA Graph、warmup 多长、平台是否受 DPM / 热限支配。**换条件就换档**，而且档与档之间可以差很多。
 
-| 条件 | 噪声带 |
+**⇒ 本主题给出的判据**（`code/specs.py` 的 `NOISE_THRESHOLD_RULE`，**[E]**，本库对一批 D 级材料的提炼）：
+
+> **任何一个显著性阈值，都必须连同它的测量条件一起给出；条件给不出，阈值不可用。**
+
+**判断式**：
+
+| 条件 | 结论 |
 |---|---|
-| **同一会话内**做代码改动 A/B（受 DPM 状态、热余量、固件版本影响，**故要求换新进程跑**） | **±10–15%** |
-| **graph capture 打开**时的读数离散度 | **1.5–3%** |
-| **`HIPFIRE_VERIFY_GRAPH=0`（关掉 graph capture）** | **约 0.1%** |
+| 声称的收益 ≥ 你的测量条件下可分辨的幅度 | 可以进入候选 |
+| 声称的收益 < 它 | **不作为结论**（或先改进测量条件） |
+| 阈值本身没写测量条件 | **不可用**（判据表第 7 / 15 行） |
 
-> ★ **这三行是两个不同条件的数，不得混成一句「噪声带 ±1–3%」。** 合并后既不是 graph on 的档，也不是 graph off 的档，**而且丢掉了唯一的结论：条件决定档位**。
-> ★ **方向也是反直觉的**：**关掉 graph capture 反而更稳**（`0.1% < 1.5–3%`）。「用 CUDA Graph 更确定」这个直觉在这一档数据上是**错的**。
+> ★ **本主题刻意不给噪声带的数值。** 那些数值属于**测量方法学**，是 `45-kernel-lifecycle/convergence-and-tuning`（**未建成**）的知识对象——本主题的边界是「**先做哪个**」，不是「**怎么测才准**」。本主题只保留由它导出的那条判据。
 
-**来源等级警告（P10 的本域最高风险处）**：上表**全部来自一个个人项目**，**未被独立复现**。**不得写成「业界经验表明噪声带是……」。** 同一份方法论文档另有一条**容差**规定：`speed-gate.sh` 相对**已提交基线**的容差是 **±5%**；「改变规范 bench 超过 5% 的 flag 才默认开启」。
+> ★ **一个反直觉的实例**（**[D] 级：单一项目的报告，未被独立复现**）：在同一个平台上，**打开 CUDA Graph 时的读数离散度反而比关掉时更大**。直觉上「用 CUDA Graph 更确定」在这一档数据上是**错的**——而它正是「条件决定档位」的例证。完整条件与数值在 `convergence-and-tuning`（**未建成**）——本主题**只引用方向，不引用数字**，因为那是该主题的知识对象。
 
-> ⚠ **不要把它写成「收益 <5% 不值得做」。** 原文**没有**这句话。原文说的是「容差 ±5%」。**「不值得投入」是本库的推论（[E]）**，且它只在 gfx1100 那一档的测量条件上成立——换平台，噪声带不同，阈值就不同。
+> ⚠ **一处高发错误（P7）**：**不得把两个不同条件的离散度并列成一句「噪声带 ±X%」**。合并后既不是条件甲的档，也不是条件乙的档，**而且丢掉了唯一的结论：条件决定档位**。引用任何阈值时，**条件就是定义的一部分**。
 
 ### 4.3 把「已有高度优化库可用」的算子当作自研目标
 
@@ -271,7 +291,7 @@ TensorRT-LLM 的做法（**[B]**，PR #18805）给出的理由，逐字：
 | 4 | 一个算子的占比 ≥ 100% | 分母错了（很可能是把 `kern_sum` 与墙钟混用） |
 | 5 | 候选的 `w`（工作量）全部相同 | **按占比排序就是对的**——此时不该提「别按占比排」 |
 | 6 | 「到上界的距离」的分母用的是**标称峰值** | 换成**可达上界**；否则已高度优化的库会被当成自研目标 |
-| 7 | 想做的优化收益 < 测量条件对应的噪声带 | **不做**（或先换测量条件）；阈值随条件变，见 §4.2 那三行 |
+| 7 | 想做的优化收益 < 你这次测量条件下可分辨的幅度 | **不作结论**（或先改进测量条件）；「可分辨幅度」必须由**测量条件**给出，见 §4.2 |
 | 8 | 引用的加速比没写明分母是哪条时间轴 | **不可用**；prefill / decode / 端到端是三条不同的轴 |
 | 9 | 优化对象是某个算子，但它落在「已有高度优化库可用」的集合里 | 距上界用「该库的实际水平 ÷ 当前」，不用标称峰值 |
 | 10 | 排名前 3 的桶合计 ≥ 80% | 可以只看前 3 个——**但这是这份剖面的性质，不是普适规则** |
@@ -279,7 +299,7 @@ TensorRT-LLM 的做法（**[B]**，PR #18805）给出的理由，逐字：
 | 12 | 说「某改动使整体快 `X×`」，而 `X` 来自单算子实测 | **不成立**；单算子加速比必须乘以 Amdahl 上界 `1/(1−占比)` 才成为端到端上界 |
 | 13 | kernel 覆盖份额 `p ≤ 0.5` | 任何 kernel 优化都到不了 `2×`；**先查时间是不是在 host 侧**（launch-starved 那一份不会被更快的 kernel 恢复） |
 | 14 | 优化对象是「能不能不做」的候选（`elimination`） | **优先**——它拿到的收益不受 `p` 限制，而加速受 |
-| 15 | 引用的噪声 / 门限量没有测量条件（平台、是否 graph capture、是否换新进程） | **不可用**；本域这类数字全是 **[D]** 级，条件即定义 |
+| 15 | 引用的阈值 / 门限量**没写测量条件**（平台、是否换新进程、是否用 CUDA Graph、warmup 多长） | **不可用**——这是本主题给的**判据**，不是数值；数值归 `convergence-and-tuning` |
 
 **闭合性检查**：读完能把「先做哪个、某个声称能不能接受、这个收益值不值得做」判完。**唯一的表外输入**是「工作量」的数值——它在 §1.3 被明确标为最弱的一环，而**表里给的是临界比值（第 11 行）而不是一个数**，所以读者不需要接受任何本库自造的工作量定价。
 
@@ -287,9 +307,9 @@ TensorRT-LLM 的做法（**[B]**，PR #18805）给出的理由，逐字：
 
 - ★ **「17.9% 排在 50.4% 之前」不是算出来的**：三条数量规则（含「距离 × 占比 ÷ 工作量」）**都**把 50.4% 的排第一；能复现的是一条布尔判据——**要不要写新 kernel**。
 - ★ **可判定的是临界值**：规则③ 需要 `工作量_A/工作量_B > 4.6606`；本库的秩映射给出 `2.50`，**不够**。所以**结论依赖工作量如何定价**——这一点必须写在正文，不能藏在公式里。
-- ★ **headroom gate 是上游实现里真实存在的闸**（**[B]**）：声称的加速比**不得超过**该算子到其约束资源的距离；边界闭（`1.300` 通过、`1.301` 被拒）；实测 `1.090 ≤ 1.2180` 通过，兑现率 **89.49%**。
-- ★ **kernel 未覆盖的份额不会被更快的 kernel 恢复**（**[B]** 逐字）：`p = 0.5 ⇒` 任何 kernel 优化的上界是 `2×`。
-- ★ **两档噪声数不同条件，不得合并**：gfx1100 会话内 **±10–15%**；graph capture 开 **1.5–3%**、关 **约 0.1%**——**关掉反而更稳**。**全部 [D] 级，未被独立复现。**
+- ★ **headroom gate 是上游实现里真实存在的闸**（**[B]，经检索转述**）：声称的加速比**不得超过**该算子到其约束资源的距离；边界闭（`1.300` 通过、`1.301` 被拒）；实测 `1.090 ≤ 1.2180` 通过，兑现率 **89.49%**。
+- ★ **kernel 未覆盖的份额不会被更快的 kernel 恢复**（**[E]，本库从 NeMo Megatron Bridge 那篇的「Launch-starved = 宿主还没把它发出去」推出**；**不是引文**）：`p = 0.5 ⇒` 任何 kernel 优化的上界是 `2×`。
+- ★ **阈值必须连带测量条件；条件给不出 ⇒ 阈值不可用**（**本库判据 [E]**）。本主题**不给噪声带的数值**——那是 `convergence-and-tuning` 的知识对象。
 - ★ **占比大的那个 Amdahl 上界更大**（`2.0161× > 1.2180×`），**而被选中的是上界小的那个**——差的正是工作量。
 - **`elimination` 应该排在 `faster execution` 之前**：消除不受 `p` 限制。
 - **§3 的全部数字是 CPU 剖面**（aarch64 DGX / 20 线程 / q8_0 / 1070 ms TTFT），**不是 GPU**。
@@ -327,17 +347,20 @@ make 03_optimization_priority        # 或 make run，跑本主题全部三个�
 
 **外部来源（**[B]：官方仓库的代码变更 / 产品官方文档**）**
 
-- NVIDIA/TensorRT-LLM **PR #18805**“Decompose the nsys timeline in the perf-analyze/optimize workflows”：`headroom_verdict` 闸、三层 busy rung 与 idle 补集、compute-absent 三分（launch-starved / blocking / dependency-stalled）、`share_pct` 由 interval-union time 定义、**流重叠会同时改变排序与百分比**、「a launch-starved share is not recovered by a faster kernel」。**经检索转述**，本实现者未逐字读到 diff 原文。
+- NVIDIA/TensorRT-LLM **PR #18805**“Decompose the nsys timeline in the perf-analyze/optimize workflows”：timeline decomposition、TRT-LLM taxonomy、`share_pct` / `enumerated_share_pct` 由 **interval-union time** 定义且 `kern_sum` 只作显式兜底、**流重叠会同时改变排序与百分比**、**`headroom_verdict` 那道校验**。**档位：经检索转述**——本实现者只读到检索摘要，**未逐字读到 diff 原文**。
+  > ⚠ **本主题初版把「三层 busy rung / idle 补集」「compute-absent 三分」「a launch-starved share is not recovered by a faster kernel」都记在这个 PR 名下并标「逐字」。那是错的**：前两者归下面那条，第三句**两次独立检索都查不到**（已改为本库推论）。
 - NVIDIA/TensorRT-LLM **PR #18825**“add elimination and overlap questions to the per-kernel coverage contract”：四类处置（elimination / faster execution / fusion / overlap）与 `gpu_busy_pct` 验证。**与 #18805 是两个 PR，不得合并引用。**
 - vLLM 官方博客（2026-07-22 / 07-27）与 vLLM v0.28.0 release notes：Kimi K3 的 metadata builder `870 µs → 34 µs` 与端到端 6%。
 
 **外部来源（**[D]：**个人或小团队仓库**，未被独立复现**）**
 
 - `mudler/vllm.cpp` 的 `.agents/specs/cpu-gdn-proj-orientation-2026-07-23.md` 及其同系列文档：§2.3 的占比表、§3 的全部数字与测量条件、`gdn_expand_nk` / `VT_GGUF_GDN_NK=0` / `VT_CPU_REF=1`、实测 `1.090×` 与 `72 → 0` 次调用。**○ 这是 CPU 剖面。**
-- `warpfront/hipfire` 的 `docs/methodology/perf-benchmarking.md`：§4.2 的三档噪声、`HIPFIRE_VERIFY_GRAPH=0`、`speed-gate.sh` 的 ±5% 容差、gfx1100 的会话内 A/B 要求换新进程。**○ 平台是 gfx1100（7900 XTX），不是数据中心 GPU。**
+- NVIDIA **NeMo Megatron Bridge** 的 Nsight Systems 分析文档（`docs.nvidia.com/nemo/megatron-bridge/nightly/skills/nemo-mbridge-perf-nsys-analysis/SKILL.html`）：**compute-absent** 的定义、**Launch-starved / Blocking / Dependency-stalled 三条逐字定义**、**配平恒等式** `launch-starved + blocking + dependency-stalled ≈ compute-absent`、**残差 > 0.5 ms / iteration 的门限**、**"kernel-duration sums … never presented as wall time"**、`eventSyncId` 的 join 规则、CUDA graph replay 的告诫。**档位：逐字（两次独立检索得到同一段文字）；出处已给到文件级 URL。**
+- `warpfront/hipfire` 的 `docs/methodology/perf-benchmarking.md`：**本主题只保留一条定性的 [D] 级观察**——「同一平台上，打开 CUDA Graph 时的读数离散度反而比关掉时更大」（§4.2）。**○ 平台是 gfx1100（7900 XTX），单一项目、未被独立复现。** 完整的噪声档与 `speed-gate.sh` 容差**归 `convergence-and-tuning`**，已从本主题的 `specs.py` 移除。
 
 **UNSOURCED（正文未使用）**
 
 - **hipfire 的「冷设置 `warmup=24` 比 `warmup=128` 偏低约 12%」**：**本次检索未找到**。检索到的该文档里与 warmup 有关的只有 `--warmups`（bench 默认 **10** 次丢弃）与 `HIPFIRE_DPM_WARMUP_SECS=10`；`128` 只作为 `--max-tokens 128` 出现。**不写进正文。**
-- **TRT-LLM 时间线分解里各档的百分比**：PR #18805 **定义了档位但没有给出任何百分比**。正文不得出现「典型 decode 有 30% 是 launch-starved」这类句子。
+- **时间线分解里各档的百分比**：两处出处（PR #18805 与 Megatron Bridge 的 NSYS 文档）**都没有给出「典型 decode 有 30% 是 launch-starved」这类百分比**。正文不得出现这类句子。
+- **`a launch-starved share is not recovered by a faster kernel` 的逐字原文**：**两次独立检索都查不到**。本主题已把它改写为**从逐字定义推出的本库推论（[E]）**，并删掉了全部「逐字」声明。
 - **本主题任何实测性能数字**：本机无 GPU；§3 的数是 **[D] 级的引用值**（CPU），不是本仓库实测。

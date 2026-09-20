@@ -12,6 +12,8 @@ r"""01-model-to-operator-inventory —— 从 config 推出算子清单。
   C 类  ① MoE 按 dense 全专家算 ⇒ 专家部分虚高 **E/k 倍**（精确，不是「数量级」）；
         ② 该口径错误**真的翻转**「谁是第一 FLOPs 消费者」的排序；
         ③ 忽略 GQA ⇒ k_proj/v_proj 虚高 **h/h_kv 倍**
+  D 类  常量自洽：本篇用到的 `specs.py` 常量**逐条被断言钉住**
+        （本域 C6 的机械判据：改 `specs.py` 的常量 ⇒ `make run` 必须报错）
 
 跑法：`make 01_operator_inventory`（或 `python3 01_operator_inventory.py`）。
 纯 python3 + 标准库（连 numpy 都不需要），不 import torch，不碰 GPU。
@@ -383,6 +385,218 @@ for c in CFGS:
 
 
 # ===========================================================================
+head("§D  常量自洽：本篇用到的 specs.py 常量，逐条被断言钉住")
+# ===========================================================================
+#
+# ★ 这一节是**机械判据**（本域 C6）的落点：**逐个改 specs.py 里的常量，
+#   `make run` 必须报错**。一条常量如果只被 `print` 而不被断言，
+#   它就是一个**没人查的抄件**——改了不会有任何反应。
+# ★ 覆盖表（本程序）：见本节末尾。三个程序合起来必须覆盖 specs.py 的**全部**常量。
+
+sub("D.1  `FLOAT16_BYTES` 与它的可推导后果")
+# 不是断言「2 == 2」，是断言**由它推出来的一个本主题结论**：
+# `lm_head` 的权重字节数 = 2·d·V·esize。
+_d, _V = derived_dims(SP.LLAMA3_8B_CONFIG)["d"], derived_dims(SP.LLAMA3_8B_CONFIG)["V"]
+_lm_weight_bytes = _d * _V * SP.FLOAT16_BYTES
+print(f"    Llama-3-8B 的 lm_head 权重 = d·V·esize = {_d}·{_V}·{SP.FLOAT16_BYTES}"
+      f" = {fmt(_lm_weight_bytes)} B")
+check("D.1 fp16 存储宽度使 lm_head 权重恰为 1,050,673,152 B",
+      _lm_weight_bytes == 1050673152, f"{_lm_weight_bytes}")
+check("D.1 `FLOAT16_BYTES == 2`（fp16 位域 S1E5M10 ⇒ 16 bit）", SP.FLOAT16_BYTES == 2,
+      f"{SP.FLOAT16_BYTES}")
+
+sub("D.2  vLLM 的三档：档名 + 「只有 complex 要新 kernel」")
+tiers = SP.VLLM_MODEL_INTEGRATION_TIERS
+print(f"    档名 = {tiers}；需要新 kernel 的那一档 = {SP.VLLM_TIER_NEEDS_NEW_KERNEL}")
+check("D.2 档名与顺序逐字一致（C6：改档名即失败）",
+      tiers == ("simple", "moderate", "complex"), str(tiers))
+check("D.2 需要新 kernel 的档就是 `complex`",
+      SP.VLLM_TIER_NEEDS_NEW_KERNEL == "complex", SP.VLLM_TIER_NEEDS_NEW_KERNEL)
+check("D.2 三档里**恰好一档**要新 kernel",
+      sum(1 for t in tiers if t == SP.VLLM_TIER_NEEDS_NEW_KERNEL) == 1)
+
+
+def needs_new_kernel(tier_name):
+    """vLLM 分档 → 要不要写新 kernel。这是 01 篇 §5 判据表第 11/12 行的机器化。"""
+    if tier_name not in SP.VLLM_MODEL_INTEGRATION_TIERS:
+        raise KeyError(tier_name)
+    return tier_name == SP.VLLM_TIER_NEEDS_NEW_KERNEL
+
+
+for _t in tiers:
+    print(f"      {_t:9s} ⇒ 要写新 kernel = {needs_new_kernel(_t)}")
+check("D.2 三档的布尔输出 == (False, False, True)",
+      [needs_new_kernel(t) for t in tiers] == [False, False, True])
+
+sub("D.3  先跑 `vllm serve`：它是判据表的第一道闸")
+print(f"    动作 = {SP.VLLM_TRANSFORMERS_BACKEND_HINT!r}")
+check("D.3 hint 逐字一致（C6：改一个字即失败）",
+      SP.VLLM_TRANSFORMERS_BACKEND_HINT == "vllm serve <model>",
+      SP.VLLM_TRANSFORMERS_BACKEND_HINT)
+check("D.3 命令形状正确（含 `vllm serve` 与模型占位符）",
+      SP.VLLM_TRANSFORMERS_BACKEND_HINT.startswith("vllm serve ")
+      and "<model>" in SP.VLLM_TRANSFORMERS_BACKEND_HINT)
+
+
+def integration_entry(serves_ok, tier_name):
+    """判据表第 12 行：先跑 `vllm serve`；起来了就不用写任何 kernel。"""
+    if serves_ok:
+        return "不需要在 vLLM 里实现任何算子"
+    return "要写新 kernel" if needs_new_kernel(tier_name) else "复用已有实现"
+
+
+print(f"      serve 能起来 + complex  ⇒ {integration_entry(True, 'complex')}")
+print(f"      serve 起不来 + complex  ⇒ {integration_entry(False, 'complex')}")
+print(f"      serve 起不来 + simple   ⇒ {integration_entry(False, 'simple')}")
+check("D.3 serve 能起来时**绕过**三档判定（不写 kernel）",
+      integration_entry(True, "complex") == "不需要在 vLLM 里实现任何算子")
+check("D.3 serve 起不来时回到三档判定",
+      integration_entry(False, "complex") == "要写新 kernel"
+      and integration_entry(False, "simple") == "复用已有实现")
+
+sub("D.4  vLLM IR 的四个标识符（逐字）")
+print(f"    {SP.VLLM_IR_DECLARATION_DECORATOR} / {SP.VLLM_IR_IMPL_DECORATOR} / "
+      f"{SP.VLLM_IR_PRIORITY_CLI_PREFIX} / {SP.VLLM_IR_RESERVED_FALLBACK_PROVIDER}")
+check("D.4 声明/注册装饰器名逐字一致（C6：改一字即失败）",
+      (SP.VLLM_IR_DECLARATION_DECORATOR, SP.VLLM_IR_IMPL_DECORATOR)
+      == ("@register_op", "register_impl"),
+      f"{SP.VLLM_IR_DECLARATION_DECORATOR} / {SP.VLLM_IR_IMPL_DECORATOR}")
+check("D.4 CLI 前缀逐字一致",
+      SP.VLLM_IR_PRIORITY_CLI_PREFIX == "--ir-op-priority", SP.VLLM_IR_PRIORITY_CLI_PREFIX)
+check("D.4 `native` 是保留的兜底 provider（⇒ 列表永远有兜底）",
+      SP.VLLM_IR_RESERVED_FALLBACK_PROVIDER == "native",
+      SP.VLLM_IR_RESERVED_FALLBACK_PROVIDER)
+
+sub("D.5  Kimi K3 带来的新算子：**四项**，且 prefill / decode 是两项")
+names = SP.KIMI_K3_NEW_OPERATOR_NAMES
+print(f"    共 {len(names)} 项：{names}")
+check("D.5 恰好 4 项（这就是「一个模型发布带来多少算子」的答案）", len(names) == 4, f"{len(names)}")
+check("D.5 四个名字逐字一致（C6：改一字即失败）",
+      names == ("KDA prefill", "KDA decode", "Attention Residuals", "SiTU"), str(names))
+check("D.5 KDA prefill 与 KDA decode 是**两条独立的项**",
+      sum(1 for n in names if n.startswith("KDA")) == 2)
+check("D.5 MoE 新激活那一项是 SiTU", "SiTU" in names)
+
+sub("D.6  Kimi K3 的其余数字与标识符（**每个数字都要落在 specs.py**）")
+print(f"    KDA prefill PR = {SP.KIMI_K3_KDA_PREFILL_PRS}；KDA decode PR = "
+      f"{SP.KIMI_K3_KDA_DECODE_PR}；SiTU/MegaMoE PR = {SP.KIMI_K3_SITU_MEGAMOE_PR}")
+print(f"    AttnRes：至多 {SP.KIMI_K3_ATTNRES_MAX_CACHED_BLOCKS} 个缓存块表示 ⇒ 至多 "
+      f"{SP.KIMI_K3_ATTNRES_MAX_SOURCES} 个来源")
+check("D.6 KDA 的两个 PR 号逐字一致",
+      SP.KIMI_K3_KDA_PREFILL_PRS == (51311, 52458) and SP.KIMI_K3_KDA_DECODE_PR == 50654,
+      f"{SP.KIMI_K3_KDA_PREFILL_PRS} / {SP.KIMI_K3_KDA_DECODE_PR}")
+check("D.6 SiTU/MegaMoE 的 PR 号逐字一致", SP.KIMI_K3_SITU_MEGAMOE_PR == 50510,
+      f"{SP.KIMI_K3_SITU_MEGAMOE_PR}")
+check("D.6 「至多 9 个来源」= 「至多 8 块」+ 当前块内残差（自洽）",
+      SP.KIMI_K3_ATTNRES_MAX_SOURCES == SP.KIMI_K3_ATTNRES_MAX_CACHED_BLOCKS + 1,
+      f"{SP.KIMI_K3_ATTNRES_MAX_SOURCES} vs {SP.KIMI_K3_ATTNRES_MAX_CACHED_BLOCKS}+1")
+check("D.6 prefix caching 拆开的三个概念逐字一致",
+      SP.KIMI_K3_PREFIX_CACHE_SEPARATED_CONCEPTS
+      == ("physical block size", "scheduler alignment", "prefix-match unit"),
+      str(SP.KIMI_K3_PREFIX_CACHE_SEPARATED_CONCEPTS))
+check("D.6 copy-on-write 为真（不是「加一个 kernel」而是改规则）",
+      SP.KIMI_K3_PREFIX_CACHE_RULE_IS_COPY_ON_WRITE is True)
+check("D.6 保留策略的环境变量名逐字一致",
+      SP.KIMI_K3_PREFIX_CACHE_ENV_VAR == "VLLM_PREFIX_CACHE_RETENTION_INTERVAL",
+      SP.KIMI_K3_PREFIX_CACHE_ENV_VAR)
+check("D.6 metadata builder 的 870→34 与端到端 6% 逐字一致",
+      SP.KIMI_K3_METADATA_BUILDER_LATENCY_US == (870, 34)
+      and SP.KIMI_K3_METADATA_BUILDER_E2E_GAIN_PCT == 6,
+      f"{SP.KIMI_K3_METADATA_BUILDER_LATENCY_US} / {SP.KIMI_K3_METADATA_BUILDER_E2E_GAIN_PCT}")
+
+sub("D.7  两个模型的 config：字段名与口径（改字段名会静默改结论，故钉住）")
+for _c, _keys in ((SP.LLAMA3_8B_CONFIG,
+                   ["name", "num_hidden_layers", "hidden_size", "num_attention_heads",
+                    "num_key_value_heads", "head_dim", "intermediate_size", "vocab_size",
+                    "num_experts", "num_experts_per_tok", "moe_intermediate_size"]),
+                  (SP.QWEN3_30B_A3B_CONFIG,
+                   ["name", "num_hidden_layers", "hidden_size", "num_attention_heads",
+                    "num_key_value_heads", "head_dim", "intermediate_size", "vocab_size",
+                    "num_experts", "num_experts_per_tok", "moe_intermediate_size"])):
+    check(f"D.7 {_c['name']} 的 config 键齐全", all(k in _c for k in _keys),
+          str([k for k in _keys if k not in _c]))
+check("D.7 Llama-3-8B 是 dense（无专家字段值）",
+      SP.LLAMA3_8B_CONFIG["num_experts"] is None
+      and SP.LLAMA3_8B_CONFIG["num_experts_per_tok"] is None)
+check("D.7 Qwen3-30B-A3B 的 GQA 是 8:1",
+      SP.QWEN3_30B_A3B_CONFIG["num_attention_heads"]
+      // SP.QWEN3_30B_A3B_CONFIG["num_key_value_heads"] == 8)
+check("D.7 两个模型都**显式**给了 head_dim（不靠除法反推）",
+      all("head_dim" in c for c in (SP.LLAMA3_8B_CONFIG, SP.QWEN3_30B_A3B_CONFIG)))
+# ★ C6：**逐个字段**钉住。只断言「落在 1% 内」会放过任何一个字段的小改动
+#   （例如 intermediate_size 14336 → 14343 只移动 0.03%），所以这里逐位比。
+_EXPECT_CFG = {
+    "Meta-Llama-3-8B": dict(name="Meta-Llama-3-8B", num_hidden_layers=32, hidden_size=4096,
+                            num_attention_heads=32, num_key_value_heads=8, head_dim=128,
+                            intermediate_size=14336, vocab_size=128256, num_experts=None,
+                            num_experts_per_tok=None, moe_intermediate_size=None),
+    "Qwen3-30B-A3B": dict(name="Qwen3-30B-A3B", num_hidden_layers=48, hidden_size=2048,
+                          num_attention_heads=32, num_key_value_heads=4, head_dim=128,
+                          intermediate_size=6144, vocab_size=151936, num_experts=128,
+                          num_experts_per_tok=8, moe_intermediate_size=768),
+}
+for _c in (SP.LLAMA3_8B_CONFIG, SP.QWEN3_30B_A3B_CONFIG):
+    _diff = {k: (v, _c.get(k)) for k, v in _EXPECT_CFG[_c["name"]].items() if _c.get(k) != v}
+    check(f"D.7 {_c['name']} 的 11 个字段逐位一致（C6：改任一字段即失败）",
+          not _diff, str(_diff))
+# ★ 再钉住**派生量**与**反算参数量**的精确整数：任何字段的小改动都会移动它们。
+_EXPECT_DIMS = {
+    "Meta-Llama-3-8B": {"d": 4096, "d_q": 4096, "d_kv": 1024, "d_ff": 14336, "L": 32,
+                        "V": 128256, "E": None, "k": None},
+    "Qwen3-30B-A3B": {"d": 2048, "d_q": 4096, "d_kv": 512, "d_ff": 768, "L": 48,
+                      "V": 151936, "E": 128, "k": 8},
+}
+_EXPECT_PARAMS = {"Meta-Llama-3-8B": 8029995008, "Qwen3-30B-A3B": 30519328768}
+for _c in (SP.LLAMA3_8B_CONFIG, SP.QWEN3_30B_A3B_CONFIG):
+    _g = derived_dims(_c)
+    check(f"D.7 {_c['name']} 的 8 个派生量逐位一致", _g == _EXPECT_DIMS[_c["name"]], str(_g))
+    _n = n_params(_c)["total"]
+    check(f"D.7 {_c['name']} 反算总参数量 == {_EXPECT_PARAMS[_c['name']]:,}（逐位）",
+          _n == _EXPECT_PARAMS[_c["name"]], f"{_n:,}")
+
+sub("D.8  公开参数量表 + UNSOURCED 清单的形状")
+check("D.8 公开参数量 = {8.03, 30.5}（A 类的对照对象，改它 A.1 立刻失败）",
+      SP.PUBLISHED_PARAM_COUNT_B == {"Meta-Llama-3-8B": 8.03, "Qwen3-30B-A3B": 30.5},
+      str(SP.PUBLISHED_PARAM_COUNT_B))
+check("D.8 UNSOURCED 全是字符串且两两不同",
+      all(isinstance(x, str) for x in SP.UNSOURCED) and len(set(SP.UNSOURCED)) == len(SP.UNSOURCED),
+      f"{len(SP.UNSOURCED)} 项")
+check("D.8 UNSOURCED 里记着「hipfire 的 warmup 12%」那条（它被移出了正文）",
+      any("warmup" in x for x in SP.UNSOURCED), str(SP.UNSOURCED))
+check("D.8 UNSOURCED 里记着「Qwen3 共享专家」那条（01 篇的清单因此是下界）",
+      any("shared_expert" in x for x in SP.UNSOURCED))
+# ★ C6：UNSOURCED 是**稳定标识符清单**（不是散文），逐条比对。
+check("D.8 UNSOURCED 的 6 个条目名逐条一致（C6：改任一条即失败）",
+      SP.UNSOURCED == ("hipfire_warmup_24_vs_128_12pct", "cold_start_time_scales",
+                       "compute_absent_per_category_pct",
+                       "qwen3_30b_a3b_shared_expert_size",
+                       "ungrounded_bandwidth_saturation_claims",
+                       "misattributed_verbatim_quotes_in_v1"),
+      str(SP.UNSOURCED))
+check("D.8 UNSOURCED 里有「已订正的错误归属」那一条（给后来者的警告）",
+      any("misattributed" in x for x in SP.UNSOURCED))
+
+# ---------------------------------------------------------------------------
+sub("D.9  本程序的常量覆盖表")
+COVERED_01 = (
+    "FLOAT16_BYTES", "LLAMA3_8B_CONFIG", "QWEN3_30B_A3B_CONFIG", "PUBLISHED_PARAM_COUNT_B",
+    "VLLM_MODEL_INTEGRATION_TIERS", "VLLM_TIER_NEEDS_NEW_KERNEL",
+    "VLLM_TRANSFORMERS_BACKEND_HINT", "VLLM_IR_DECLARATION_DECORATOR",
+    "VLLM_IR_IMPL_DECORATOR", "VLLM_IR_PRIORITY_CLI_PREFIX",
+    "VLLM_IR_RESERVED_FALLBACK_PROVIDER",
+    "KIMI_K3_NEW_OPERATOR_NAMES", "KIMI_K3_KDA_PREFILL_PRS", "KIMI_K3_KDA_DECODE_PR",
+    "KIMI_K3_SITU_MEGAMOE_PR", "KIMI_K3_ATTNRES_MAX_CACHED_BLOCKS",
+    "KIMI_K3_ATTNRES_MAX_SOURCES", "KIMI_K3_PREFIX_CACHE_SEPARATED_CONCEPTS",
+    "KIMI_K3_PREFIX_CACHE_RULE_IS_COPY_ON_WRITE", "KIMI_K3_PREFIX_CACHE_ENV_VAR",
+    "KIMI_K3_METADATA_BUILDER_LATENCY_US", "KIMI_K3_METADATA_BUILDER_E2E_GAIN_PCT",
+    "UNSOURCED",
+)
+for _n in COVERED_01:
+    print(f"      {_n:36s} 有断言")
+print(f"    ⇒ 01 篇覆盖 {len(COVERED_01)} 条（其余在本主题另两个程序里被覆盖）")
+
+
+# ===========================================================================
 head("汇总")
 # ===========================================================================
 if FAILED:
@@ -390,7 +604,7 @@ if FAILED:
     for f in FAILED:
         print(f"      · {f}")
     sys.exit(1)
-print("  ✓ 全部断言通过（A 类 4 组 · B 类 2 组 · C 类 3 组）")
+print("  ✓ 全部断言通过（A 类 4 组 · B 类 2 组 · C 类 3 组 · D 类 9 组）")
 print()
 print("  ★ 本程序的数**全部是从 config 推出的推导值**，不是实测：")
 print("    本机 macOS 无 GPU，本主题不产出任何实测性能数字。")

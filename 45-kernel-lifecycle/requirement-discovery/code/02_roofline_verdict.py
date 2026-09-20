@@ -15,6 +15,7 @@ r"""02-roofline-verdict —— 「这个算子是什么受限」的判定。
 跑法：`make 02_roofline_verdict`。纯 python3 + 标准库，不 import torch，不碰 GPU。
 """
 
+import math
 import sys
 
 import specs as SP
@@ -258,8 +259,9 @@ print(f"    FLOPs = {flops:,.0f}  （两种口径都是这个数）")
 
 sub("C.2  两种字节口径")
 print(f"    口径一（**唯一 DRAM 字节**，理想复用）：")
-print(f"      输入 {CIN*H*W:,} + 权重 {COUT*CIN*KS*KS:,} + 输出 {COUT*H*W:,} = "
-      f"{bytes_unique:,.0f} B")
+print(f"      （输入 {CIN*H*W:,} + 权重 {COUT*CIN*KS*KS:,} + 输出 {COUT*H*W:,}）"
+      f" **个元素** = {CIN*H*W + COUT*CIN*KS*KS + COUT*H*W:,} 个元素")
+print(f"      × {ESIZE} B/element = {bytes_unique:,.0f} B")
 print(f"    口径二（**总读取字节**，无复用实现实际发出的流量）：")
 print(f"      每个输出元素重读 K²·Cin = {KS*KS*CIN} 个权重元素、K² = {KS*KS} 个输入元素"
       f"，输出写 1 次")
@@ -294,6 +296,121 @@ print("        所以错误的方向是「把理想的 AI 当实现的 AI 用」
 
 
 # ===========================================================================
+head("§D  常量自洽：本篇用到的 specs.py 常量，逐条被断言钉住")
+# ===========================================================================
+#
+# ★ 机械判据（本域 C6）：**逐个改 specs.py 里的常量，`make run` 必须报错。**
+#   只被 `print` 不被断言的常量是「没人查的抄件」。
+
+sub("D.1  `FLOAT16_BYTES`：它就是本篇口径三件套里的 esize")
+check("D.1 esize == 2 B/element（口径三件套写死的那一个）", ESIZE == 2, f"{ESIZE}")
+check("D.1 换成 fp32 宽度的整张表会整体减半（AI 是比值，不是绝对量）",
+      abs(ai_layernorm(4096) - 1.25) < 1e-12 and (5.0 * 4096) / ((2 * 4096) * 4) == 0.625,
+      "1.25 vs 0.625")
+
+sub("D.2  `HBM_BW_GBps_BY_GEN`：口径是十进制 10^9、SXM 档")
+print(f"    {GPU} = {BW} GB/s")
+check("D.2 H100 标称带宽 == 3350.0 GB/s（十进制）", BW == 3350.0, f"{BW}")
+check("D.2 取的是**并集**口径，四代都在（V100/A100/H100/B200）",
+      set(SP.HBM_BW_GBps_BY_GEN) == {"V100", "A100", "H100", "B200"},
+      str(sorted(SP.HBM_BW_GBps_BY_GEN)))
+check("D.2 全为正数且逐代递增（口误写成 PCIe 档会破坏这一点）",
+      list(SP.HBM_BW_GBps_BY_GEN.values()) == sorted(SP.HBM_BW_GBps_BY_GEN.values())
+      and all(v > 0 for v in SP.HBM_BW_GBps_BY_GEN.values()))
+check("D.2 四个带宽值与来源逐位一致（C6：改 specs 即失败）",
+      SP.HBM_BW_GBps_BY_GEN == {"V100": 900.0, "A100": 2039.0, "H100": 3350.0, "B200": 7700.0},
+      str(SP.HBM_BW_GBps_BY_GEN))
+check("D.2 FP32 向量峰值四代与来源逐位一致",
+      SP.FP32_VECTOR_TFLOPS_DENSE == {"V100": 15.7, "A100": 19.5, "H100": 67.0, "B200": 75.0},
+      str(SP.FP32_VECTOR_TFLOPS_DENSE))
+
+sub("D.3  峰值：**dense** 的 989.5 与 67.0")
+check("D.3 FP16 张量核 dense 峰值 == 989.5（不是带稀疏的 1979.0）", PEAK_FP16 == 989.5, f"{PEAK_FP16}")
+check("D.3 sparse 位确实是 1979.0（⇒ 两者都在表里，选错的代价是 2 倍）",
+      SP.TC_TFLOPS_DENSE_SPARSE["FP16"][GPU][1] == 1979.0,
+      f"{SP.TC_TFLOPS_DENSE_SPARSE['FP16'][GPU][1]}")
+check("D.3 FP32 向量峰值 == 67.0（非 tensor core 通路）", PEAK_FP32 == 67.0, f"{PEAK_FP32}")
+check("D.3 V100 的 sparse 位是 None（Volta 没有 2:4，不是「未采集」）",
+      SP.TC_TFLOPS_DENSE_SPARSE["FP16"]["V100"][1] is None)
+# ★ C6：FP16 行的**四个二元组逐位比对**（含 A100/B200 的 sparse 位——它们没有参与
+#   任何推导，但**只要留在 specs.py 里就必须被钉住**，否则就是漏网）。
+check("D.3 FP16 行四代 dense/sparse 二元组与来源逐位一致",
+      SP.TC_TFLOPS_DENSE_SPARSE["FP16"] == {
+          "V100": (125.0, None), "A100": (312.0, 624.0),
+          "H100": (989.5, 1979.0), "B200": (2250.0, 4500.0)},
+      str(SP.TC_TFLOPS_DENSE_SPARSE["FP16"]))
+check("D.3 精度表**只保留 FP16 一行**（其余四行与本主题无关，已裁掉）",
+      set(SP.TC_TFLOPS_DENSE_SPARSE) == {"FP16"}, str(sorted(SP.TC_TFLOPS_DENSE_SPARSE)))
+check("D.3 其余三代也在（ridge 表用到了 V100/A100/B200）",
+      set(SP.TC_TFLOPS_DENSE_SPARSE["FP16"]) == {"V100", "A100", "H100", "B200"},
+      str(sorted(SP.TC_TFLOPS_DENSE_SPARSE["FP16"])))
+
+sub("D.4  `RIDGE_EXPECTED`：八条全部逐一复算（只核一条会被漏掉七条）")
+for _k, _v in sorted(SP.RIDGE_EXPECTED.items()):
+    _gen, _path = _k.split("_fp")
+    _path = "fp" + _path
+    if _path == "fp16_tc":
+        _peak = SP.TC_TFLOPS_DENSE_SPARSE["FP16"][_gen][0]
+    elif _path == "fp32_vec":
+        _peak = SP.FP32_VECTOR_TFLOPS_DENSE[_gen]
+    else:
+        raise AssertionError(_k)
+    _got = roofline_ridge(_peak, SP.HBM_BW_GBps_BY_GEN[_gen])
+    print(f"      {_k:16s} = {_peak:7.1f}e12 ÷ {SP.HBM_BW_GBps_BY_GEN[_gen]:7.1f}e9 "
+          f"= {_got:9.4f}（表值 {_v}）")
+    check(f"D.4 RIDGE_EXPECTED[{_k}] 与复算逐位一致", abs(_got - _v) < 5e-5,
+          f"{_got:.4f} vs {_v}")
+
+sub("D.5  `ACHIEVABLE_BW_SHORTFALL_PCT_IN_REPO`：缺口的两端各自代入一遍")
+lo, hi = SP.ACHIEVABLE_BW_SHORTFALL_PCT_IN_REPO
+check("D.5 缺口就是 (5, 15)，且 5 < 15", (lo, hi) == (5, 15) and lo < hi, f"{(lo, hi)}")
+for _pct in (lo, hi):
+    _eta = 1 - _pct / 100
+    _r = roofline_ridge(PEAK_FP16, BW * _eta)
+    print(f"      缺口 {_pct:2d}% ⇒ η = {_eta:.2f} ⇒ 可达 ridge = {_r:.2f}")
+check("D.5 η = 0.85 给出的可达 ridge == 347.50",
+      abs(roofline_ridge(PEAK_FP16, BW * 0.85) - 347.50) < 0.005,
+      f"{roofline_ridge(PEAK_FP16, BW * 0.85):.4f}")
+check("D.5 缺口越大 ⇒ ridge 越高（判据越严，这就是本节的反直觉点）",
+      roofline_ridge(PEAK_FP16, BW * 0.85) > roofline_ridge(PEAK_FP16, BW * 0.95))
+
+sub("D.6  `L2_MB_H100_IN_REPO`：它推出的那个量级（§2.1 的 2.6e7 个 fp16 元素）")
+_l2_bytes = SP.L2_MB_H100_IN_REPO * 2 ** 20
+_l2_elems = _l2_bytes // ESIZE
+print(f"    {SP.L2_MB_H100_IN_REPO} MiB = {_l2_bytes:,} B ÷ {ESIZE} B = {_l2_elems:,} 个 fp16 元素"
+      f"（= 2^{math.log2(_l2_elems):.3f}）")
+check("D.6 50 MiB 装得下 26,214,400 个 fp16 元素（§2.1 的「2.6e7」）",
+      _l2_elems == 26214400, f"{_l2_elems}")
+check("D.6 结论是 2^24.644 ≈ 2^24.6（量级判断，不是精确结论）",
+      abs(math.log2(_l2_elems) - 24.644) < 0.001, f"{math.log2(_l2_elems):.4f}")
+
+sub("D.7  `B200_RIDGE_ALT_BW_TBPS`：**分母**不同，分子相同")
+_alt = roofline_ridge(SP.TC_TFLOPS_DENSE_SPARSE["FP16"]["B200"][0],
+                      SP.B200_RIDGE_ALT_BW_TBPS * 1000)
+_own = SP.RIDGE_EXPECTED["B200_fp16_tc"]
+print(f"    8.0 TB/s 口径：{SP.TC_TFLOPS_DENSE_SPARSE['FP16']['B200'][0]}e12 ÷ "
+      f"{SP.B200_RIDGE_ALT_BW_TBPS * 1000:.0f}e9 = {_alt:.4f}")
+print(f"    7.7 TB/s 口径：{SP.TC_TFLOPS_DENSE_SPARSE['FP16']['B200'][0]}e12 ÷ 7700e9"
+      f" = {_own:.4f}")
+check("D.7 8.0 TB/s 口径给出的 ridge == 281.25", abs(_alt - 281.25) < 5e-5, f"{_alt:.4f}")
+check("D.7 两个口径的**分子相同**（都是 B200 的 2250.0 TFLOPS）——差异只在分母",
+      SP.TC_TFLOPS_DENSE_SPARSE["FP16"]["B200"][0] == 2250.0)
+check("D.7 两个口径**给出不同的数**（否则 02 篇 §4.4 那条踩坑不成立）",
+      abs(_alt - _own) > 10.0, f"{_alt:.2f} vs {_own:.2f}")
+
+# ---------------------------------------------------------------------------
+sub("D.8  本程序的常量覆盖表")
+COVERED_02 = (
+    "FLOAT16_BYTES", "HBM_BW_GBps_BY_GEN", "FP32_VECTOR_TFLOPS_DENSE",
+    "TC_TFLOPS_DENSE_SPARSE", "RIDGE_EXPECTED", "ACHIEVABLE_BW_SHORTFALL_PCT_IN_REPO",
+    "L2_MB_H100_IN_REPO", "B200_RIDGE_ALT_BW_TBPS",
+)
+for _n in COVERED_02:
+    print(f"      {_n:36s} 有断言")
+print(f"    ⇒ 02 篇覆盖 {len(COVERED_02)} 条")
+
+
+# ===========================================================================
 head("汇总")
 # ===========================================================================
 if FAILED:
@@ -301,7 +418,7 @@ if FAILED:
     for f in FAILED:
         print(f"      · {f}")
     sys.exit(1)
-print("  ✓ 全部断言通过（A 类 2 组 · B 类 4 组 · C 类 3 组）")
+print("  ✓ 全部断言通过（A 类 2 组 · B 类 5 组 · C 类 3 组 · D 类 7 组）")
 print()
 print(f"  ★ 本程序的数**全部是推导值**：只用 specs.py 的规格常量做算术，"
       f"不产出实测。")
