@@ -117,9 +117,9 @@ DEFECTS = [
 
     ("D2", "插桩对照里去掉「不插桩」那一组（两组都插桩 ⇒ 测不出开销）",
      "01_collection_mechanisms.py",
-     "        a = timed(fn, False)\n        b = timed(fn, True)",
-     "        a = timed(fn, True)        # DEFECT: 「不插桩」那一组被删掉\n"
-     "        b = timed(fn, True)",
+     "        a, b = timed_pair(fn)",
+     "        a, b = timed_pair(fn)\n"
+     "        a = b                     # DEFECT: 「不插桩」那一组被删掉",
      ["01_collection_mechanisms.py"], "fail"),
 
     ("D3", "（★ 反向测试）跨 pass 组合改成**同一次** pass 内取分子分母",

@@ -418,22 +418,41 @@ B_WALL_SEC = 0.10
 B_REPS = 7
 
 
-def timed(fn, profiled, reps=B_REPS):
+def timed_pair(fn, reps=B_REPS):
+    """**A/B 交错 + ABBA**：交替采「不插桩」与「插桩」两组，返回 `(中位_不插桩, 中位_插桩)`。
+
+    ★★ 为什么必须交错（机制是计划 §0.7 **D-12**，正文在同域
+      `tuning-practice/03-ab-orchestration`）：
+      「先把 7 次不插桩跑完、再把 7 次插桩跑完」会让两组各自占据一个**连续的时间段**；
+      机器状态（负载、频率、cache）在两段之间漂移时，那个漂移会被原样记进
+      `pct = (b − a) / a` —— 而 `pct` 正是 `B.1`/`B.3` 的判据。
+      ★ 本机实测（自造 **9 个忙进程**打满 CPU）：
+        · **顺序采样**：`定次数` 那一路的 `pct` 出现 **1/20 次的 +10.6%**
+          （另一轮 20 次里出现过 +75.9% / +76%）⇒ **`B.1`（`pct_fixed > 100`）会红**；
+        · **交错采样**：**0/20**，20 次的 `pct` 全落在 **195%–205%**。
+      ★ `wall-bounded` 那一路本来就不受影响（墙钟把总时长钉死了：20 次实测恒在
+        **0.00%–0.09%**），但它与本条同源，一起交错没有代价。
+
+    ★ ABBA（偶数轮「先不插桩」、奇数轮反过来）：否则「同一轮里第二个被量的那个」
+      会稳定地偏慢，交错会留下一个残余的顺序效应（`03` 的 `inter_round` 实测过）。
+    """
     import statistics
-    ts = []
-    for _ in range(reps):
-        if profiled:
-            pr = cProfile.Profile()
-            t0 = time.perf_counter()
-            pr.enable()
-            fn()
-            pr.disable()
-            ts.append(time.perf_counter() - t0)
-        else:
-            t0 = time.perf_counter()
-            fn()
-            ts.append(time.perf_counter() - t0)
-    return statistics.median(ts)
+    a, b = [], []
+    for k in range(reps):
+        order = (False, True) if k % 2 == 0 else (True, False)      # ★ ABBA
+        for profiled in order:
+            if profiled:
+                pr = cProfile.Profile()
+                t0 = time.perf_counter()
+                pr.enable()
+                fn()
+                pr.disable()
+                b.append(time.perf_counter() - t0)
+            else:
+                t0 = time.perf_counter()
+                fn()
+                a.append(time.perf_counter() - t0)
+    return statistics.median(a), statistics.median(b)
 
 
 def part_B():
@@ -448,8 +467,10 @@ def part_B():
     for name, fn in (("定次数  fixed_iters(%d)" % B_FIXED_N, lambda: fixed_iters(B_FIXED_N)),
                      ("墙钟定界 wall_bounded(%.2fs)" % B_WALL_SEC,
                       lambda: wall_bounded(B_WALL_SEC))):
-        a = timed(fn, False)
-        b = timed(fn, True)
+        # ★★ **交错采样**（A/B/A/B…、且 ABBA），**不是**「先跑完 7 次不插桩、再跑完 7 次插桩」——
+        #   后者让两组各自占据一个连续时间段，机器状态在两段之间的漂移会被记进 `pct`。
+        #   理由与实测见 `timed_pair` 的 docstring。
+        a, b = timed_pair(fn)
         pct = (b - a) / a * 100.0 if a > 0 else float("inf")
         rows.append((name, a, b, pct))
         print("     %-28s 不插桩 %.4f s · 插桩 %.4f s ⇒ 开销 %+.1f%%" % (name, a, b, pct))
