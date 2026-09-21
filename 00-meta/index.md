@@ -122,7 +122,18 @@
   - [03-convergence](../45-kernel-lifecycle/convergence-and-tuning/03-convergence.md)
 
 ## 50-performance
-尚未开始。
+- [profiling-tools](../50-performance/profiling-tools/) —— 工具作为仪器：三种采集机制 / replay 与多 pass / 默认值不中立 / 归因
+  - [01-collection-mechanisms](../50-performance/profiling-tools/01-collection-mechanisms.md)
+  - [02-replay-and-multipass](../50-performance/profiling-tools/02-replay-and-multipass.md)
+  - [03-defaults-and-attribution](../50-performance/profiling-tools/03-defaults-and-attribution.md)
+- [bottleneck-diagnosis](../50-performance/bottleneck-diagnosis/) —— 从读数到判据：延迟 vs 带宽 / 读计数器的反模式 / 一次完整诊断
+  - [01-latency-and-bandwidth](../50-performance/bottleneck-diagnosis/01-latency-and-bandwidth.md)
+  - [02-reading-counters](../50-performance/bottleneck-diagnosis/02-reading-counters.md)
+  - [03-diagnosis-walkthrough](../50-performance/bottleneck-diagnosis/03-diagnosis-walkthrough.md)
+- [tuning-practice](../50-performance/tuning-practice/) —— σ 与 τ 的标定 / 真实测量噪声下的搜索 / A-B 的实验编排
+  - [01-measuring-sigma-and-tau](../50-performance/tuning-practice/01-measuring-sigma-and-tau.md)
+  - [02-noise-and-search](../50-performance/tuning-practice/02-noise-and-search.md)
+  - [03-ab-orchestration](../50-performance/tuning-practice/03-ab-orchestration.md)
 
 ## 60-compilers
 - [mlir](../60-compilers/mlir/) —— IR 结构与方言 / tensor 与 memref / 渐进式 lowering / 编写 pass

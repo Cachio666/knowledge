@@ -22,7 +22,7 @@
 | `30-gpu-programming` | CUDA、Triton、PTX/SASS、CUTLASS |
 | `40-kernels` | GEMM、attention、reduce、softmax、融合算子、MoE kernel |
 | `45-kernel-lifecycle` | 算子全生命周期：需求发掘、算子设计、实现验证、收敛与调优 |
-| `50-performance` | profiling 工具、瓶颈定位、调优实战 |
+| `50-performance` | 工具作为仪器（采集机制 / replay / 归因）、从读数到判据、σ 与 τ 的标定 |
 | `60-compilers` | MLIR、TVM、Inductor、XLA、自动调优 |
 | `70-frameworks` | PyTorch、TensorFlow、JAX |
 | `80-model-architectures` | Transformer、注意力变体、MoE、归一化、位置编码 |

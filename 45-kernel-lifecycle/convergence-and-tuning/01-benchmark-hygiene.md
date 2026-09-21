@@ -277,7 +277,7 @@ E[z_(r:m)] ≈ Φ⁻¹( (r − 0.375) / (m + 0.25) )
 - 「快了 3% 算不算快」——噪声带 → 最小可检出差异的换算：`45-kernel-lifecycle/convergence-and-tuning/02-significance`。
 - 什么时候该停手、以及「一直调下去」会累积出什么：`45-kernel-lifecycle/convergence-and-tuning/03-convergence`。
 - 先保证算对再谈性能（正确性门）：`45-kernel-lifecycle/implementation/01-reference-first`、`.../02-verification-matrix`。
-- 通用 profiling 工具与瓶颈定位（本域**不讲**的边界）：`50-performance/*`（未建成）。
+- 通用 profiling 工具与瓶颈定位（本域**不讲**的边界）：`50-performance/profiling-tools/01-collection-mechanisms`、`50-performance/bottleneck-diagnosis/01-latency-and-bandwidth`。
 
 ## 编译与运行
 

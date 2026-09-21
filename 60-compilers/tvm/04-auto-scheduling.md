@@ -222,7 +222,7 @@ cost(ti, tj) = N_total
 - 代价模型的完整形态与模型质量实测 → `60-compilers/auto-tuning/02-cost-models`（回链）
 - **Ansor 论文的全部可引数字（搜索成本表、加速比、模型质量）的唯一正文位置** → `60-compilers/auto-tuning/03-search-algorithms` §5（回链，本文不复制）
 - 被这些调度作用的那两条轨道 → [03-native-track-and-tile-primitives](03-native-track-and-tile-primitives.md)
-- 「人怎么找瓶颈、怎么定参、怎么测」属于测量方法论 → `50-performance/tuning-practice`（正文在上游，此处回链）
+- 「人怎么找瓶颈、怎么定参、怎么测」属于测量方法论 → `50-performance/tuning-practice/01-measuring-sigma-and-tau`（正文在上游，此处回链）
 
 ## 编译与运行
 

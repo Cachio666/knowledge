@@ -400,11 +400,24 @@ F15_CACHE_ALL_VERBATIM = ("All GPU caches are flushed before each kernel replay 
 #   那一个的指派句在 `10/03:187`（「微基准与 profiler 的分工」），
 #   **本主题的指派句在 `10/03:303`**（「把整卡级的峰值与**具体 kernel 的实测**做对比」）
 #   —— 计划 §0.7 B 的表格里**这两行是分开的两行**（v1 曾把它们写成同一条，已订正）。
+# ★★ 锚点形态：**前缀锚定**（2026-09-21 订正，两条）。
+#   锚点要证明的是「**这一行确实是那句话**」，**不是**「这一行逐字永不改变」。
+#   上游的**跨域链接**会**指向更具体的文档**（`50-performance` Chunk 4 就这么改过：
+#   `[50-performance/bottleneck-diagnosis]` → `[…/bottleneck-diagnosis/01-latency-and-bandwidth]`）
+#   —— 旧写法把**链接的文件名部分**也算进引文，于是**改动恰好落在被引用的那一行上**，
+#   断言被打断（`D.5` 红），而**被引用的那句话一个字没变**。
+#   ⇒ 引文**截到域名为止**（`正文在 [50-performance/bottleneck-diagnosis`）：
+#     整段**可变部分**（尾部的 `]`、`/01-…`、`](url)`）都排除在锚点之外。
+#   ★ 为什么截在域名末尾而**不是**再往前截到纯散文：域名就是这条断言的**落点**
+#     （「指名指派**给本域**」）—— 去掉它，锚点就不再证明任何**跨域**的事。
+#   ★ 为什么够长、不退化成 P5：它 40 字符、含一条具体路径；把域名换成
+#     `profiling-tools`（或把「正文在」删掉）定向变异立刻 D.5 红。
 UPSTREAM_CLAIMS = (
     {
         "path": "10-foundations/performance-models/03-measuring-roofline.md", "line": 303,
-        "quote": "正文在 [50-performance/bottleneck-diagnosis]",
-        "why": "★ 本主题的**指名指派**：拿到数之后判「卡在哪」的正文在本域",
+        "quote": "正文在 [50-performance/bottleneck-diagnosis",
+        "why": "★ 本主题的**指名指派**：拿到数之后判「卡在哪」的正文在本域。"
+               "★ 锚点**止于域名**（不含链接的文件名与 URL）—— 见本表上方的前缀锚定注",
     },
     {
         "path": "45-kernel-lifecycle/convergence-and-tuning/03-convergence.md", "line": 177,

@@ -340,6 +340,14 @@ python3 02_noise_and_search.py --lint # AST 扫描：不 import torch/triton/num
   #   把它加进来会让「模型误导搜索」与「测量噪声」两件事混在一起，无法归因。/ `MEASURE_NOISE = 0.0`」
   —— ★ **本主题 `02` 的存在理由**，也是「有噪声的搜索」这一块的来源。
 - `60-compilers/auto-tuning/03-search-algorithms.md:255`
-  「怎么测量、怎么定位瓶颈（**测量方法论在上游**） → [50-performance/tuning-practice]」
+  「怎么测量、怎么定位瓶颈（**测量方法论在上游**）
+  → [50-performance/tuning-practice/01-measuring-sigma-and-tau]」
+  ★ 上游的链接在 **`50-performance` Chunk 4 已指向更具体的文档**；
+  `code/specs.py` 里这条**从一开始就只引散文**（链接在引文之外），所以没被打断 ——
+  对照 `60/tvm/04:225` 那条，它的引文原先含链接文件名，本次改成了**前缀锚定**。
+- `60-compilers/tvm/04-auto-scheduling.md:225`
+  「属于测量方法论 → `50-performance/tuning-practice/01-measuring-sigma-and-tau`」
+  ★ `code/specs.py` 里登记的锚点**止于域名**（`` 属于测量方法论 → `50-performance/tuning-practice ``），
+  **不含反引号、`/01-…` 与 URL**。
 - `45-kernel-lifecycle/convergence-and-tuning/02-significance.md:246`
   「**表外输入**是「本批测量的 `σ` 与 `τ`」——它们必须测（材料从同一批数据来）。」

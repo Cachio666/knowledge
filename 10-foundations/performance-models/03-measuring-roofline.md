@@ -9,8 +9,8 @@ prerequisites:
   - 10-foundations/performance-models/01-roofline-model
 tags: [roofline, benchmark, peak-flops, hbm-bandwidth, measurement-pitfalls]
 related:
-  - 50-performance/profiling-tools
-  - 50-performance/bottleneck-diagnosis
+  - 50-performance/profiling-tools/01-collection-mechanisms
+  - 50-performance/bottleneck-diagnosis/01-latency-and-bandwidth
 code:
   - code/11_roofline_probe.cu
 status: draft
@@ -184,7 +184,7 @@ FP32 理论峰值 = SM 数 × 每 SM 的 FP32 单元数 × 2 FLOP/FMA × SM 时�
 
 **第三层：加上 cache 分层。**单层 roofline 只承认 HBM 一条带宽。把 L2 带宽、共享内存带宽也量出来，才能判断一个 kernel 的瓶颈是否已经从 HBM 转移到了下一级。这一层的关键是规模必须**跨过 L2 的边界**：同一个 copy kernel，在「装得进 L2」的规模与「`8 × L2`」的规模上各跑一次，会得到两个完全不同的带宽数——前者是 L2 的，后者才是 HBM 的（以 H100 的 50 MB L2 为例，后者是 400 MB）。`11` 只做了 HBM 这一层，并在边界一节声明「没有测 L2 带宽、共享内存带宽、NVLink 带宽」。
 
-**第四层：用 profiler 的计数器校准。**微基准给出的是整卡的峰值；要判断**某个具体 kernel** 离它的上限还有多远，需要 profiler 的硬件计数器（DRAM 吞吐、Tensor Core 活跃周期、L2 命中率）。这一步的正文在 [50-performance/profiling-tools](../../50-performance/profiling-tools.md)（正文在该域，此处回链）。微基准与 profiler 的分工是：前者给出**边界**，后者给出**当前位置**。
+**第四层：用 profiler 的计数器校准。**微基准给出的是整卡的峰值；要判断**某个具体 kernel** 离它的上限还有多远，需要 profiler 的硬件计数器（DRAM 吞吐、Tensor Core 活跃周期、L2 命中率）。这一步的正文在 [50-performance/profiling-tools/01-collection-mechanisms](../../50-performance/profiling-tools/01-collection-mechanisms.md)（正文在该域，此处回链）。微基准与 profiler 的分工是：前者给出**边界**，后者给出**当前位置**。
 
 ## 4. 踩坑与失败模式
 
@@ -300,7 +300,7 @@ make regs                   # 查看寄存器用量与 spill（上文 4.1 的验
 3. **属性名与单位是硬性的。** 显存总线宽度是 `cudaDevAttrGlobalMemoryBusWidth`（`cudaDevAttrMemoryBusWidth` 不存在），`cudaDevAttrMemoryClockRate` 单位是 kHz，理论带宽算式末尾的 `×2`（DDR）不能漏。
 4. **口径必须跟着数字走。** 标量 FP32 的拐点与 Tensor Core BF16 的拐点差一个数量级；`copy` 口径与 `read-only` 口径不是同一个指标。报任何一个 `I*` 都要带上精度与口径。
 
-延伸阅读：`01` 那篇给出的规格表峰值与本文量出的可达峰值**不是同一个数**，前者是上限、后者是天花板；两者之间的差距正是「你的 kernel 还有多少余量」这个问题的分母。要继续往下走，下一步是把本文整卡级的峰值与具体 kernel 的实测做对比，那需要 profiler 的硬件计数器——正文在 [50-performance/bottleneck-diagnosis](../../50-performance/bottleneck-diagnosis.md)（正文在该域，此处回链）。
+延伸阅读：`01` 那篇给出的规格表峰值与本文量出的可达峰值**不是同一个数**，前者是上限、后者是天花板；两者之间的差距正是「你的 kernel 还有多少余量」这个问题的分母。要继续往下走，下一步是把本文整卡级的峰值与具体 kernel 的实测做对比，那需要 profiler 的硬件计数器——正文在 [50-performance/bottleneck-diagnosis/01-latency-and-bandwidth](../../50-performance/bottleneck-diagnosis/01-latency-and-bandwidth.md)（正文在该域，此处回链）。
 
 ## 参考
 
@@ -309,4 +309,4 @@ make regs                   # 查看寄存器用量与 spill（上文 4.1 的验
 - NVIDIA, *NVIDIA H100 Tensor Core GPU Datasheet* —— 本文引用的全部标称值（BF16 dense 989.5 TFLOPS、HBM3 3.35 TB/s、80 GB、L2 容量）。
 - NVIDIA, *CUDA C++ Programming Guide* —— 「Compute Capabilities」章节中各计算能力的每 SM FP32 单元数（`sm_80` 为 64，`sm_86`/`sm_89`/`sm_90` 为 128，与程序中的硬编码假设对应）。
 - 本仓库 [10-foundations/performance-models/01-roofline-model.md](01-roofline-model.md) —— `I`、`I*` 与两段线的完整推导，以及本文所替代的那套规格表峰值。
-- 本仓库 [50-performance/profiling-tools](../../50-performance/profiling-tools.md) —— 用 profiler 计数器校准实测峰值与具体 kernel 的关系。
+- 本仓库 [50-performance/profiling-tools/01-collection-mechanisms](../../50-performance/profiling-tools/01-collection-mechanisms.md) —— 用 profiler 计数器校准实测峰值与具体 kernel 的关系。

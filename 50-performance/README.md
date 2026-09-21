@@ -8,9 +8,9 @@
 
 | 主题 | 内容 | 状态 |
 |---|---|---|
-| [profiling-tools](profiling-tools/) | **工具作为仪器**：三种采集机制 / replay 与多 pass / 默认值不中立 / 归因 | **进行中** |
-| [bottleneck-diagnosis](bottleneck-diagnosis/) | **从读数到判据**：延迟 vs 带宽 / 读计数器的反模式 / 一次完整诊断 | **进行中** |
-| [tuning-practice](tuning-practice/) | **σ 与 τ 的标定** / 真实测量噪声下的搜索 / A-B 的实验编排 | **进行中** |
+| [profiling-tools](profiling-tools/) | **工具作为仪器**：三种采集机制 / replay 与多 pass / 默认值不中立 / 归因 | **已完成**（3 篇） |
+| [bottleneck-diagnosis](bottleneck-diagnosis/) | **从读数到判据**：延迟 vs 带宽 / 读计数器的反模式 / 一次完整诊断 | **已完成**（3 篇） |
+| [tuning-practice](tuning-practice/) | **σ 与 τ 的标定** / 真实测量噪声下的搜索 / A-B 的实验编排 | **已完成**（3 篇） |
 
 **统一主线**：
 
@@ -109,5 +109,12 @@
 - **横切**：本域是**测量域**——它不产出新的硬件知识，而是给出「拿到一个数之后怎么读它」。
 - **与 `30-gpu-programming` 的关系**：瓶颈定位常需下钻到 SASS；**读 SASS 的方法与 ISA 语义**在 `30-gpu-programming/ptx-sass`（正文在那边，此处回链），本域不重复 ISA 语义、也不重复语言层的承诺与泄漏。
 - **与 `45-kernel-lifecycle` 的关系（本域与它最容易打架，边界写死）**：`45` 给**判据**（σ 是输入），本域给**测量**（σ 是输出）。本域**不重讲** `45` 的 warmup、统计量选择、MDE、噪声带与停止判据；本域只提供它声明为「**表外输入**」的 σ 与 τ 的测法。
+
+## 术语
+
+本域的术语（采样 / 插桩 / replay / pass · multi-pass / 归因 / inclusive vs exclusive /
+量化步长 `τ_q` / 重复次数的选择效应 / σ 的组间与组内成分 / `δ*` / 交错 / 配对）
+**正文在 [`00-meta/glossary.md`](../00-meta/glossary.md) 的「性能工程与测量」节**，**本域不复制**——
+术语表是跨域工件，按 `CONTRIBUTING:82`「**域 README 只回链**」处理。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)

@@ -15,6 +15,10 @@ r"""02_reading_counters.py —— 读计数器有三种系统性误读，**而�
 
 ★★ 本程序的可证伪断言：
 
+  · ★ **空报告闸门**（**先于** A 类全部断言）——`sample` 在满载时可能在窗口里
+          一个样本都没采到（报告仍然生成、`Call graph:` 段为空）。那种报告会让
+          `A.1`（只看字节数）与 `A.3`（自家函数 0 次）**假过** ⇒ 闸门先判空，
+          是空报告就以**可操作的错误 rc=2** 退出（**不是**断言失败，见 `part_A` 的注）；
   · `A.3`  **采样报告里，程序自己定义的函数各出现 0 次** ← 本主题的核心断言；
   · `A.4`  同一份报告里**机器栈符号 > 0**（⇒ A.3 不是「采样器什么都没采到」）；
   · `A.5`  **「报告提到的符号集合」∩「程序自己定义的函数集合」= 空集**
@@ -35,6 +39,7 @@ r"""02_reading_counters.py —— 读计数器有三种系统性误读，**而�
 
 import ast
 import os
+import re
 import resource
 import shutil
 import subprocess
@@ -164,6 +169,78 @@ def read_text(path):
     return open(path, encoding="utf-8", errors="replace").read() if os.path.exists(path) else ""
 
 
+# ★★ **空报告闸门**（2026-09-21 补，实测触发过）。
+#   满载时（本机 load 60–170）`sample` 可能在 2 秒窗口里**一个样本都没采到**：
+#   报告照样生成、字节数也不小（上一轮实测**恰好 64832 字节** —— 报告头 + 空的
+#   `Call graph:` 段 + 完整的 `Binary Images:` 段），**但 `Call graph` 是空的**。
+#
+#   那种报告会让两条断言**假过**，而且它们看起来都「对」：
+#     · `A.1`（rc=0 且 bytes > 10000）—— 它**只看字节数**，空报告轻松过；
+#     · `A.3`（程序自己定义的函数各出现 0 次）—— 空报告里**自动成立**，但它证明的是
+#       「采样器没采到任何东西」，**不是**「采样器把时间归给了别的符号」。
+#   （`A.4`/`A.5` 会红，但红的原因是「MENTIONED 为空」，与 A.3 要立的结论无关。）
+#   ⇒ **先判空、再跑下游断言**：空报告时**下游三条断言全都不该被评估** ——
+#     它们各自给出的「通过/失败」都不是关于被测问题的结论。
+#
+#   ★ 为什么必须**以可操作的错误退出**（rc=2，**不打印失败标记**）而不是让 A.3 红：
+#     空报告是**仪器没拿到数据**（测量条件问题），不是**被测断言为假**（P8 的形状：
+#     状态没在断言里现身就等于被吞掉）。`mutate.py` 明令「断言捕获与崩溃捕获分开计数」——
+#     把环境问题记成断言失败会**污染那个计数**（同 `microbench.require_clang` 的处置）。
+#
+#   ★ 量法口径：`sample` 的 `Call graph:` 段里，**行首那个整数就是该栈节点的样本数**
+#     （`    1503 Thread_…` / `      1503 start (in dyld)` / `              + 153 …`）。
+#     把这一段里所有行首整数**加起来** ⇒ 「和为 0」与「段是空的」都表示**零样本**，
+#     两种情况在这里被同一处拦下。
+#     ⚠ 这里**不解析** `sample` 的其余文本（那是 A.5 注释里已说明的「新错源」）；
+#       只取这一个**格式稳定**的整数。
+def call_graph_samples(txt):
+    """返回报告 `Call graph:` 段里**采到的样本数**；段不在场返回 `None`。"""
+    lines = txt.splitlines()
+    start = None
+    for k, l in enumerate(lines):
+        if l.strip() == "Call graph:":
+            start = k
+            break
+    if start is None:
+        return None
+    total = 0
+    for l in lines[start + 1:]:
+        if not l.strip():
+            break                     # 空行 ⇒ `Call graph:` 段到此为止
+        m = re.match(r"\s+(?:\+\s+)?(\d+)\s", l)
+        if m:
+            total += int(m.group(1))
+    return total
+
+
+def require_nonempty_sample_report(txt, r, nbytes, sout):
+    """空报告 ⇒ **以可操作的错误退出（rc=2）**，不让下游断言各自给出无意义的结论。"""
+    n = call_graph_samples(txt)
+    if n is not None and n > 0:
+        return n
+    print()
+    print("  ── 空报告闸门 ──")
+    print("     rc=%d，%d 字节，`Call graph:` 段里的样本数 = %s ⇒ **这份报告是空的**。"
+          % (r.returncode, nbytes, "(无 `Call graph:` 段)" if n is None else n))
+    print("!! `sample` 在 %d 秒窗口里**一个样本都没采到**，报告仍然生成了。" % SAMPLE_SECS)
+    print("   为什么这一步必须停：这种报告会让 `A.1`（只看字节数 > 10000）与")
+    print("   `A.3`（自家函数出现 0 次）**假过** —— 它们在回答一个**没有被测量**的问题；")
+    print("   而 `A.4`/`A.5` 的红也不是关于被测问题的结论。")
+    print("   这是**仪器没拿到数据**（测量条件），**不是断言为假** —— 所以以 rc=2 退出，")
+    print("   **不打印失败标记**（`mutate.py` 把「断言捕获」与「崩溃捕获」分开计数）。")
+    # ★ 空报告**留一份**再退（`main()` 的 `finally` 会 rmtree 掉临时目录，
+    #   不留就「报告是空的」这句话无法复核）。
+    keep = os.path.join(tempfile.gettempdir(), "perf02b_empty_sample.txt")
+    try:
+        shutil.copyfile(sout, keep)
+    except OSError:
+        keep = "(复制失败)"
+    print("   怎么办：① 等机器空下来再跑（`uptime` 看 load）；")
+    print("           ② 把窗口调大：本文件顶部的 `SAMPLE_SECS`；")
+    print("           ③ 这份空报告已另存到 `%s`，可手工看。" % keep)
+    sys.exit(2)
+
+
 # ===========================================================================
 # 2. A 类：归因失效 —— 采样器把时间归给了机器栈上的符号
 # ===========================================================================
@@ -219,6 +296,14 @@ def part_A(tmpdir, can_sample):
     print("     ── **机器栈**上的符号 ──")
     for s in STACK_SYMS:
         print("        `%-30s` 出现 %d 次" % (s, txt.count(s)))
+
+    # ★★ **空报告闸门**：`sample` 成功返回（rc=0）**但一个样本都没采到**时，
+    #    `A.1`（只看字节数）与 `A.3`（自家函数 0 次）会**假过** —— 它们回答的是
+    #    一个**没有被测量**的问题。⇒ 在这一步停住，以可操作的错误 rc=2 退出。
+    #   ★ 只在 `rc == 0` 时开闸：`sample` 自己失败（rc≠0）是另一回事，
+    #     那种情况 `A.1` 本来就该红，不该被这里吞掉。
+    if r.returncode == 0:
+        require_nonempty_sample_report(txt, r, nbytes, sout)
 
     check("A", "A.1", r.returncode == 0 and nbytes > 10000,
           "`sample` 免 root 可用：rc=0，产出 %d 字节调用图" % nbytes)

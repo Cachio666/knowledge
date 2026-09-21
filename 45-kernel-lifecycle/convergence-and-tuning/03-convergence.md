@@ -275,7 +275,7 @@ r = 0.6 ⇒ ln2 / |ln 0.6| = 0.6931 / 0.5108 = 1.3569 步  （连续解；误差
 - 一个读数的可信度（冷启动与测量卫生）：`45-kernel-lifecycle/convergence-and-tuning/01-benchmark-hygiene`。
 - 判断「能不能定」的阈值与临界值约定：`45-kernel-lifecycle/convergence-and-tuning/02-significance`。
 - 「这个算子值不值得优化」（占比 × 距上界的距离 × 修复成本）：`45-kernel-lifecycle/requirement-discovery/03-optimization-priority`。
-- 通用 profiling 工具与 host 侧瓶颈（本域**不讲**的边界）：`50-performance/*`（未建成）。
+- 通用 profiling 工具与 host 侧瓶颈（本域**不讲**的边界）：`50-performance/profiling-tools/01-collection-mechanisms`、`50-performance/bottleneck-diagnosis/01-latency-and-bandwidth`。
 
 ## 编译与运行
 

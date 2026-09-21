@@ -10,7 +10,7 @@ prerequisites:
 tags: [auto-tuning, ansor, cost-model, gbdt, xgboost, pairwise-accuracy, shared-model]
 related:
   - 60-compilers/tvm/04-auto-scheduling
-  - 50-performance/tuning-practice
+  - 50-performance/tuning-practice/01-measuring-sigma-and-tau
 code:
   - code/02_cost_model.py
 status: stable

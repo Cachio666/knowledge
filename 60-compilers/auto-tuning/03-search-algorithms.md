@@ -10,7 +10,7 @@ prerequisites:
 tags: [auto-tuning, ansor, triton, autotuner, search-strategy, budget, regret, pruned-configs]
 related:
   - 60-compilers/tvm/04-auto-scheduling
-  - 50-performance/tuning-practice
+  - 50-performance/tuning-practice/01-measuring-sigma-and-tau
   - 40-kernels/gemm/02-shared-memory-tiling
 code:
   - code/03_search_trace.py
@@ -252,7 +252,7 @@ min(timings, key=timings.get)
 - 代价模型：为什么需要它、它什么时候会把搜索带偏 → [02-cost-models](02-cost-models.md)
 - 调度原语与物化位置 → [tvm/02-schedule-primitives](../tvm/02-schedule-primitives.md)
 - DLight 的确定性路径与 MetaSchedule 的组件 → [tvm/04-auto-scheduling](../tvm/04-auto-scheduling.md)
-- 怎么测量、怎么定位瓶颈（测量方法论在上游） → [50-performance/tuning-practice](../../50-performance/README.md)
+- 怎么测量、怎么定位瓶颈（测量方法论在上游） → [50-performance/tuning-practice/01-measuring-sigma-and-tau](../../50-performance/tuning-practice/01-measuring-sigma-and-tau.md)
 - tile 大小与共享内存的取舍（上游，本文只代入） → [40-kernels/gemm/02-shared-memory-tiling](../../40-kernels/gemm/02-shared-memory-tiling.md)
 
 ## 编译与运行

@@ -398,6 +398,21 @@ F15_CACHE_ALL_VERBATIM = ("All GPU caches are flushed before each kernel replay 
 #   · `bottleneck-diagnosis` 的指派句在 `10/03:303`（整卡峰值 vs 具体 kernel 实测）；
 #   · **本主题的立足点是「45 把 σ 与 τ 当作表外输入、明说必须测」这三句话**
 #     + `60/auto-tuning` 显式冻结测量噪声（`MEASURE_NOISE = 0.0`）让出的那一块。
+#
+# ★★ 锚点形态：**前缀锚定**（2026-09-21 订正）。
+#   锚点要证明的是「**这一行确实是那句话**」，**不是**「这一行逐字永不改变」。
+#   上游的**跨域链接**会**指向更具体的文档**（`50-performance` Chunk 4 就这么改过：
+#   `` `50-performance/tuning-practice` `` → `` `…/tuning-practice/01-measuring-sigma-and-tau` ``）
+#   —— 旧写法把**链接的文件名部分**也算进引文，于是**改动恰好落在被引用的那一行上**，
+#   断言被打断（`E.6` 红），而**被引用的那句话一个字没变**。
+#   ⇒ 引文**截到域名为止**（`` 属于测量方法论 → `50-performance/tuning-practice ``）：
+#     尾部的 `` ` ``、`/01-…`、`](url)` 这些**可变部分**都排除在锚点之外。
+#   ★ 为什么截在域名末尾而**不是**只留 `属于测量方法论 →`：域名就是这条断言的**落点**
+#     （「指名指派**给本主题**」）—— 去掉它，锚点就不再证明任何**跨域**的事，
+#     而且 11 个字符太短，会退化成 P5（不可证伪的断言）。
+#   ★ 反例（**已经是对的**）：本表里 `60/auto-tuning/03:255` 那条从一开始就只引散文
+#     （`怎么测量、怎么定位瓶颈（测量方法论在上游）`），链接在引文之外 ——
+#     所以同一批 Chunk 4 改动**没有**打断它。这正是前缀锚定的正面样本。
 UPSTREAM_CLAIMS = (
     {
         "path": "45-kernel-lifecycle/convergence-and-tuning/01-benchmark-hygiene.md",
@@ -432,8 +447,9 @@ UPSTREAM_CLAIMS = (
     {
         "path": "60-compilers/tvm/04-auto-scheduling.md",
         "line": 225,
-        "quote": "属于测量方法论 → `50-performance/tuning-practice`",
-        "why": "同上，`60/tvm` 也把「怎么测」指到本主题",
+        "quote": "属于测量方法论 → `50-performance/tuning-practice",
+        "why": "同上，`60/tvm` 也把「怎么测」指到本主题。"
+               "★ 锚点**止于域名**（不含反引号、`/01-…` 与 URL）—— 见本表上方的前缀锚定注",
     },
 )
 

@@ -325,7 +325,10 @@ python3 03_diagnosis_walkthrough.py --lint  # AST 扫描
   `MDE_COEFFICIENT_AT_POWER_80 = 2.801585218112968` —— 上游的常量定义。
 - `10-foundations/performance-models/03-measuring-roofline.md:303`
   「下一步是把本文整卡级的峰值与**具体 kernel 的实测**做对比，那需要 profiler 的硬件计数器——
-  正文在 `[50-performance/bottleneck-diagnosis]`（正文在该域，此处回链）。」
+  正文在 `[50-performance/bottleneck-diagnosis/01-latency-and-bandwidth]`（正文在该域，此处回链）。」
   —— ★ 本主题的**指名指派**。
+  ★ 上游的链接在 **`50-performance` Chunk 4 已指向更具体的文档**，
+  而 `code/specs.py` 里登记的锚点是**前缀**（`正文在 [50-performance/bottleneck-diagnosis`，
+  **止于域名**、不含链接的文件名与 URL）—— 所以链接再指向更细的文档也不会打断 `D.5`。
 - 以上每一句都由 `code/specs.py` 的 `MDE_ANCHORS` / `UPSTREAM_CLAIMS` 带行号登记，
   并由程序在**上游文件在场时逐字核对**（不在场时 SKIP 并单独计数）。

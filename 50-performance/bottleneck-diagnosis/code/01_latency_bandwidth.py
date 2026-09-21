@@ -25,8 +25,10 @@ r"""01_latency_bandwidth.py —— 「访存慢」这句话本身不构成诊断
   · `B.1`  **对照**：把 K **固定为 1** 重复测，带宽的散布 < 3.0 倍
            （静息 1.01–1.09、8 个忙循环打满时 1.42）⇒ A 类的那个效应**属于 K 这个自变量**，
            不属于「跑久了会变快」；
-  · `C.1`  **另一段代码**（8 路写死展开）在 **L2 内**（64 KB…4 MB）的有效带宽**是常数**
-           （极差 < 1.5 倍）；
+  · `C.1`  **另一段代码**（8 路写死展开）在 **L2 的 1/4 以内**（64 KB…1 MB —— **不是 4 MB，
+           4 MB 恰好等于本机 L2 且 L2 是共享的**，见 `part_C` 的注）的有效带宽**是常数**
+           （极差 < 1.5 倍；★ 这条断言量的是「**窗口够不够长**」，见 `part_C` 的注 ——
+           它在窗口 50 µs 时满载 4/4 全红，窗口提到 20 ms 后才成立）；
   · `C.2`  **cache 侧 ÷ DRAM 侧 < 4 倍**（本机静息 **1.23–1.41**，8 个副本并行时最坏 3.06）
            ⇒ cache 层次在本机的效应弱到不能当教学实验。★ 窗宽是有意的，见 `part_C` 的注；
   · `D.1`  F1–F15 的**结构不变量**（含 `must_contain ⊂ quote`）全过；
@@ -265,25 +267,60 @@ def part_C(bpaths):
     #   在机器上还有别的活时随机失败）。
     cache_side = [v[1] for b, v in cur.items() if b <= l2 // 4]
     dram_side = [v[1] for b, v in cur.items() if b >= 64 * microbench.MB]
-    spread_cache = max(cache_side) / min(cache_side)
-    ratio_cd = max(cache_side) / min(dram_side)
 
-    # ★★ C.1 只断言**cache 侧内部**的平坦性：这些规模**不落 DRAM**，
-    #   所以它**不受外部内存竞争（DRAM 侧）的干扰** —— 实测在 8 个副本并行时仍是 1.00–1.06。
+    # ★★ **空集保护**（与同域 `tuning-practice` 的 `float("inf")` 同一做法）。
+    #   `cache_side` / `dram_side` 是从 `cur` 里按规模**筛**出来的；若某一侧
+    #   **一个点都没有**（例如 `l2 // 4` 被改小、或 `UNROLL8_SIZES` 被改窄 ——
+    #   `make mutate` 的变异就可能做到），`max()`/`min()` 会抛 `ValueError`。
+    #   ★ 那是**崩溃捕获，不是断言捕获** —— 本库明令两者**分开计数**
+    #     （`mutate.py` 的「崩溃捕获」栏），一次崩溃会把 `C.1`/`C.2` 的捕获记错。
+    #   ⇒ 空集时把比值定义成 `float("inf")`：`inf < 1.5` 与 `inf < 4.0` **都为假**，
+    #     于是两条断言各自给出**断言失败**（可证伪），而不是整个程序崩掉。
+    spread_cache = (max(cache_side) / min(cache_side)) if cache_side else float("inf")
+    ratio_cd = (max(cache_side) / min(dram_side)) if (cache_side and dram_side) else float("inf")
+    print("     ★ cache 侧 %d 个点、DRAM 侧 %d 个点（某一侧为空时比值记作 `inf` ⇒ 断言失败，"
+          "**不是** `ValueError` 崩溃）" % (len(cache_side), len(dram_side)))
+
+    # ★★ C.1 只断言**cache 侧内部**的平坦性。
+    #   ★★ 一处**被实测推翻的旧解释**（写在这里，免得下一个人又照它推理）：
+    #      旧注释说「这些规模不落 DRAM ⇒ **不受外部内存竞争干扰**」，并把这条断言在
+    #      满载下的失败归给「外部干扰」。**实测不成立**：自造 `cpu_count()-1` 个忙进程
+    #      打满 CPU 后 `C.1` 红（上一轮修复者实测 **4/4 全红**；本次复现里极差 **1.94 倍**）
+    #      —— 而三个点**全都**不落 DRAM。
+    #      真因是**计时窗口太短**：一次几十 µs 的抢占落在 50 µs 的窗口里，
+    #      把那一档的「一遍耗时」抬高几十个百分点（三档分别被抬高 23 / 87 / 95 µs，
+    #      而它们的真值都是 ~62 GB/s）。
+    #      ⇒ 处置在**仪器一侧**：`microbench.UNROLL8_MIN_MEASURE_S` 从 50 µs 提到
+    #        **20 ms**（抢占时长**不随窗口成比例增长**，所以放大窗口把它摊薄）。
+    #   ★ 阈值 `1.5` **不动**：实测（满载，改窗口后）极差落在 **1.004–1.173**（23 次），
+    #     最坏一次留给 1.5 仍有 35% 余量；而它**仍可证伪** ——
+    #     把窗口调回 50 µs、或把 cache 侧的计时多做一次 `inner` 除法，极差立刻 > 1.5
+    #     （两条定向变异都实测过，见 `make mutate` / 本文件的注）。
     check("C", "C.1", spread_cache < 1.5,
           "★ L2 的 1/4 以内（%s … %s）的有效带宽**几乎是常数**：极差 %.3f 倍。"
-          "（这些规模不落 DRAM ⇒ 不受外部内存竞争干扰）"
-          % (microbench.describe(min(cur)), microbench.describe(l2 // 4), spread_cache))
+          "（三档的计时窗口等长 = %s ⇒ 一次抢占对各档抬高的是**同一个比例**）"
+          "%s"
+          % (microbench.describe(min(cur)), microbench.describe(l2 // 4), spread_cache,
+             "%.1f ms" % (microbench.unroll8_inner(min(cur)) * cur[min(cur)][0] * 1e3),
+             "" if cache_side else
+             " ★ **cache 侧为空集** ⇒ 比值记作 `inf`、本断言**失败**（而非 `ValueError` 崩溃）"))
 
     # ★★ C.2 是**冒烟检查**，窗取 4.0 是**有意的**（与同域 `profiling-tools/03` 的
     #   `C.2` 同一做法）：这个比值**会被机器负载放大** —— 内存带宽被并行副本瓜分时，
-    #   DRAM 侧掉得比 cache 侧多。本机实测：静息 **1.23–1.41 倍**，
+    #   DRAM 侧掉得比 cache 侧多。本机实测（**窗口 50 µs，即订正前**）：静息 **1.23–1.41 倍**，
     #   8 个副本并行时最坏 **3.06 倍**。窗贴着 1.5 会让这条断言在满载时随机假失败。
     #   ⇒ 正文里引用的量级取**静息那一档**；这一条只保证「比值没有量级上的异常」。
+    #   ★ 窗口提到 20 ms 之后（`UNROLL8_MIN_MEASURE_S`，见 `part_C` 上面那段注）：
+    #     本机满载实测落在 **1.03–1.76**（最坏那次是 **DRAM 侧自己被抢占**，不是 cache 侧变快）。
+    #     比值本身没变，变的是它两端的噪声 —— 与 `C.1` 是同一处订正的两个后果。
     check("C", "C.2", ratio_cd < 4.0,
           "★ **cache 侧（≤ %s）÷ DRAM 侧（≥ 64 MB）= %.2f 倍**（< 4.0；本机静息实测 "
           "1.23–1.41，8 个副本并行时最坏 3.06）⇒ 本机 **cache 层次的影响在 1.3 倍量级**，"
-          "弱到不能当教学实验" % (microbench.describe(l2 // 4), ratio_cd))
+          "弱到不能当教学实验"
+          "%s" % (microbench.describe(l2 // 4), ratio_cd,
+                  "" if (cache_side and dram_side) else
+                  " ★ **某一侧为空集** ⇒ 比值记作 `inf`、本断言**失败**"
+                  "（而非 `ValueError` 崩溃）"))
     print("     ★ 正文里凡出现「跨过 cache 边界」，一律**回链** "
           "`10-foundations/performance-models/03`（探针构造的四个陷阱：依赖链 / 跨 L2 / "
           "死代码 / boost 漂移），**本域不展开**（计划 §1.4）。")

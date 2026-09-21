@@ -1,7 +1,7 @@
 # 实施进度表
 
 > 最后更新：2026-09-21
-> 进度：37 / 65 主题完成
+> 进度：40 / 65 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -40,9 +40,9 @@
 - [x] convergence-and-tuning
 
 ## 50-performance
-- [ ] profiling-tools (进行中)
-- [ ] bottleneck-diagnosis (进行中)
-- [ ] tuning-practice (进行中)
+- [x] profiling-tools
+- [x] bottleneck-diagnosis
+- [x] tuning-practice
 
 ## 60-compilers
 - [x] mlir

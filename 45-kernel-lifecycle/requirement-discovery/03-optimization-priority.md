@@ -320,7 +320,7 @@ TensorRT-LLM 的做法（**[B]，经检索转述**，PR #18805）给出的理由
 - 候选清单怎么来：`45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory`。
 - Amdahl 上界的通用形式与扩展性分析：`10-foundations/performance-models/02-amdahl-and-scaling`（**正文在该域，此处回链**）。
 - 一个算子**怎么改**（而不是「先改哪个」）：`40-kernels/*`——例如 MoE 的 grouped GEMM 与 permute/unpermute，回链 `40-kernels/moe-kernels/01-moe-compute-pattern`。
-- profiling 工具本身的用法（nsys / ncu / CUPTI）：**不在本域**，见 `50-performance`（**未建成**）。
+- profiling 工具本身的用法（nsys / ncu / CUPTI）：**不在本域**，见 `50-performance/profiling-tools/01-collection-mechanisms`。
 - 收敛与停止条件（残差是噪声还是工程能触及的）：`45-kernel-lifecycle/convergence-and-tuning`（**未建成**）。
 
 ## 编译与运行
