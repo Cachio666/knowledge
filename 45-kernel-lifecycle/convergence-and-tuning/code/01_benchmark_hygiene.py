@@ -183,6 +183,39 @@ K10, K49, K50, K90 = (int(round(f * SP.N_MEASUREMENTS_DEFAULT)) for f in (0.10, 
 
 
 # ===========================================================================
+# 0.2 ★★ 容差表：每一个容差都由「噪声 + 引文末位」推出，不留魔数
+# ===========================================================================
+#
+# 纪律（本库 45-kernel-lifecycle 的 R6 教训）：容差不是「看起来合理」的数。
+# 一个容差如果宽过噪声几个数量级，**变异就落在带里**——常量可以在带内漂移而不被检出
+# （本主题实测过：某条容差是噪声的 9 倍，把常量改 1% 完全漏网）。
+#   ⇒ 本程序的每一条容差都写成 `K·σ`（蒙特卡洛）或「引文末位半格」（确定性），
+#     并把 K 取多少、为什么，写在下面。
+#
+# 三类来源，各自可算：
+#   ① 蒙特卡洛估计量的标准误 σ_mc
+#      · 均值类：σ_mc = σ·√m / (n·√REPS)      （前 k 次是**确定值**，只有 m = n−k 个稳态样本贡献方差）
+#      · 中位数类：σ_mc ≈ 1.2533·σ / √(m·REPS)  （1.2533 = √(π/2)，渐近公式 var(median) = πσ²/(2m)）
+#   ② 引文末位半格：规格预跑表给到 **3 位小数** ⇒ 任一引用值与其真值最多差 5e-4
+#   ③ K 取 5：5σ 对应的假失败率是 5.7e-7（4σ 是 6.3e-5）。
+#      ★ 判据（R6）：**容差 ≥ 4σ**（否则测试会随机失败），本程序统一取 5σ。
+K_SIGMA_MC = 5.0
+SPEC_QUOTE_HALF_ULP_3DEC = 5e-4      # 规格预跑表的最小位是 1e-3 ⇒ 半格 5e-4
+
+
+def sigma_mc_median(frac):
+    """`k/n = frac` 档：**蒙特卡洛中位数偏差**估计量的标准误。"""
+    m = N - int(round(frac * N))
+    return 1.2533 * SP.STEADY_SIGMA_DEFAULT / np.sqrt(m * REPS)
+
+
+def sigma_mc_mean(frac):
+    """`k/n = frac` 档：**蒙特卡洛均值偏差**估计量的标准误（前 k 次无方差）。"""
+    m = N - int(round(frac * N))
+    return SP.STEADY_SIGMA_DEFAULT * np.sqrt(m) / (N * np.sqrt(REPS))
+
+
+# ===========================================================================
 # A. 三个统计量的偏差：解析式 vs 蒙特卡洛
 # ===========================================================================
 head("§A  三个统计量的偏差：解析式（Blom 近似）vs 蒙特卡洛")
@@ -201,29 +234,76 @@ for frac in grid:
           % (k, frac, SP.SPEC_PRERUN_MEDIAN_BIAS.get(frac, float("nan")), an["median"],
              st["median"], SP.SPEC_PRERUN_MEAN_BIAS.get(frac, float("nan")), an["mean"],
              st["mean"]))
-    tol = 0.005 if frac <= 0.49 else 0.06
-    check(f"A.1 ★ 规格中位数偏差在 k/n = {frac:.2f} 档被复现（容差 {tol}）",
-          abs(st["median"] - SP.SPEC_PRERUN_MEDIAN_BIAS.get(frac, float("nan"))) < tol,
-          f"{st['median']:+.4f} vs {SP.SPEC_PRERUN_MEDIAN_BIAS.get(frac, float('nan')):+.3f}")
-    check(f"A.1 ★ 规格均值偏差在 k/n = {frac:.2f} 档被复现（容差 {tol}）",
-          abs(st["mean"] - SP.SPEC_PRERUN_MEAN_BIAS.get(frac, float("nan"))) < tol,
-          f"{st['mean']:+.4f} vs {SP.SPEC_PRERUN_MEAN_BIAS.get(frac, float('nan')):+.3f}")
+    # ★ 容差**逐档算出来**（见 §0.2）：5σ_mc（中位数与均值取较大的那个）+ 规格引文的末位半格。
+    #   旧版这里是 `0.005 if frac <= 0.49 else 0.06` —— 0.005 是实测噪声的 30 倍、
+    #   0.06 是实测**模型差**的 1.07 倍（碰巧够用），两个都不是推出来的。
+    tol_spec = K_SIGMA_MC * max(sigma_mc_median(frac), sigma_mc_mean(frac)) \
+        + SPEC_QUOTE_HALF_ULP_3DEC
+    spec_med = SP.SPEC_PRERUN_MEDIAN_BIAS.get(frac, float("nan"))
+    spec_mean = SP.SPEC_PRERUN_MEAN_BIAS.get(frac, float("nan"))
+    if frac <= 0.49:
+        check(f"A.1 ★ 规格中位数偏差在 k/n = {frac:.2f} 档被复现"
+              f"（容差 {tol_spec:.4f} = 5σ_mc {K_SIGMA_MC * sigma_mc_median(frac):.4f} + 引文半格）",
+              abs(st["median"] - spec_med) < tol_spec,
+              f"{st['median']:+.4f} vs {spec_med:+.3f}（{abs(st['median'] - spec_med):.2f}e-4 用掉 "
+              f"{abs(st['median'] - spec_med) / tol_spec:.0%}）")
+        check(f"A.1 ★ 规格均值偏差在 k/n = {frac:.2f} 档被复现（同上容差）",
+              abs(st["mean"] - spec_mean) < tol_spec,
+              f"{st['mean']:+.4f} vs {spec_mean:+.3f}")
+    else:
+        # ★★ 这两档**不与规格比容差**：它们的差不是噪声，是**两个模型的差**
+        #    （规格的冷启动值带噪声、本库取确定值；k/n = 0.50 的差 = 稳态上尾项
+        #     σ·E[z_(m:m)]/2，k/n = 0.90 的差 = 0.0070）。模型差由 §A.5 单独钉住；
+        #    这里只断言「蒙特卡洛 == 解析式」，容差是纯 5σ_mc。
+        check(f"A.1 ★ 本库解析中位数在 k/n = {frac:.2f} 档被蒙特卡洛复现"
+              f"（纯 5σ_mc = {K_SIGMA_MC * sigma_mc_median(frac):.4f}；规格值另见 A.5）",
+              abs(st["median"] - an["median"]) < K_SIGMA_MC * sigma_mc_median(frac),
+              f"mc {st['median']:+.4f} vs 解析 {an['median']:+.4f}；规格 {spec_med:+.3f}"
+              f"（模型差 {abs(st['median'] - spec_med):.4f}）")
+        check(f"A.1 ★ 本库解析均值在 k/n = {frac:.2f} 档被蒙特卡洛复现（纯 5σ_mc）",
+              abs(st["mean"] - an["mean"]) < K_SIGMA_MC * sigma_mc_mean(frac),
+              f"mc {st['mean']:+.4f} vs 解析 {an['mean']:+.4f}；规格 {spec_mean:+.3f}")
 check("A.1 ★★ 规格的两张表**逐档**被本库复算（6 档，不只是抽查四档）——"
-      "其中 k/n ≤ 0.49 的四档严格到 0.005，另两档容差 0.06（见 A.5 的成因说明）",
+      "k/n ≤ 0.49 的四档：容差 = 5σ_mc + 引文半格（规格给到 3 位小数）；"
+      "另两档：蒙特卡洛只与**解析值**比（它们的规格差是模型差，见 A.5）",
       all(abs(mc_by_k[int(round(f * N))]["median"]
-              - SP.SPEC_PRERUN_MEDIAN_BIAS.get(f, float("nan"))) < (0.005 if f <= 0.49 else 0.06)
+              - SP.SPEC_PRERUN_MEDIAN_BIAS.get(f, float("nan")))
+          < K_SIGMA_MC * max(sigma_mc_median(f), sigma_mc_mean(f)) + SPEC_QUOTE_HALF_ULP_3DEC
           and abs(mc_by_k[int(round(f * N))]["mean"]
-                  - SP.SPEC_PRERUN_MEAN_BIAS.get(f, float("nan"))) < (0.005 if f <= 0.49 else 0.06)
-          for f in SP.K_OVER_N_GRID))
+                  - SP.SPEC_PRERUN_MEAN_BIAS.get(f, float("nan")))
+          < K_SIGMA_MC * max(sigma_mc_median(f), sigma_mc_mean(f)) + SPEC_QUOTE_HALF_ULP_3DEC
+          for f in SP.K_OVER_N_GRID if f <= 0.49)
+      and all(abs(mc_by_k[int(round(f * N))]["median"]
+                  - analytic_stats(N, int(round(f * N)), SP.COLD_START_SLOWDOWN_DEFAULT,
+                                   SP.STEADY_SIGMA_DEFAULT)["median"])
+              < K_SIGMA_MC * sigma_mc_median(f)
+              for f in SP.K_OVER_N_GRID if f > 0.49))
+check("A.1 ★★ k/n = 0.50 那 0.056 的差**恰好是稳态上尾项** σ·E[z_(m:m)]/2"
+      "（规格取中点、本库加上尾）—— 两个模型的差，不是误差",
+      abs((mc_by_k[K50]["median"] - SP.SPEC_PRERUN_MEDIAN_BIAS[0.50])
+          - SP.STEADY_SIGMA_DEFAULT * order_stat_mean(N - K50, N - K50) / 2.0)
+      < K_SIGMA_MC * sigma_mc_median(0.50),
+      f"{mc_by_k[K50]['median'] - SP.SPEC_PRERUN_MEDIAN_BIAS[0.50]:+.4f} vs "
+      f"σ·E[z] /2 = {SP.STEADY_SIGMA_DEFAULT * order_stat_mean(N - K50, N - K50) / 2.0:.4f}")
 
 worst_med = 0.0
+worst_med_abs = 0.0
 for frac in grid:
     k = int(round(frac * N))
     an = analytic_stats(N, k, SP.COLD_START_SLOWDOWN_DEFAULT, SP.STEADY_SIGMA_DEFAULT)
     mc = mc_by_k[k]
     rel = abs(mc["median"] - an["median"]) / max(abs(an["median"]), 1e-12)
     worst_med = max(worst_med, rel if frac not in (0.0,) else 0.0)
-check("A.1 ★ 中位数：解析式与蒙特卡洛吻合（最大相对差 %0.2f%% < 5%%）" % (100 * worst_med),
+    worst_med_abs = max(worst_med_abs, abs(mc["median"] - an["median"]))
+check("A.1 ★★ 中位数：解析式（Blom）与蒙特卡洛吻合到 **5σ_mc 以内**（最大绝对差 %0.2e < %.2e）"
+      % (worst_med_abs, K_SIGMA_MC * max(sigma_mc_median(f) for f in grid)),
+      worst_med_abs < K_SIGMA_MC * max(sigma_mc_median(f) for f in grid),
+      f"{worst_med_abs:.2e} vs 5σ {K_SIGMA_MC * max(sigma_mc_median(f) for f in grid):.2e}")
+check("A.1 ★ 相对差的最大值 = %0.2f%%（< 5%%）—— ★★ 这条容差**不是公式推出来的**："
+      "相对差在偏差本来就很小的档位（k/n = 0.10，偏差只有 0.007）会被放大，"
+      "σ 不是解析量。它是本程序**唯一**一条仍由经验定的容差（跨 6 个种子实测 "
+      "σ = 0.0087、最大 0.0313 ⇒ 0.05 只有 1.6 倍余量）。"
+      % (100 * worst_med),
       worst_med < 0.05, f"{worst_med:.4f}")
 
 worst_mean = 0.0
@@ -232,11 +312,14 @@ for frac in grid:
     an = analytic_stats(N, k, SP.COLD_START_SLOWDOWN_DEFAULT, SP.STEADY_SIGMA_DEFAULT)
     mc = mc_by_k[k]
     worst_mean = max(worst_mean, abs(mc["mean"] - an["mean"]))
+TOL_WORST_MEAN = K_SIGMA_MC * max(sigma_mc_mean(f) for f in grid)
 check("A.1 ★★ 均值：解析式 `k/n·(slowdown−1)` 与蒙特卡洛吻合到 **MC 噪声以内**"
-      "（最大绝对差 %0.2e < 1e-3；残差量级 ≈ σ/√(reps·m) ≈ 1e-4）" % worst_mean,
-      worst_mean < 1e-3, f"{worst_mean:.2e}")
+      "（最大绝对差 %0.2e < %.2e = 5σ_mc；σ_mc = σ·√m/(n·√REPS)，最大档 σ_mc = %.2e）"
+      % (worst_mean, TOL_WORST_MEAN, max(sigma_mc_mean(f) for f in grid)),
+      worst_mean < TOL_WORST_MEAN, f"{worst_mean:.2e}")
 print("      ★ 口径：解析式给的是**期望**，蒙特卡洛给的是**样本估计**——")
-print("        两者的差**不是误差**，是后者的标准误。所以容差取 MC 噪声量级，不取 0。")
+print("        两者的差**不是误差**，是后者的标准误。所以容差取 MC 噪声的 5 倍，不取 0。")
+print("        ★★ 这条差**曾经**是魔数 1e-3（= 41σ）；现在是 5σ_mc = %.2e。" % TOL_WORST_MEAN)
 
 sub("A.2  ★★ 判据的两个点：0.49 必须**超一个 σ**，0.10 必须**很小**")
 b49 = analytic_stats(N, K49, SP.COLD_START_SLOWDOWN_DEFAULT, SP.STEADY_SIGMA_DEFAULT)["median"]
@@ -269,11 +352,19 @@ for k in (K10, K49, K50, K90):
 print("      ★ 机制一句话：稳态值占了排序的前 m 位，所以**合并名次 r 在稳态子样本里的分位是 r/m**；")
 print("        k 越大 ⇒ m 越小 ⇒ 同一个名次的**分位越高** ⇒ 中位数被推向稳态的**上尾**。")
 check("A.3 ★★ 分位随 k 单调上升（k = 10 时 50/91 ≈ 0.55，k = 49 时 50/52 ≈ 0.96）",
-      50 / 91 < 50 / 52 and abs(50 / 52 - 0.9615) < 0.001,
+      50 / 91 < 50 / 52 and abs(50 / 52 - 0.9615) < 1e-4,
       f"{50 / 91:.4f} → {50 / 52:.4f}")
-check("A.3 ★ k = 50 时**只有一个**中位名次落在稳态里（另一个是冷启动值）⇒ 偏差恰好是中点",
+#  ↑ 容差 1e-4 = **2 个末位半格**：0.9615 是 4 位小数的写法（半格 5e-5），
+#    而 50/52 = 0.9615385 与它差 3.85e-5。旧值 1e-3 是它的 20 倍，没道理。
+check("A.3 ★★ k = 50 时**只有一个**中位名次落在稳态里（另一个是冷启动值）⇒ "
+      "偏差 = 中点 + σ·E[z_(m:m)]/2 —— **等式**，不是「差不多」",
       abs(analytic_stats(N, K50, SP.COLD_START_SLOWDOWN_DEFAULT, SP.STEADY_SIGMA_DEFAULT)["median"]
-          - ((1.0 + SP.COLD_START_SLOWDOWN_DEFAULT) / 2.0 - 1.0)) < 0.12)
+          - (((1.0 + SP.COLD_START_SLOWDOWN_DEFAULT) / 2.0 - 1.0)
+             + SP.STEADY_SIGMA_DEFAULT * order_stat_mean(N - K50, N - K50) / 2.0)) < 1e-12,
+      f"解析 {analytic_stats(N, K50, SP.COLD_START_SLOWDOWN_DEFAULT, SP.STEADY_SIGMA_DEFAULT)['median']:.6f}"
+      f" vs 中点+上尾项 "
+      f"{((1.0 + SP.COLD_START_SLOWDOWN_DEFAULT) / 2.0 - 1.0) + SP.STEADY_SIGMA_DEFAULT * order_stat_mean(N - K50, N - K50) / 2.0:.6f}"
+      f"（旧容差 0.12 是这条等式的 1/5000）")
 
 sub("A.4  ★ 最小值：**与冷启动倍数无关**的负偏差——它抗冷启动，但不是无偏的")
 mins = {frac: mc_by_k[int(round(frac * N))]["min"] for frac in grid}
@@ -298,8 +389,16 @@ for frac in (0.0, 0.49, 0.90):
           f" · 蒙特卡洛 {mins.get(frac, float('nan')):+.4f}")
 an_min = SP.STEADY_SIGMA_DEFAULT * order_stat_mean(1, N - 10)
 _m10v = mins.get(0.10, float("nan"))
-check("A.4 ★ 解析值 = σ·E[z_(1:m)]（Blom 近似）与蒙特卡洛吻合到 0.005",
-      abs(_m10v - an_min) < 0.005, f"{_m10v:+.4f} vs {an_min:+.4f}")
+# ★ 容差**由噪声推出**：估计量是 REPS 个重复的样本最小值的平均 ⇒
+#     SE_MIN = sd(重复间最小值) / √REPS。`STEADY_DRAW` 已经是 (4000, 90) 的稳态样本
+#     （m = 90 正是 k/n = 0.10 那一档），直接量它的最小值列的离散度即可。
+SE_MIN = float(STEADY_DRAW.min(axis=1).std(ddof=1)) / np.sqrt(REPS)
+TOL_MIN = 6.0 * SE_MIN     # 5σ 给 MC 噪声，另 1σ 给 Blom 近似在**极小分位**上的偏差
+                          # （实测该偏差 ≈ 0.8σ_mc——Blom 对 E[z_(1:m)] 不无偏）
+check("A.4 ★ 解析值 = σ·E[z_(1:m)]（Blom 近似）与蒙特卡洛吻合到 6σ_mc = %.4f"
+      "（σ_mc = sd(重复间最小值)/√REPS = %.2e）" % (TOL_MIN, SE_MIN),
+      abs(_m10v - an_min) < TOL_MIN, f"{_m10v:+.4f} vs {an_min:+.4f}"
+      f"（差 {abs(_m10v - an_min):.2e} = {abs(_m10v - an_min) / SE_MIN:.1f}σ）")
 check("A.4 ★★ 三个 k 档**互不相同**（否则下面两条会退化成同一句）",
       len({K10, K49, K90}) == 3)
 d_a = abs(mins.get(0.0, float("nan")) - mins.get(0.10, float("nan")))
@@ -313,17 +412,23 @@ sub("A.5  ★ 规格预跑表的一处**未复现**：k/n = 0.90 那一格")
 spec90 = SP.SPEC_PRERUN_MEDIAN_BIAS.get(0.90, float("nan"))
 mc90 = mc_by_k.get(K90, {}).get("median", float("nan"))
 print(f"      规格 {spec90:.3f} · 本库 {mc90:.4f}（差 {abs(mc90 - spec90):.4f}）")
-check("A.5 ★ 本库的 k/n = 0.90 中位数偏差恰好是 4.000（两个中位名次都在冷启动块里 ⇒ "
-      "每个重复都给同一个值 ⇒ 标准差为 0）",
-      abs(mc90 - 4.0) < 1e-12, f"{mc90!r}")
+check("A.5 ★★ 本库的 k/n = 0.90 中位数偏差**精确等于** 4.000（两个中位名次都在冷启动块里 ⇒ "
+      "每个重复都给同一个值 ⇒ 标准差为 0 ⇒ 可以断言**相等**，不需要容差）",
+      mc90 == 4.0, f"{mc90!r}（旧版写 < 1e-12，等价但没说出「它是精确的」）")
 print("      ★ 差异的成因：规格的冷启动值带了一点噪声，本库模型取**确定值**。")
 print("        ⇒ 这不是「本库算错」，是**两个模型的差别**；正文按本库口径写，并把差异写出来。")
 for frac in (0.0, 0.10, 0.40, 0.49):
     k = int(round(frac * N))
     got = mc_by_k.get(k, {}).get("median", float("nan"))
     want = SP.SPEC_PRERUN_MEDIAN_BIAS.get(frac, float("nan"))
-    check(f"A.5 规格 {frac:.2f} 档的中位数偏差被本库复现（|差| < 0.005）",
-          abs(got - want) < 0.005, f"{got:+.4f} vs {want:+.3f}")
+    tol_here = K_SIGMA_MC * sigma_mc_median(frac) + SPEC_QUOTE_HALF_ULP_3DEC
+    check(f"A.5 规格 {frac:.2f} 档的中位数偏差被本库复现"
+          f"（|差| < {tol_here:.4f} = 5σ_mc {K_SIGMA_MC * sigma_mc_median(frac):.4f} + 引文半格）",
+          abs(got - want) < tol_here, f"{got:+.4f} vs {want:+.3f}（用掉 {abs(got - want) / tol_here:.0%}）")
+check("A.5 ★★ 0.90 那一档的 0.007 差是**固定的模型差**（规格 3.993 vs 本库 4.000）——"
+      "两侧都是常量、与蒙特卡洛无关 ⇒ 这一条**不需要容差**，直接钉住模型差",
+      SP.SPEC_PRERUN_MEDIAN_BIAS.get(0.90) == 3.993 and mc90 == 4.0
+      and abs(abs(mc90 - SP.SPEC_PRERUN_MEDIAN_BIAS[0.90]) - 0.007) < 1e-12)
 
 
 # ===========================================================================
@@ -396,8 +501,16 @@ for sd in sweep:
     mc = float(np.median(pooled_sample(N, K49, sd, SP.STEADY_SIGMA_DEFAULT, 1000, RNG), axis=1).mean() - 1.0)
     print(f"        {sd:6.4f}×   {an:+.4f} / {mc:+.4f}")
     sweep_err = max(sweep_err, abs(an - mc))
-check("B.2 ★★ **带封顶的**解析式在整个扫描区间上都对得上蒙特卡洛（最大绝对差 %0.4f < 0.01）"
-      % sweep_err, sweep_err < 0.01, f"{sweep_err:.4f}")
+TOL_SWEEP = 0.01
+check("B.2 ★★ **带封顶的**解析式在整个扫描区间上都对得上蒙特卡洛（最大绝对差 %0.4f < %s）"
+      % (sweep_err, TOL_SWEEP), sweep_err < TOL_SWEEP, f"{sweep_err:.4f}")
+print("      ★★ 这条容差**不是**噪声容差，写清楚它是什么：单个扫描点的 MC 噪声只有 "
+      "1.2533σ/√(m·1000) = %.1e，" % (1.2533 * SP.STEADY_SIGMA_DEFAULT / np.sqrt(51 * 1000))
+      + "而最大差是 %.1e（相差 %.0f 倍）——差异来自 **Blom 近似在「封顶交界」处**的"
+      % (sweep_err, sweep_err / (1.2533 * SP.STEADY_SIGMA_DEFAULT / np.sqrt(51 * 1000))))
+print("       的系统性误差（跨 6 个种子实测 4.91e-3、sd 只有 1.0e-4 ⇒ 是系统项不是随机项）。")
+print("       ⇒ 这一类（近似误差）**没有闭式界**，容差只能取「实测系统项 × 2」；")
+print("         它与「噪声容差」是两码事，不能互相解释。")
 unclamped = median_bias_at(N, K49, 1e9, SP.STEADY_SIGMA_DEFAULT)
 mc_at_thr_below = median_bias_at(N, K49, 1.02, SP.STEADY_SIGMA_DEFAULT)
 print("      ★ 这一条同时说明：**少了 `min` 封顶的解析式在轻冷启动区间会错一个数量级**——")
@@ -405,14 +518,20 @@ print(f"        阈值以下（1.02×）带封顶给 {mc_at_thr_below:+.4f}，�
       f"给 {unclamped:+.4f}（{unclamped / mc_at_thr_below:.1f} 倍）。")
 check("B.2 ★★ 不带封顶的公式在阈值以下把偏差**高估 5 倍以上** ⇒ 封顶不是修饰，是必需的",
       unclamped / mc_at_thr_below > 5.0, f"{unclamped / mc_at_thr_below:.1f}×")
-check("B.2 ★★ 阈值**以下**（1.02×）：解析与蒙特卡洛都 < 0.03 ⇒ 机制不成立",
-      median_bias_at(N, K49, 1.02, SP.STEADY_SIGMA_DEFAULT) < 0.03,
-      f"{median_bias_at(N, K49, 1.02, SP.STEADY_SIGMA_DEFAULT):+.4f}")
-check("B.2 ★★ 阈值**以上**饱和：5× 的偏差与阈值处的偏差相差 < 10%",
-      abs(median_bias_at(N, K49, 5.0, SP.STEADY_SIGMA_DEFAULT) - median_bias_at(N, K49, thr49, SP.STEADY_SIGMA_DEFAULT))
-      / median_bias_at(N, K49, thr49, SP.STEADY_SIGMA_DEFAULT) < 0.10,
-      f"{median_bias_at(N, K49, 5.0, SP.STEADY_SIGMA_DEFAULT):+.4f} vs "
-      f"{median_bias_at(N, K49, thr49, SP.STEADY_SIGMA_DEFAULT):+.4f}")
+check("B.2 ★★ 阈值**以下**（1.02×）：偏差**恰好退化成冷启动超额量 `slowdown − 1`**"
+      "（= %.4f）—— 这是**精确等式**，不需要「< 0.03」这种容差："
+      "两个中位名次都被封顶在冷启动值上，所以解析值就是 1.02 − 1.00"
+      % (1.02 - SP.STEADY_TIME_NOMINAL),
+      abs(median_bias_at(N, K49, 1.02, SP.STEADY_SIGMA_DEFAULT)
+          - (1.02 - SP.STEADY_TIME_NOMINAL)) < 1e-12,
+      f"{median_bias_at(N, K49, 1.02, SP.STEADY_SIGMA_DEFAULT):+.6f}")
+check("B.2 ★★ 阈值**以上**饱和：5× 与阈值处的偏差**恰好相同**（不是「相差 < 10%」）——"
+      "两处都没触发封顶，中位数取的是同一个稳态上尾值",
+      abs(median_bias_at(N, K49, 5.0, SP.STEADY_SIGMA_DEFAULT)
+          - median_bias_at(N, K49, thr49, SP.STEADY_SIGMA_DEFAULT)) < 1e-12,
+      f"{median_bias_at(N, K49, 5.0, SP.STEADY_SIGMA_DEFAULT):+.6f} vs "
+      f"{median_bias_at(N, K49, thr49, SP.STEADY_SIGMA_DEFAULT):+.6f}"
+      f"（旧容差 10% 是它的 1e13 倍）")
 print("      ⇒ **k < n/2 时偏差有上界，而那个上界与冷启动倍数无关**：")
 print("        冷启动从 %s× 到 5×，偏差只从 +%.4f 走到 +%.4f。"
       % (f"{thr49:.4f}", median_bias_at(N, K49, thr49, SP.STEADY_SIGMA_DEFAULT),
@@ -425,11 +544,15 @@ print(f"      ① 与冷启动倍数无关：1.5× 给 {median_bias_at(N, K49, 1
       f"5× 给 {cap49:+.4f}、9× 给 {median_bias_at(N, K49, 9.0, SP.STEADY_SIGMA_DEFAULT):+.4f}")
 print(f"      ② 与稳态 σ 成正比：σ = 0.05 时上界 {cap49:+.4f}，σ = 0.5 时上界 {cap_big_sigma:+.4f}"
       f"（比值 {cap_big_sigma / cap49:.2f}）")
-check("B.3 ★★ 上界对冷启动倍数**不敏感**（1.5× 与 9× 相差 < 1%）",
+check("B.3 ★★ 上界对冷启动倍数**完全不敏感**（1.5× 与 9× **逐位相同**，不是「相差 < 1%」）——"
+      "封顶之后两个名次取的是同一个稳态上尾值，冷启动倍数已经不出现",
       abs(median_bias_at(N, K49, 9.0, SP.STEADY_SIGMA_DEFAULT)
-          - median_bias_at(N, K49, 1.5, SP.STEADY_SIGMA_DEFAULT)) / cap49 < 0.01)
-check("B.3 ★★ 上界对 σ **近似线性**（σ 放大 10 倍，上界放大 10 倍 ± 2%）",
-      abs(cap_big_sigma / cap49 - 10.0) < 0.2, f"{cap_big_sigma / cap49:.3f}")
+          - median_bias_at(N, K49, 1.5, SP.STEADY_SIGMA_DEFAULT)) < 1e-12,
+      f"{median_bias_at(N, K49, 9.0, SP.STEADY_SIGMA_DEFAULT)!r} vs "
+      f"{median_bias_at(N, K49, 1.5, SP.STEADY_SIGMA_DEFAULT)!r}")
+check("B.3 ★★ 上界对 σ **精确线性**（σ 放大 10 倍 ⇒ 上界放大**恰好** 10 倍，误差 < 1e-12）："
+      "封顶未触发时 `bias = σ·(E[z₁]+E[z₂])/2`，σ 是一次的",
+      abs(cap_big_sigma / cap49 - 10.0) < 1e-12, f"{cap_big_sigma / cap49:.15f}")
 print("      ⇒ 两句话都会随前提消失，所以它们**可证伪**：")
 print("        把 σ 调到冷启动值被淹没（slowdown < slowdown*）⇒ 整个机制消失（B.2 已跑出）。")
 
@@ -457,6 +580,27 @@ head("§C  ★★ 符号翻转：同一个实现，两种测量协议报出相�
 sub("C.1  同一个实现、同一个稳态时间（1.0），两种协议")
 PROTO_WARM = {"name": "warmup（丢弃前导）", "n": 20, "k": 0}
 PROTO_COLD = {"name": "no warmup（保留前导）", "n": 5, "k": 3}
+
+# ★★ §L 结构守卫（C6 模式八）：容器常量要**先于任何索引/取值**被逐格断言。
+#    这两个字典的**键**被改错时，`protocol_mean` 会在 `proto["k"]` 处抛 `KeyError`，
+#    rc≠0 但**没有失败断言** —— 与「断言失败」的退出码相同，于是**假的捕获被当成真的**。
+#    实测（`make mutate-all`）：6 个键变异全部表现为 `KeyError` ⇒ 崩溃捕获。
+#    这一节把它们转成干净的 `[FAIL]`，并顺带钉住**值**（`PROTO_WARM["n"] = 20` 改掉
+#    不会有任何别的断言发现——它只影响 k = 0 时的均值，而 k = 0 时均值恰好与 n 无关）。
+check("§L PROTO_WARM 的键集合 == {'name','n','k'}（先守卫、再使用）",
+      set(PROTO_WARM) == {"name", "n", "k"}, f"{sorted(PROTO_WARM)}")
+check("§L PROTO_COLD 的键集合 == {'name','n','k'}", set(PROTO_COLD) == {"name", "n", "k"},
+      f"{sorted(PROTO_COLD)}")
+check("§L PROTO_WARM 逐格 == {'name': 'warmup（丢弃前导）', 'n': 20, 'k': 0}",
+      PROTO_WARM == {"name": "warmup（丢弃前导）", "n": 20, "k": 0}, f"{PROTO_WARM}")
+check("§L PROTO_COLD 逐格 == {'name': 'no warmup（保留前导）', 'n': 5, 'k': 3}",
+      PROTO_COLD == {"name": "no warmup（保留前导）", "n": 5, "k": 3}, f"{PROTO_COLD}")
+if FAILED:
+    # ★ 守卫不过就**立刻停**：继续往下走会在 `proto["k"]` 处抛 KeyError，
+    #   那是一个「崩溃」——rc 同样是 1，变异测试会把它误记成「断言捕获」。
+    print()
+    print("  ✗ §L 结构守卫未通过 ⇒ 立即退出（不再往下走到取值处，避免 KeyError 冒充断言失败）")
+    sys.exit(1)
 
 
 def protocol_mean(proto, steady, slowdown):
@@ -587,9 +731,12 @@ check("D.2b 拉长 warmup 后测得 %s ms" % SP.TRITON_ISSUE_2306_TIME_WITH_EXTE
       SP.TRITON_ISSUE_2306_TIME_WITH_EXTENDED_WARMUP_MS == 8.79)
 check("D.2b 使读数稳定的 warmup 门槛 > %s ms" % SP.TRITON_ISSUE_2306_REQUIRED_WARMUP_OVER_MS,
       SP.TRITON_ISSUE_2306_REQUIRED_WARMUP_OVER_MS == 150.0)
-check("D.2b ★★ 由这三个数推出的「假加速」= %+.2f%%（与 §C.3 用的是同一个常量）"
+check("D.2b ★★ 由这三个数推出的「假加速」= %+.2f%%（与 §C.3 用的是同一个常量）——"
+      "容差 1e-4 = 引文末位（4 位小数 27.7588）的 2 个半格；实测差 1.68e-5"
       % SP.TRITON_ISSUE_2306_IMPLIED_FAKE_GAIN_PCT,
-      abs(SP.TRITON_ISSUE_2306_IMPLIED_FAKE_GAIN_PCT - 27.7588) < 0.01)
+      abs(SP.TRITON_ISSUE_2306_IMPLIED_FAKE_GAIN_PCT - 27.7588) < 1e-4,
+      f"差 {abs(SP.TRITON_ISSUE_2306_IMPLIED_FAKE_GAIN_PCT - 27.7588):.2e}"
+      f"（旧容差 0.01 是引文半格的 200 倍）")
 check("D.2b 受害对象：**不用 autotune 装饰器**的 triton.jit kernel",
       SP.TRITON_ISSUE_2306_AFFECTS_JIT_WITHOUT_AUTOTUNE is True)
 check("D.2b ★ 证据形态：官方仓库的 issue（**不是**经过评审的结论）",

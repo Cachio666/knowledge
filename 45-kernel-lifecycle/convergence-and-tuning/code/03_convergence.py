@@ -159,8 +159,10 @@ print(f"      δ*(4.00) = {100 * thr_4:.3f}%  ⇒ 最后值得做的步 = {k_4}�
 check("A.2 ★★ 两个系数给出**不同的停止步数**",
       k_4 != k_enum, f"{k_4} vs {k_enum}")
 check("A.2 ★ 4.0/2.80 的比值 = %.4f（≈ 43%% 的保守放大）"
-      % (SP.MDE_REDUCED_COEFFICIENT_SPEC_CLAIMED / SP.MDE_REDUCED_COEFFICIENT_EXACT),
-      abs(SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT - 42.776) < 0.01,
+      "——容差 5e-4 = 引文 42.776（3 位小数）的末位半格，实测差 %.2e"
+      % (SP.MDE_REDUCED_COEFFICIENT_SPEC_CLAIMED / SP.MDE_REDUCED_COEFFICIENT_EXACT,
+         abs(SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT - 42.776)),
+      abs(SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT - 42.776) < 5e-4,
       f"{SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT:.3f}%")
 print("      ★ 这一条本身就是「规格的约简形式不是无害的」的机械证据：")
 print("        它让整个过程**早停一步**，而那一步里有 %.2f%% 的真实增益。"
@@ -287,20 +289,33 @@ def false_victory_rate(crit, reps, rng, sigma=SIGMA, n=N_PER_GROUP):
 
 
 rng = np.random.default_rng(SEED)
-MC_REPS = 200000
+MC_REPS = 1000000
 mc_t4 = 100.0 * false_victory_rate(T4, MC_REPS, rng)
 mc_t8 = 100.0 * false_victory_rate(T8, MC_REPS, rng)
 rate_t4 = SP.FP_RATE_PCT_AT_T4_WRONG_DF / 100.0      # 3.28%（**解析率**，见 specs §7）
 rate_t8 = SP.FP_RATE_PCT_AT_T8_CORRECT_DF / 100.0    # 2.50%
+# ★★ 下面两条容差**由二项噪声推出**（本条是 R6 的同类物，改前是硬编码的 5%）：
+#   假阳性率是**比例估计** ⇒ 相对标准误 σ_rel = √((1−p)/(p·R))（p = 解析率、R = MC_REPS）
+#   容差 = 5σ_rel（假失败率 5.7e-7；且满足判据要求的 ≥4σ）。
+#   ★ R 从 2×10⁵ 提到 10⁶：2×10⁵ 时 σ_rel = 1.40% ⇒ 4σ = 5.6% > 旧的 5%
+#     —— 旧容差**连 4σ 都不到**（3.6σ），是「随机失败边缘」的数。
+#     提到 10⁶ 后 σ_rel = 0.63% ⇒ 5σ = 3.1%，比旧值**更紧**且满足 ≥4σ。
+SIGMA_REL_FP = max(np.sqrt((1.0 - rate_t4) / (rate_t4 * MC_REPS)),
+                   np.sqrt((1.0 - rate_t8) / (rate_t8 * MC_REPS)))
+TOL_FP_REL = 5.0 * SIGMA_REL_FP
 print(f"      单步假阳性率（解析率来自 specs.py §7，与 02 篇同一口径；蒙特卡洛复核 {MC_REPS} 次）：")
 print(f"        临界值 {T4}（规格用的 t(4)）⇒ 解析 {100 * rate_t4:.2f}%"
       f"，蒙特卡洛 {mc_t4:.3f}%")
 print(f"        临界值 {T8}（正确的 t(8)）⇒ 解析 {100 * rate_t8:.2f}%"
       f"，蒙特卡洛 {mc_t8:.3f}%")
-check("C.0 ★★ 解析率与蒙特卡洛一致（相对差 < 5%）——本程序用**解析率**做累积，"
-      "避免把 MC 噪声误读成模型差异",
-      abs(mc_t4 / (100 * rate_t4) - 1.0) < 0.05 and abs(mc_t8 / (100 * rate_t8) - 1.0) < 0.05,
-      f"{mc_t4:.3f}/{100 * rate_t4:.2f} · {mc_t8:.3f}/{100 * rate_t8:.2f}")
+print(f"      ★ 容差 = 5σ_rel = {TOL_FP_REL:.4f}（σ_rel = √((1−p)/(p·{MC_REPS})) = {SIGMA_REL_FP:.4f}）")
+check("C.0 ★★ 解析率与蒙特卡洛一致（相对差 < 5σ_rel = %.4f，σ_rel 由 R = %d 与 p 闭式给出）"
+      "——本程序用**解析率**做累积，避免把 MC 噪声误读成模型差异"
+      % (TOL_FP_REL, MC_REPS),
+      abs(mc_t4 / (100 * rate_t4) - 1.0) < TOL_FP_REL
+      and abs(mc_t8 / (100 * rate_t8) - 1.0) < TOL_FP_REL,
+      f"{mc_t4:.3f}/{100 * rate_t4:.2f}（{100 * (mc_t4 / (100 * rate_t4) - 1):+.2f}%）"
+      f" · {mc_t8:.3f}/{100 * rate_t8:.2f}（{100 * (mc_t8 / (100 * rate_t8) - 1):+.2f}%）")
 
 sub("C.1  ★★ 复现规格的假胜利表（10 / 50 / 200 步）")
 print("      步数   规格值    本库(t(4) 临界)   规格名义(2.5%)   本库(t(8) 临界)")
@@ -310,10 +325,18 @@ for steps in SP.FALSE_VICTORY_STEP_COUNTS:
     spec = SP.SPEC_PRERUN_FALSE_VICTORIES.get(steps, float("nan"))
     nom = SP.SPEC_PRERUN_FALSE_VICTORY_NOMINAL.get(steps, float("nan"))
     print(f"      {steps:4d}   {spec:6.2f}    {v_t4:14.3f}   {nom:14.2f}   {v_t8:14.3f}")
-    check(f"C.1 步数 {steps}：规格值 {spec} 与本库（t(4) 临界）相差 ≤ 10%",
-          abs(v_t4 / spec - 1.0) < 0.10, f"{100 * (v_t4 / spec - 1.0):+.1f}%")
-    check(f"C.1 步数 {steps}：用**正确的 t(8)** 临界值时回到名义值 {nom}（相差 ≤ 2%）",
-          abs(v_t8 / nom - 1.0) < 0.02, f"{100 * (v_t8 / nom - 1.0):+.2f}%")
+    # ★ 这两条比的是**两组常量**（本库的 rate 常量 vs 规格引文），两侧都**没有随机性**：
+    #   v_t4 = steps × 3.28%、spec = steps × 3.5%（规格引文隐含的每步率）
+    #   ⇒ 相对差**恰好**是 1 − 3.28/3.5 = 6.29%，是个**等式**，不需要「≤ 10%」这种容差。
+    spec_step_rate = SP.SPEC_PRERUN_FALSE_VICTORIES[steps] / steps      # 规格隐含的每步率
+    check(f"C.1 步数 {steps}：规格的累积量 = 步数 × **每步 {100 * spec_step_rate:.1f}%**，"
+          f"本库 = 步数 × **每步 {100 * rate_t4:.2f}%** ⇒ 相对差**恰好**是 1 − 3.28/3.5 = "
+          f"{100 * (1 - rate_t4 / spec_step_rate):.2f}%（口径差，不是模型不一致）",
+          abs(v_t4 / spec - rate_t4 / spec_step_rate) < 1e-12,
+          f"{100 * (v_t4 / spec - 1.0):+.2f}% vs {100 * (rate_t4 / spec_step_rate - 1.0):+.2f}%")
+    check(f"C.1 步数 {steps}：用**正确的 t(8)** 临界值时**精确**回到名义值 {nom}"
+          "（本库的 2.50% 与规格名义值**是同一个数**）——两侧都是常量 ⇒ 容差 1e-12",
+          abs(v_t8 / nom - 1.0) < 1e-12, f"{100 * (v_t8 / nom - 1.0):+.2e}%")
 print("      ★ 口径差异写清：规格那组数对应**每步约 3.5%**，本库实测/解析是 **3.28%**")
 print("        （t(4) 临界值下的假阳性率，见 02 篇）——相差约 6–7%，方向是规格偏高。")
 print("        用**正确的 t(8)** 则回到名义的 2.5%，累积量随之回到名义值。")
@@ -331,8 +354,9 @@ v200 = 200 * rate_t4
 print(f"      200 步 × 每步 {100 * rate_t4:.2f}% = **{v200:.2f} 次假胜利 / 试验**")
 check("C.2 ★★ 200 步累积**超过 6 次**假胜利（而**没有任何一步有真实增益**）",
       v200 > 6.0, f"{v200:.3f}")
-check("C.2 ★★ 累积量随步数**线性增长**（10 → 200 步，累积量增长 20 倍 ± 1%）",
-      abs((200 * rate_t4) / (10 * rate_t4) - 20.0) < 0.2)
+check("C.2 ★★ 累积量随步数**精确线性**（10 → 200 步，累积量增长**恰好** 20 倍）——"
+      "两侧是同一个 rate 常量乘以 10 与 200 ⇒ 比值是代数恒等式，容差 1e-12",
+      abs((200 * rate_t4) / (10 * rate_t4) - 20.0) < 1e-12)
 print("      ⇒ 结论：**没有停止判据的调优过程必然产出假结论**——")
 print("        不是「可能」，而是「跑到哪一步就有多少次的期望值」。")
 
@@ -412,8 +436,9 @@ check("D.2 规格的假胜利表与名义值表被原样收录",
       SP.SPEC_PRERUN_FALSE_VICTORIES == {10: 0.35, 50: 1.75, 200: 6.90}
       and SP.SPEC_PRERUN_FALSE_VICTORY_NOMINAL == {10: 0.25, 50: 1.25, 200: 5.00})
 check("D.2 ★★ 本库的复算把差异定位到**临界值**上：规格那组对应每步 3.28%，"
-      "换成正确的 t(8) 后回到名义值",
-      abs(100 * rate_t4 - 3.28) < 0.2 and abs(100 * rate_t8 - 2.50) < 0.2)
+      "换成正确的 t(8) 后回到名义值"
+      "——容差 5e-3 = 引文 3.28 / 2.50（2 位小数）的末位半格；两个常量就是这两个数 ⇒ 差为 0",
+      abs(100 * rate_t4 - 3.28) < 5e-3 and abs(100 * rate_t8 - 2.50) < 5e-3)
 check("D.2 ★ 规格的「≈ 4σ/√n」让停止步数变化 —— 已记在常量里",
       SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT > 40.0 and k_4 != k_enum)
 

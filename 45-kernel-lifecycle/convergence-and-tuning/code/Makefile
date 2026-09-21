@@ -9,10 +9,14 @@
 #   make run                依次跑三个编号程序（任一断言失败即非零退出）
 #   make 01_benchmark_hygiene   只跑一个（省略 .py 后缀）
 #   make lint               AST 检查：确认没有 import torch（不用 grep）
+#   make mutate             叶子级变异测试：**只测 specs.py**（C6 的分母口径）
+#   make mutate-all         同上，但分母含三个编号程序的模块级常量
 #   make clean              清理 __pycache__
 #
 # 非编号文件（不计入「文档数 = 编号程序数」的核对，见 CONTRIBUTING §2）：
 #   specs.py          本主题的外部事实常量源，**每条带 `# 来源：` 与来源等级（A–E）**
+#   mutate.py         叶子级变异测试（诊断工具，**不进 `make run`**）——
+#                     ★ 只在**副本**上变异，原文件只读、结尾再校验一次 sha256
 #   Makefile / requirements.txt   构建入口
 #
 # ── 与同域前三个主题的形态差异（写出来，避免读者以为这里不一致）──────────────
@@ -43,7 +47,7 @@
 PYTHON  ?= python3
 SCRIPTS := 01_benchmark_hygiene 02_significance 03_convergence
 
-.PHONY: all run lint clean
+.PHONY: all run lint mutate mutate-all clean
 all: run
 
 run:
@@ -70,6 +74,13 @@ sys.exit(1 if bad else 0)'
 
 %:
 	$(PYTHON) $@.py
+
+# ★ 耗时约 2 分钟（230 个叶子 × 副本里跑受影响程序）。它是**诊断工具**，不进 `run`。
+mutate:
+	@$(PYTHON) mutate.py specs
+
+mutate-all:
+	@$(PYTHON) mutate.py all
 
 clean:
 	rm -rf __pycache__

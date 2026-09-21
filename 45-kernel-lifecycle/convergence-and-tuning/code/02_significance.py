@@ -220,10 +220,15 @@ print(f"      n = {n_probe}：√(1/n) 给 {f_wrong:.4f}（= {100 * f_wrong:.2f}
 print(f"      比值 = {f_right / f_wrong:.4f}（= √2）")
 check("A.2 ★★ 两式之比恰好是 √2（这就是被漏掉的那个因子）",
       abs(f_right / f_wrong - np.sqrt(2.0)) < 1e-12, f"{f_right / f_wrong:.12f}")
-check("A.2 ★★ 规格的预跑值是 2.4%（σ = 3%、n = 25）——只有 √(2/n) 给得出它",
-      abs(100 * f_right - 2.4) < 0.05, f"{100 * f_right:.3f}%")
-check("A.2 ★ 规格初稿的式子（漏 √2）给 1.7% —— 也正是它自陈的那个错值",
-      abs(100 * f_wrong - 1.7) < 0.05, f"{100 * f_wrong:.3f}%")
+# ★ 容差 0.05 = **引文末位半格**：规格把这两个数写成 2.4 与 1.7（**1 位小数**）
+#   ⇒ 任一引用值与其真值最多差 0.05。两侧都是解析式算出来的**确定值**，没有 MC 噪声。
+SPEC_ONE_DEC_HALF_ULP = 0.05
+check("A.2 ★★ 规格的预跑值是 2.4%（σ = 3%、n = 25）——只有 √(2/n) 给得出它"
+      f"（容差 0.05 = 引文 1 位小数的末位半格；实测差 {abs(100 * f_right - 2.4):.3f}）",
+      abs(100 * f_right - 2.4) < SPEC_ONE_DEC_HALF_ULP, f"{100 * f_right:.3f}%")
+check("A.2 ★ 规格初稿的式子（漏 √2）给 1.7% —— 也正是它自陈的那个错值"
+      f"（同样用引文半格；实测差 {abs(100 * f_wrong - 1.7):.3f}）",
+      abs(100 * f_wrong - 1.7) < SPEC_ONE_DEC_HALF_ULP, f"{100 * f_wrong:.3f}%")
 check("A.2 ★ 规格已自订正（常量 `SPEC_CLAIM_MDE_USED_SQRT_1_OVER_N` = False）",
       SP.SPEC_CLAIM_MDE_USED_SQRT_1_OVER_N is False
       and SP.MDE_FORMULA_DENOMINATOR_IS_SQRT_2_OVER_N is True)
@@ -243,6 +248,14 @@ def mde_monte_carlo(sigma, n, crit, reps, rng, target=0.80):
 
 
 print("      n    规格解析   本库解析   蒙特卡洛(z 临界)  蒙特卡洛(t 临界)   规格 MC")
+# ★★ 下面那条 MC 容差**不是闭式推出来的**，写明它的来路（这是本程序唯一的例外）：
+#   蒙特卡洛的 δ 是**二分**出来的（40 步），估计量有两部分误差 ——
+#   ① 系统偏差：检出率曲线由 MC_REPS 次抽样估计，二分的结果整体偏大；
+#   ② 随机项：换种子后的散布。
+#   跨 6 个种子实测：n=5 偏 +1.19%、sd 0.24%；n=25 偏 +0.26%、sd 0.072%；n=100 偏 +0.01%、sd 0.18%。
+#   ⇒ 容差 = 最差档偏差 + 5σ_mc = 0.0119 + 5×0.0024 = 0.024，取 0.03（1.25 倍余量）。
+#   ★ 旧值 0.05 没有来路（是「看着合理」的数，且是最差档的 4 倍）。
+TOL_MC_MDE_REL = 0.03
 mc_t_crit = {}
 for n in (5, 25, 100):
     a_val = mde_analytic(SIGMA, n)
@@ -254,27 +267,43 @@ for n in (5, 25, 100):
     spec_a, spec_mc = SP.SPEC_PRERUN_MDE.get(n, (float("nan"), float("nan")))
     print("     %3d   %8.4f   %8.4f   %14.4f  %14.4f   %8.4f"
           % (n, spec_a, a_val, mc_z, mc_t, spec_mc))
-    check(f"A.3 n = {n}：本库解析值与规格解析值一致（|差| < 1e-4）",
+    check(f"A.3 n = {n}：本库解析值与规格解析值一致（|差| < 1e-4 = 规格 4 位小数的 2 个半格；"
+          f"实测 {abs(a_val - spec_a):.2e}）",
           abs(a_val - spec_a) < 1e-4, f"{a_val:.4f} vs {spec_a:.4f}")
-    check(f"A.3 n = {n}：蒙特卡洛（z 临界）与解析式的相对差 < 5%",
-          abs(mc_z / a_val - 1.0) < 0.05, f"{100 * (mc_z / a_val - 1.0):+.2f}%")
+    check(f"A.3 n = {n}：蒙特卡洛（z 临界）与解析式的相对差 < {TOL_MC_MDE_REL:.2f}"
+          f"（= 最差档的系统偏差 +1.19% + 5σ_mc，见上）",
+          abs(mc_z / a_val - 1.0) < TOL_MC_MDE_REL, f"{100 * (mc_z / a_val - 1.0):+.2f}%")
 print("      ★ 规格的 n = 5 那一格给 0.0548，本库（z 临界）给 %.4f —— 差 %.2f%%。"
       % (mc_t_crit[5][0],
          100 * abs(mc_t_crit[5][0] / SP.SPEC_PRERUN_MDE.get(5, (0, float("nan")))[1] - 1.0)))
 print("        成因是蒙特卡洛的临界值约定（见 A.4）：换成本库的 t 临界值，值还会再变。")
-check("A.3 ★★ 三个 n 上解析式与蒙特卡洛都吻合到 5% 以内 ⇒ 公式可用作 A 类对照",
-      all(abs(mc_t_crit[n][0] / mde_analytic(SIGMA, n) - 1.0) < 0.05 for n in (5, 25, 100)))
+check(f"A.3 ★★ 三个 n 上解析式与蒙特卡洛都吻合到 {TOL_MC_MDE_REL:.2f} 以内 ⇒ 公式可用作 A 类对照"
+      f"（最大 {100 * max(abs(mc_t_crit[n][0] / mde_analytic(SIGMA, n) - 1.0) for n in (5, 25, 100)):.2f}%，"
+      f"用掉 {max(abs(mc_t_crit[n][0] / mde_analytic(SIGMA, n) - 1.0) for n in (5, 25, 100)) / TOL_MC_MDE_REL:.0%}）",
+      all(abs(mc_t_crit[n][0] / mde_analytic(SIGMA, n) - 1.0) < TOL_MC_MDE_REL for n in (5, 25, 100)))
 
 sub("A.4  ★★ t 分布工具的自检：已知分位数逐条对齐")
 KNOWN_T = ((1, 0.025, 12.706204), (2, 0.025, 4.302653), (4, 0.025, 2.776445),
            (4, 0.05, 2.131847), (8, 0.025, 2.306004), (8, 0.05, 1.859548),
            (30, 0.025, 2.042272), (48, 0.025, 2.010635))
+# ★ 容差 1e-6 = **引文末位半格的 2 倍**：参考分位数给到 6 位小数（半格 5e-7），
+#   而本程序的二分求分位数是 120 次迭代（分辨率 200/2¹²⁰，可忽略）。
+#   实测最大偏差 7.4e-7（= 1.5 个半格）⇒ 1e-6 有效；旧值 5e-6 是它的 5 倍。
+TOL_T_REF = 1e-6
 for df, alpha, ref in KNOWN_T:
     got = t_crit(alpha, df)
-    check(f"A.4 t({df}) 的单侧 {100 * alpha:.1f}% 临界值 = {got:.6f}（参考 {ref}）",
-          abs(got - ref) < 5e-6)
-check("A.4 ★ t 分布的分位数**在 df → ∞ 时收敛到 z**（t(2000) 与 z 相差 < 0.01）",
-      abs(t_crit(0.025, 2000) - z95) < 0.01, f"{t_crit(0.025, 2000):.6f} vs {z95:.6f}")
+    check(f"A.4 t({df}) 的单侧 {100 * alpha:.1f}% 临界值 = {got:.6f}（参考 {ref}）"
+          f"——|差| < 2 个末位半格（{TOL_T_REF}）",
+          abs(got - ref) < TOL_T_REF, f"差 {abs(got - ref):.2e}")
+# ★ 容差 0.002：t(2000) 与 z 的差**有闭式的一阶项**（Cornish–Fisher）
+#   t(df) ≈ z + (z³+z)/(4df) ⇒ df = 2000 时 = (7.5292+1.9600)/8000 = 1.186e-3。
+#   二阶项是 O(1/df²) ≈ 1e-7。⇒ 容差取 0.002（一阶项的 1.7 倍）；旧值 0.01 是它的 8 倍。
+TOL_T_TO_Z = 0.002
+T_Z_TO_Z_FIRST_ORDER = (z95 ** 3 + z95) / (4 * 2000)
+check("A.4 ★ t 分布的分位数**在 df → ∞ 时收敛到 z**（t(2000) 与 z 相差 < %.4f = "
+      "一阶项 %.6f 的 1.7 倍）" % (TOL_T_TO_Z, T_Z_TO_Z_FIRST_ORDER),
+      abs(t_crit(0.025, 2000) - z95) < TOL_T_TO_Z,
+      f"{t_crit(0.025, 2000):.6f} vs {z95:.6f}（差 {abs(t_crit(0.025, 2000) - z95):.6f}）")
 print("      ★ 自检过的工具有资格当参照；`specs.py` 里没有 t 表，**因为它是算出来的**。")
 
 sub("A.5  ★★ 同一份数据、四种临界值约定 ⇒ 四个不同的「最小可检出差异」")
@@ -312,8 +341,10 @@ for s_pct, d_pct in ((3.0, 3.0), (3.0, 1.0), (6.0, 3.0), (3.0, 5.0)):
     print(f"      σ = {s_pct}%、要检出 δ = {d_pct}% ⇒ n = {n_req:.2f} ⇒ **每组取 "
           f"{int(np.ceil(n_req))} 次**")
 check("B.1 ★ σ = 3%%、δ = 3%% ⇒ n = 2·(2.8016)² = %.3f ⇒ 取整 %d 次（公式解，不是经验值）"
-      % (n_required(0.03, 0.03), int(np.ceil(n_required(0.03, 0.03)))),
-      abs(n_required(0.03, 0.03) - 15.6977) < 0.01)
+      "——容差 1e-4 = 引文 15.6977（4 位小数）的 2 个半格，实测差 %.2e"
+      % (n_required(0.03, 0.03), int(np.ceil(n_required(0.03, 0.03))),
+         abs(n_required(0.03, 0.03) - 15.6977)),
+      abs(n_required(0.03, 0.03) - 15.6977) < 1e-4)
 check("B.1 ★★ `n ∝ σ²`：σ 翻倍 ⇒ 需要的重复次数**翻四倍**",
       abs(n_required(0.06, 0.03) / n_required(0.03, 0.03) - 4.0) < 1e-9)
 check("B.1 ★★ `n ∝ 1/δ²`：要检出的差异减半 ⇒ 次数翻四倍",
@@ -344,8 +375,9 @@ for s_pct, d_pct in ((3.0, 3.0), (3.0, 5.0)):
     check(f"B.3 n = {n_req} 的实测检定力在 70%–90% 之间（公式解没有系统性偏差；"
           f"取整会让实际检定力略偏离 80%）",
           0.70 <= rate <= 0.90, f"{100 * rate:.1f}%")
-check("B.3 ★ 口径注意：检定力是对**正确的 t 临界值**测的（`t(2n−2)`）",
-      abs(crit8 - 2.306004) < 5e-6, f"t(8)@0.975 = {crit8:.6f}")
+check("B.3 ★ 口径注意：检定力是对**正确的 t 临界值**测的（`t(2n−2)`）"
+      "——容差 1e-6 = 引文 2.306004（6 位小数）的 2 个半格，实测差 %.2e" % abs(crit8 - 2.306004),
+      abs(crit8 - 2.306004) < 1e-6, f"t(8)@0.975 = {crit8:.6f}")
 
 
 # ===========================================================================
@@ -354,16 +386,37 @@ check("B.3 ★ 口径注意：检定力是对**正确的 t 临界值**测的（`
 head("§C  ★★ 假阳性：单次测量、临界值约定、计时器分辨率")
 
 sub("C.1  ★★ 用**单次测量**判胜负：假阳性率 = 50%")
-reps1 = 200000
+# ★★ 容差**由二项噪声推出**（这是本主题 R6 的靶心，改前是硬编码的 1.0）：
+#   估计量 = REPS1 次伯努利试验的样本比例 ⇒ σ_pp = 100·√(p(1−p)/REPS1)，p = 1/2
+#   （δ = 0、两组同分布 ⇒ 胜率**恰好是 1/2**，这个 p 是模型给的，不是猜的）
+#   K = 5：假失败率 5.7e-7（4σ 是 6.3e-5）⇒ **容差 = 5σ_pp**。
+#   ★★ 为什么 REPS1 必须取 2×10⁶：两个要求把它**夹**出来了 ——
+#     ①「把常量改到 50.5 必须被抓住」⇒ 容差 < |实测 − 50.5|；
+#     ②「容差 ≥ 4σ」（否则测试会随机失败）；
+#     REPS1 = 2×10⁵ 时 σ_pp = 0.1118 ⇒ 4σ = 0.447，而实测值本身偏离 50.0 约 0.08
+#     ⇒ 要抓住 50.5 需要容差 < 0.42 < 4σ —— **两个要求不可能同时满足**。
+#     REPS1 = 2×10⁶：σ_pp = 0.0354、5σ = 0.177 ⇒ 对 0.5 的偏移有 2.4 倍余量，两边都满足。
+REPS1 = 2_000_000
+SIGMA_WIN_PP = 100.0 * np.sqrt(0.5 * 0.5 / REPS1)
+TOL_WIN_PP = 5.0 * SIGMA_WIN_PP
 r1 = np.random.default_rng(SEED + 1)
-a1 = r1.standard_normal(reps1)
-b1 = r1.standard_normal(reps1)
+a1 = r1.standard_normal(REPS1)
+b1 = r1.standard_normal(REPS1)
 win = float((b1 < a1).mean())      # 越小越好 ⇒ b 更快
-print(f"      真实差异 δ = 0（两组同分布），各测 1 次，判「b 更快」的比例 = {100 * win:.3f}%")
-check("C.1 ★★ 实测假阳性率 = %.1f%%，与解析值 50%% 一致（|差| < 1%%）" % (100 * win),
-      abs(100 * win - SP.SINGLE_MEASUREMENT_WIN_PROB_PCT) < 1.0, f"{100 * win:.3f}%")
-check("C.1 ★★ 它比名义的 5% 高 **10 倍**（不是「略高」）",
-      win > 10 * 0.05, f"{100 * win:.1f}% vs 5%")
+print(f"      真实差异 δ = 0（两组同分布），各测 1 次，判「b 更快」的比例 = {100 * win:.4f}%")
+print(f"      ★ 容差 = 5σ_pp = 5·100·√(0.25/{REPS1}) = {TOL_WIN_PP:.4f} 个百分点"
+      f"（σ_pp = {SIGMA_WIN_PP:.4f}）")
+check("C.1 ★★ 实测假阳性率 = %.4f%%，与解析值 %.1f%% 一致"
+      "（|差| < 5σ_pp = %.4f 个百分点；用掉 %.0f%%）"
+      % (100 * win, SP.SINGLE_MEASUREMENT_WIN_PROB_PCT, TOL_WIN_PP,
+         100 * abs(100 * win - SP.SINGLE_MEASUREMENT_WIN_PROB_PCT) / TOL_WIN_PP),
+      abs(100 * win - SP.SINGLE_MEASUREMENT_WIN_PROB_PCT) < TOL_WIN_PP, f"{100 * win:.4f}%")
+check("C.1 ★★ 它比名义的 5% 高 **10 倍**（不是「略高」）——★ 这里断言的是**名义值**的关系"
+      f"（{SP.SINGLE_MEASUREMENT_WIN_PROB_PCT:g} / 5 = 10）；旧版写 `win > 10 * 0.05`，"
+      "那是拿蒙特卡洛的**方向**做断言：真实胜率恰好是 50%，样本值会在它上下摆动 "
+      "⇒ **约一半的种子会失败**（实测：种子 22、33 都失败）",
+      SP.SINGLE_MEASUREMENT_WIN_PROB_PCT / 5.0 == 10.0,
+      f"实测 {100 * win:.4f}% 由上面那条 5σ 断言管住")
 print("      ⇒ 「跑一次看快了就是快了」不是「有噪声的结论」，**是一次抛硬币**。")
 
 sub("C.2  ★★ 临界值约定不同 ⇒ 假阳性率从 2.5% 变到 6.9%")
@@ -383,20 +436,35 @@ t5 = welch_t(a5, b5)
 for crit, name in CRIT_ROWS:
     theo = 100.0 * t_sf(crit, 8)
     mc = 100.0 * float((t5 > crit).mean())
+    # ★ 本库**自己的**蒙特卡洛：这是比例估计 ⇒ σ 有闭式（σ_pp = 100·√(p(1−p)/reps5)），
+    #   容差 = 5σ_pp（5.7e-7 的假失败率，且满足 ≥4σ）。
+    sig_pp = 100.0 * np.sqrt((theo / 100.0) * (1.0 - theo / 100.0) / reps5)
+    check(f"C.2 本库蒙特卡洛（reps5 = {reps5}）与理论值一致：|差| < 5σ_pp = {5 * sig_pp:.3f} pp"
+          f"（σ_pp = {sig_pp:.4f}）",
+          abs(mc - theo) < 5 * sig_pp, f"{mc:.3f}% vs {theo:.3f}%（差 {abs(mc - theo):.4f}）")
     spec = SP.SPEC_PRERUN_FP_RATE_PCT.get(round(crit, 3))
     spec_s = f"（规格 {spec}%）" if spec is not None else ""
     print(f"        {crit:.6f}  {name:42s} 理论 {theo:6.3f}%  蒙特卡洛 {mc:6.3f}% {spec_s}")
     if spec is not None:
-        check(f"C.2 规格给的 {spec}% 与理论值 P(t₈ > {crit:.3f}) = {theo:.2f}% 一致（|差| < 0.1）",
-              abs(theo - spec) < 0.1, f"{theo:.3f}%")
-check("C.2 ★★ 正确的临界值（t(8)=2.306）给出**恰好 2.5%**",
-      abs(100 * t_sf(2.306004, 8) - 2.5) < 0.01, f"{100 * t_sf(2.306004, 8):.4f}%")
+        # ★ 容差 0.05：两侧都是**固定的数**（本库解析值 vs 本库引用的规格值），**没有随机性** ⇒
+        #   「≥4σ」这类噪声判据在这里不适用。0.05 覆盖的是「规格值给到 2 位小数」
+        #   （半格 0.005）与**规格自己那次 MC 的偏差**（它未披露重复次数；实测最大差 0.019）。
+        #   ★ 旧值 0.1 是实测差的 5 倍，没有来路。
+        check(f"C.2 规格给的 {spec}% 与理论值 P(t₈ > {crit:.3f}) = {theo:.2f}% 一致"
+              f"（|差| < 0.05；实测 {abs(theo - spec):.4f}）",
+              abs(theo - spec) < 0.05, f"{theo:.3f}%")
+check("C.2 ★★ 正确的临界值（t(8)=2.306）给出**恰好 2.5%**"
+      "——差 5.3e-7 只来自「2.306004 是 6 位小数的表值」（半格在概率上是 "
+      "0.0303×5e-7×100 ≈ 1.5e-6 pp）⇒ 容差 1e-5（旧值 0.01 是它的 1000 倍）",
+      abs(100 * t_sf(2.306004, 8) - 2.5) < 1e-5, f"{100 * t_sf(2.306004, 8):.7f}%")
 check("C.2 ★★ 用 z(1.96) 时假阳性率 = %.2f%%（名义 2.5%% 的 %.2f 倍）"
       % (100 * t_sf(z95, 8), t_sf(z95, 8) / 0.025),
       t_sf(z95, 8) > 0.025 * 1.5)
 check("C.2 ★★ 规格把 2.132 标成「t(4) 单侧 2.5%」——**标签错**："
-      "2.132 是 t(4) 的 **0.95** 分位（单侧 5%），单侧 2.5% 是 2.776",
-      abs(t_crit(0.05, 4) - 2.131847) < 5e-6 and abs(t_crit(0.025, 4) - 2.776445) < 5e-6
+      "2.132 是 t(4) 的 **0.95** 分位（单侧 5%），单侧 2.5% 是 2.776"
+      f"（两个引用值各给到 6 位小数 ⇒ 容差 1e-6 = 2 个半格；实测差 "
+      f"{abs(t_crit(0.05, 4) - 2.131847):.1e} / {abs(t_crit(0.025, 4) - 2.776445):.1e}）",
+      abs(t_crit(0.05, 4) - 2.131847) < 1e-6 and abs(t_crit(0.025, 4) - 2.776445) < 1e-6
       and SP.SPEC_CLAIM_T4_CRIT_IS_ONE_SIDED_2_5PCT is False)
 print("      ⇒ ★ 判据（进 §5）：报「显著」时必须写明**用的是哪个临界值、自由度怎么算**。")
 
@@ -421,10 +489,20 @@ fp_fixed8 = 100.0 * float((t5 > 2.306004).mean())
 print(f"        用 Welch 自由度当临界值（均值 {crit_welch.mean():.4f}）：假阳性率 "
       f"**{fp_data_dep:.3f}%** < 2.5%")
 print(f"        用固定的 t(8) = 2.306004：                  假阳性率 **{fp_fixed8:.3f}%** ≈ 2.5%")
+# ★ 两个假阳性率都是**比例估计**（reps5 次抽样）⇒ σ 有闭式，容差 = 5σ_pp。
+#   ★★ 旧版写 `fp_data_dep < 2.5 < fp_fixed8`：拿 MC 值去比**名义值 2.5**，
+#      而 fp_fixed8 的 σ_pp = 0.0285 ⇒ 它有一半的时候落在 2.5 以下 ⇒ **又是 flaky**。
+#      改成「|fp_fixed8 − 2.5| < 5σ_pp」+「fp_data_dep 比 fp_fixed8 小 5σ 以上」。
+FP_SIGMA_PP = 100.0 * np.sqrt(0.025 * 0.975 / reps5)
+check("C.3 ★★ 用固定的 t(8) 时假阳性率 ≈ 名义 2.5%%（|差| < 5σ_pp = %.3f，"
+      "σ_pp = 100·√(p(1−p)/reps5) = %.4f）" % (5 * FP_SIGMA_PP, FP_SIGMA_PP),
+      abs(fp_fixed8 - 2.5) < 5 * FP_SIGMA_PP, f"{fp_fixed8:.3f}%")
 check("C.3 ★★ 用 Welch 自由度当临界值 ⇒ 假阳性率**低于**名义值（保守），"
-      "与规格「Welch 自由度造成膨胀」的方向**相反**",
-      fp_data_dep < 2.5 < fp_fixed8 or fp_data_dep < fp_fixed8,
-      f"{fp_data_dep:.3f}% < {fp_fixed8:.3f}%")
+      "与规格「Welch 自由度造成膨胀」的方向**相反**"
+      "（要求差值 > 5σ_pp，而不是「小于 2.5」这种把 MC 比名义值的写法）",
+      fp_data_dep < fp_fixed8 - 5 * FP_SIGMA_PP,
+      f"{fp_data_dep:.3f}% < {fp_fixed8:.3f}% − 5σ（差 {fp_fixed8 - fp_data_dep:.3f} = "
+      f"{(fp_fixed8 - fp_data_dep) / FP_SIGMA_PP:.0f}σ）")
 check("C.3 ★ 规格的那条机制句被标为 False，且方向常量写明是 conservative",
       SP.SPEC_CLAIM_WELCH_DF_CAUSES_FP_INFLATION is False
       and SP.SPEC_WELCH_DF_EFFECT_DIRECTION == "conservative")
@@ -578,10 +656,21 @@ check("D.4b ★★ MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT 的**精确值**（不是
       abs(SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT - 42.77631014537673) < 1e-9,
       f"{SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT!r}")
 check("D.4b ★★ 它由两个常量**算出来**，不是硬编码：4.0/2.801585218112968 − 1 = %r"
+      "——★ 这里两侧是**同一个表达式**，必须**逐位相同**（0.0）；旧容差 1e-9 会把 "
+      "「副本漂移 2 个 ulp」这种变异放过去（实测漏网，见 mutate.py）"
       % (SP.MDE_REDUCED_COEFFICIENT_SPEC_CLAIMED / SP.MDE_REDUCED_COEFFICIENT_EXACT - 1.0),
       abs(SP.MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT
           - (SP.MDE_REDUCED_COEFFICIENT_SPEC_CLAIMED
-             / SP.MDE_REDUCED_COEFFICIENT_EXACT - 1.0) * 100.0) < 1e-9)
+             / SP.MDE_REDUCED_COEFFICIENT_EXACT - 1.0) * 100.0) == 0.0)
+check("D.4b ★★ `MDE_REDUCED_COEFFICIENT_EXACT` 与 `MDE_COEFFICIENT_AT_POWER_80` "
+      "**逐位相同**（它是同一个数的**第二份拷贝**；两份拷贝漂移必须被抓）"
+      "——★ 这正是叶子级变异测试抓出来的那一条漏网",
+      SP.MDE_REDUCED_COEFFICIENT_EXACT == SP.MDE_COEFFICIENT_AT_POWER_80)
+check("D.4b ★★ 而 specs.py 里 `MDE_REDUCED_CLAIM_EXCEEDS_EXACT_PCT` 那行用的是**字面量**"
+      "（不是引用上面的名字）⇒ 必须断言「那个字面量与命名常量是同一个 double」，"
+      "否则改名字常量、公式不动，派生值不变 ⇒ 漏网",
+      (4.0 / SP.MDE_REDUCED_COEFFICIENT_EXACT - 1.0) * 100.0
+      == (4.0 / SP.MDE_COEFFICIENT_AT_POWER_80 - 1.0) * 100.0)
 check("D.4b ★ HPEC 那篇的标题逐字核对（本常量在别处只被引用、没被断言过）",
       SP.HPEC_ROBUST_BENCH_TITLE == "Robust benchmarking in noisy environments")
 check("D.4b ★★ 「噪声带是普遍规律」这条规格论断被标为 False",
@@ -605,8 +694,9 @@ check("D.5 「至少 %d 次、高方差加到 %d 次」是**练习建议**，不
       and SP.BENCHMARK_MIN_RUNS_HIGH_VARIANCE == 30)
 check("D.5 ★ 预热阶段的结果**一律丢弃**（MLPerf 对齐方法学）",
       SP.WARMUP_DISCARD_IS_REQUIRED_BY_ALIGNED_METHODOLOGY is True)
-check("D.5 ★★ 而本库自己给的是**公式**而不是固定次数（§B.1）：两者不是同一类结论",
-      abs(n_required(0.03, 0.03) - 15.6977) < 0.01)
+check("D.5 ★★ 而本库自己给的是**公式**而不是固定次数（§B.1）：两者不是同一类结论"
+      "（容差 1e-4 = 引文 4 位小数的 2 个半格）",
+      abs(n_required(0.03, 0.03) - 15.6977) < 1e-4)
 
 sub("D.6  ★ 全模块常量覆盖的**机械检查**")
 COVERED_02 = (
