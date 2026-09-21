@@ -21,5 +21,8 @@
 - **下游**：`40-kernels`（attention 变体直接决定 kernel 设计）、`100-parallelism`（MoE 引出专家并行）、`120-inference`（KV cache 的大小由架构决定）。
 - **横切**：注意力变体的 kernel 实现在 `40-kernels/attention`，本域只讲架构层面的取舍；
   这些结构**落成 kernel 要用的语言与抽象层**（CUDA / Triton / PTX-SASS / CuTe）正文在 `30-gpu-programming`，本域只回链。
+- **与 `45-kernel-lifecycle` 的关系**：本域讲结构**是什么**（transformer / 注意力变体 / MoE / 归一化 / 位置编码）；
+  **怎么从这些结构读出算子需求**（该做哪些算子、每个算子的算术强度与约束资源是什么、先做哪个）的正文在
+  `45-kernel-lifecycle`（正文在该域，此处回链）；本域只提供结构的定义与取舍，**不做那个判定**。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)

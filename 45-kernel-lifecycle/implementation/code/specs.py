@@ -3,7 +3,7 @@
 本模块是 CONTRIBUTING §2 约定的**共享事实源**（`specs.py`）：三个编号程序从它读常量，
 推导过程可复核，**常量本身不可自证**。
 
-★ 本主题的常量按来源等级分四类（域 README 的 A–E 五级，本模块用到 A/B/C/D/E）：
+★ 本主题的常量按来源等级分四类（`CONTRIBUTING.md` §2 的 A–E 五级，本模块用到 A/B/C/D/E）：
 
   · **A 级：厂商规范**——NVIDIA Compute Sanitizer 的工具清单与各工具的作用域、
     IEEE 754 的单位舍入误差、warp size。

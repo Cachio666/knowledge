@@ -22,7 +22,7 @@ r"""30-gpu-programming/triton 的外部事实常量源。
                                          的**漏网清单**里（`MODEL_OWN_RULES[*].rule` 5 条等），本模块
                                          不声称它们「改一个字程序就会失败」。
 
-★ 来源等级（域 README 转述 `45-kernel-lifecycle/README.md` 的 A–E 五级）：
+★ 来源等级（定义在 `CONTRIBUTING.md` §2「外部来源分级 A–E」）：
 
   · **A 级：厂商官方规范/官方文档原文** —— `triton-lang.org` 的**官方文档站点**，逐字引文。
     本模块的 7 条语义锚点（`ANCHORS` 5 条 + `LOAD_QUOTES` 2 条）全部是 A 级。

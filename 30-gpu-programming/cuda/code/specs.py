@@ -16,7 +16,7 @@
                                  （`01_sync_contract.py` 用 `ast` 读另外两个程序）；
      · 外部工件的条目          —— 被**逐字行内容**与 `sha256` 前 16 位钉住（读真实文件比对）。
 
-★ 来源等级（域 README 转述 `45-kernel-lifecycle/README.md` 的 A–E 五级）：
+★ 来源等级（定义在 `CONTRIBUTING.md` §2「外部来源分级 A–E」）：
 
   · **A 级：厂商官方规范**——CUDA C++ Programming Guide 12.6.1 / CUDA Driver API Reference /
     CUDA Runtime API Reference 的原文。本模块的 21 条语义锚点全部是 A 级。

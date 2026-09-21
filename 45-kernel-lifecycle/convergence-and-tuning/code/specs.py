@@ -9,7 +9,7 @@
    （`HIPFIRE_*` / `TRITON_*` / `VLLM_*` / `ARXIV_*` / `MYTKOWICZ_*` / `CUDA_*`），
    使**误用可见**：看到一个以别人项目名开头的常量，就知道它只支撑「那个项目这么做」。
 
-★ 来源等级（域 README 的 A–E 五级，本模块用到 A/B/C/D/E）：
+★ 来源等级（`CONTRIBUTING.md` §2 的 A–E 五级，本模块用到 A/B/C/D/E）：
 
   · **A 级：厂商规范**——`cudaEventElapsedTime` 的分辨率与语义（CUDA Runtime API / Best
     Practices Guide 两个官方页面**两次检索一致**）。

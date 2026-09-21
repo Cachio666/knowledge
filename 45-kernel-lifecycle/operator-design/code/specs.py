@@ -3,7 +3,7 @@
 本模块是 CONTRIBUTING §2 约定的**共享事实源**（`specs.py`）：三条编号程序从它读常量，
 推导过程可复核，**常量本身不可自证**。
 
-★ 本主题的常量**只有三类来源**（域 README 的 A–E 五级）：
+★ 本主题的常量**只有三类来源**（`CONTRIBUTING.md` §2 的 A–E 五级）：
 
   · **A 级：规范与厂商文档**——PTX ISA 的 `wmma` 语义、CUDA C++ Programming Guide 的
     wmma 对齐与占用限制、NVIDIA H100 白皮书的 SMEM 容量、cuDNN 的 FP8 约束、
