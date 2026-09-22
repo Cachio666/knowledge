@@ -186,7 +186,7 @@ GShard 的同义表述（§2.2，**[C] + 未确认同行评审**）：
 > 「丢掉之后**要不要把幸存权重重新归一化**、**要不要给这类 token 补一条旁路**，
 > 属于**架构层的决定**（正文在 `80-model-architectures/moe`，此处回链）」
 
-同文 `:238` 逐字：
+同文 `:238` 逐字（⚠ 该行**不是**让渡句 —— 它里面没有「正文在本域」的括注；本节引用的是它的**内容**）：
 
 > 「**做 mask 之后输出并不是 `X[t]` 本身**：它是 `X[t] × 幸存权重之和`（本场景用 §C2 的构造
 > 可以验证这一点）。**要不要重新归一化是架构层的选择**；kernel 侧只要保证这个选择是可表达的。」
@@ -419,12 +419,15 @@ Table 1`、`All models were trained for the same number of steps on identical ha
 - **向前**：`01-gating-and-routing.md`（谁选谁决定了负载的形状）。
 - **同主题的下一篇**：`03-balance-and-granularity.md` —— 容量是**事后**的截断，
   而 aux loss 是**事前**的拉平；两笔账合起来才是「负载」这一栏的完整内容。
-- **本文接住的上游让渡（8 处，逐字见下）**：
-  `00-meta/glossary.md:239`、`40-kernels/moe-kernels/03:47`、`03:197`、`03:238`、
-  `01:270`、`02:198`、`code/verify.py:887`、`code/verify.py:1170`、
+- **本文接住的上游指名让渡（8 处）**：`00-meta/glossary.md:239`、
+  `40-kernels/moe-kernels/01:270`、`02:198`、`03:47`、`03:197`、
+  `code/verify.py:887`、`code/verify.py:1170`（该字符串跨两行，引用句在 `:1171`）、
   `code/03_permute_unpermute.cu:341`。
-  ★ 其中 `:197`/`:238` 是**本文 §1.4** 接住的（「要不要重新归一化」），
+  ★ 其中 `03:197` 是**本文 §1.4** 接住的（「要不要重新归一化」），
   `01:270` 是**本文 §1.6** 接住的（「槽位数 C 该取多少」）。
+  ⚠ `03:238` **不是**让渡句（它里面没有「正文在 `80-model-architectures/moe`」），
+  而是**同一段里被引用的一句**：「做 mask 之后输出并不是 `X[t]` 本身：它是
+  `X[t] × 幸存权重之和`」—— 它同样是**本文 §1.4** 的正文（见本节末的契约表）。
 
 ## 编译与运行
 
@@ -552,7 +555,9 @@ EOF
 | `00-meta/glossary.md:239` | 定义正文在本域 ⇒ **本文 §1.1**；它描述的「前向输出恰为 0」对应 **dropping 下的贡献口径** ⇒ **本文 §3.2**（并列，不改它） |
 | `40-kernels/moe-kernels/03-permute-and-unpermute.md:47` | 定义正文在本域 ⇒ **本文 §1.1** |
 | `40-kernels/moe-kernels/03:197` | 「要不要重新归一化」⇒ **本文 §1.4** |
-| `40-kernels/moe-kernels/03:238` | 「做 mask 之后输出是 `X[t] × 幸存权重之和`」⇒ **本文 §1.4** |
+| `40-kernels/moe-kernels/03:238` | ⚠ **不是让渡句**（该行不含「正文在本域」的括注），而是被引用的一句：「做 mask 之后输出并不是 `X[t]` 本身：它是 `X[t] × 幸存权重之和`」⇒ **本文 §1.4**（同样的内容） |
 | `40-kernels/moe-kernels/01-moe-compute-pattern.md:270` | 「槽位数 C 该取多少」⇒ **本文 §1.6**（+ `03` 的 `C.4`） |
 | `40-kernels/moe-kernels/02-grouped-gemm.md:198` | 结构设计空间 ⇒ **本文 §1.6** 与 `03` 的粒度一节 |
-| `40-kernels/moe-kernels/code/verify.py:887`、`:1170`、`code/03_permute_unpermute.cu:341` | 同上（`.cu` 与 `verify.py` 的配套回链） |
+| `40-kernels/moe-kernels/code/verify.py:887` | 逐字 `# 容量截断后的丢弃率（slot 数 C 的语义见 80-model-architectures/moe）` ⇒ **本文 §1.1** |
+| `40-kernels/moe-kernels/code/verify.py:1170` | 「**容量因子的定义与语义**不在本域——正文只讲它对 kernel 的影响，定义回链 `80-model-architectures/moe`」——★ **该字符串跨 `:1170-1171` 两行**，引用句落在 `:1171` ⇒ **本文 §1.1** |
+| `40-kernels/moe-kernels/code/03_permute_unpermute.cu:341` | 逐字 `要不要把它重新归一化是架构层的选择（见 80-model-architectures/moe）` ⇒ **本文 §1.4** |
