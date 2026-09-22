@@ -1,0 +1,8 @@
+# 80-model-architectures/transformer 的运行依赖
+#
+# ★ 只有 numpy。本域**不 import 任何目标框架**（计划 §0.2；CONTRIBUTING §2 的
+#   「永不 import 目标框架」，原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
+#   没有 numpy 就装不上，也跑不了：编号程序与 mutate.py 都用它。
+#
+# 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64）。
+numpy>=2.0
