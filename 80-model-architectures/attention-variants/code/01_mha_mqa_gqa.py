@@ -381,33 +381,40 @@ def part_C():
           "★ 缩放**是判据的组成部分**：换掉它输出就变（差 %.4f > %g）"
           "⇒ 「去掉 `1/√d_h`」这类口径变异会在输出上露出来" % (d, SCALE_DROP_MIN))
 
-    # ── C.4 ★★ M6 的**对照组**：把参照换成被测自己 ⇒ 断言「测不出来」 ────
+    # ── C.4 ★★ M6 的**对照组**：一个**共享代码的「假参照」** ⇒ 断言「测不出来」 ──
     # ★★ 计划 §3 Chunk 2 的验收要求：「把参考实现与被测实现**共享一段代码**，断言应当
     #    **测不出来**（即这个「假通过」现象**必须能被复现**）」。
-    # ★ 这里刻意把 P17 的现场复现一遍：**参照就是被测**时，逐元素差恒为**精确的 `0.0`**
-    #   —— 而 `A.3` 的容差式判据（`< 1e-14`）**照样通过**。⇒ 容差对这种情况**没有分辨力**。
-    #   ⇒ 唯一能揭穿它的是**机械检查**：`inspect.getsource` 相等（`A.5`）。
+    # ★ 这里刻意把 P17 的现场复现一遍：假参照**直接调用被测实现** ⇒ 逐元素差恒为
+    #    **精确的 `0.0`**，而 `A.3` 的容差式判据（`< 1e-14`）**照样通过**
+    #    ⇒ 容差对这种情况**没有分辨力**。
+    # ★ 揭穿它的是**机械检查**：`inspect.getsource` 不等（`A.5`）与 **AST 调用表**
+    #    （下面这一条用的是与 `D.8` 同一个探测器）。
     # ★ 注意 `== 0.0` 在这里是**合法的用法**：它落在 `00-meta/glossary.md:240` 说的
     #   「**两种相反含义**」的**第二种**（共享代码 ⇒ 测不出来），而不是第一种（正确）。
+    def attn_shared_ref(q, k, v):
+        """★ 故意的「假参照」：它**直接调用被测实现**（这就是 P17 的现场）。"""
+        return attn_dense(q, k, v)
+
     x_s, k_s, v_s = draw_data(SEED, 1, 1, D_HEAD, S_Q, S_K)
-    shared_a = attn_dense(x_s[0], k_s[0], v_s[0])
-    shared_b = attn_dense(x_s[0], k_s[0], v_s[0])        # ← 「参照」= 被测自己
-    d_shared = float(np.abs(shared_a - shared_b).max())
-    indep_a = attn_dense(x_s[0], k_s[0], v_s[0])
-    indep_b = attn_stream(x_s[0], k_s[0], v_s[0])
-    d_indep = float(np.abs(indep_a - indep_b).max())
-    same_src = inspect.getsource(attn_dense) == inspect.getsource(attn_dense)
+    d_shared = float(np.abs(attn_dense(x_s[0], k_s[0], v_s[0])
+                            - attn_shared_ref(x_s[0], k_s[0], v_s[0])).max())
+    d_indep = float(np.abs(attn_dense(x_s[0], k_s[0], v_s[0])
+                           - attn_stream(x_s[0], k_s[0], v_s[0])).max())
+    caught_shared = "attn_dense" in _callee_names(attn_shared_ref)   # ← 探测器
+    caught_real = "attn_dense" in _callee_names(attn_stream)
     print()
-    print("  C.4：★★ 对照组（M6）——「参照」与「被测」是**同一份代码**时：")
+    print("  C.4：★★ 对照组（M6）——「参照」是一个**直接调用被测实现**的假参照：")
     print("       逐元素差 = **%.1f**（精确 0.0！）而 A.3 的判据 `< %g` **照样通过**"
           % (d_shared, REF_TOL))
     print("       真独立时同一个量 = %.3e ≠ 0.0 ⇒ 两种情形**只是量级不同**，"
           "容差**分辨不出来**" % d_indep)
-    check("C.4", d_shared == 0.0 and d_indep != 0.0 and same_src
-          and inspect.getsource(attn_dense) != inspect.getsource(attn_stream),
+    print("       ★ 但 AST 调用表**分辨得出来**：假参照里含 `attn_dense` = %s，"
+          "真参照里含 = %s" % (caught_shared, caught_real))
+    check("C.4", d_shared == 0.0 and d_indep != 0.0
+          and caught_shared and not caught_real,
           "★ 假通过**可复现**：共享代码 ⇒ 差是**精确 `0.0`**（%.1f），独立路径 ⇒ %.3e "
-          "—— 两者都 `< %g`。★ 揭穿它的是**源码相等**这一条机械检查（`A.5`），"
-          "不是容差" % (d_shared, d_indep, REF_TOL))
+          "—— 两者都 `< %g`。★ 揭穿它的是**AST 调用表**（假参照 True / 真参照 False）"
+          "与 `inspect.getsource` 不等（`A.5`），**不是**容差" % (d_shared, d_indep, REF_TOL))
 
 
 # ===========================================================================
@@ -418,6 +425,7 @@ def _callee_names(func):
 
     先例：`make lint` 与 `mutate.py` 都走 AST 而不是 grep —— 注释里出现一个名字
     和真的调用它是两件事。
+    ★ 它同时是**参照实现独立性**的探测器（`D.8`）与**假通过**的探测器（`C.4`）。
     """
     import textwrap
     tree = ast.parse(textwrap.dedent(inspect.getsource(func)))

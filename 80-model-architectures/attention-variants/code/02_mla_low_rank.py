@@ -486,37 +486,49 @@ def part_C():
           "（极差 %.4f > %g），所以拿它作差是「两个都不合法的对象之差」"
           " —— 这正是计划 §0.7-D 给 `probe_80g.py` 记下的那处瑕疵" % (spread_bad, SHIFT_MIN))
 
-    # ── C.4 ★★ M6 的**对照组**：把参照换成被测自己 ⇒ 断言「测不出来」 ────
+    # ── C.4 ★★ M6 的**对照组**：一个**共享代码的「假参照」** ⇒ 断言「测不出来」 ──
     # ★★ 计划 §3 Chunk 2 的验收要求：「把参考实现与被测实现**共享一段代码**，断言应当
     #    **测不出来**（即这个「假通过」现象**必须能被复现**）」。
-    # ★ `A.1` 的判据是容差式（`< 1e-12`）：**参照就是被测**时逐元素差恒为**精确的 `0.0`**，
-    #   而它**照样通过** ⇒ 容差对这种情况**没有分辨力**。
+    # ★ `A.1` 的判据是容差式（`< 1e-12`）：假参照**直接调用被测实现**时，逐元素差恒为
+    #    **精确的 `0.0`**，而它**照样通过** ⇒ 容差对这种情况**没有分辨力**。
+    # ★ 揭穿它的是**机械检查**：`inspect.getsource` 不等（`A.3`）与 **AST 调用表**
+    #    （下面用的是与 `D.6` 同一个探测器）。
     # ★ `== 0.0` 在这里是**合法用法**：它落在 `00-meta/glossary.md:240` 说的「**两种相反
-    #   含义**」的**第二种**（共享代码 ⇒ 测不出来），不是第一种（正确）。
-    a_shared = mla_explicit(x, w_q, w_dkv, w_uk)[0]        # ← 「参照」= 被测自己
-    b_shared = mla_explicit(x, w_q, w_dkv, w_uk)[0]
-    d_shared = float(np.abs(a_shared - b_shared).max())
-    a_indep = mla_explicit(x, w_q, w_dkv, w_uk)[0]
-    b_indep = mla_absorbed(x, w_q, w_uk, x @ w_dkv)
-    d_indep = float(np.abs(a_indep - b_indep).max())
+    #    含义**」的**第二种**（共享代码 ⇒ 测不出来），不是第一种（正确）。
+    def mla_shared_ref(xx, wq, wdkv, wuk):
+        """★ 故意的「假参照」：它**直接调用被测实现**（这就是 P17 的现场）。"""
+        return mla_explicit(xx, wq, wdkv, wuk)[0]
+
+    c_now = x @ w_dkv
+    d_shared = float(np.abs(mla_explicit(x, w_q, w_dkv, w_uk)[0]
+                            - mla_shared_ref(x, w_q, w_dkv, w_uk)).max())
+    d_indep = float(np.abs(mla_explicit(x, w_q, w_dkv, w_uk)[0]
+                           - mla_absorbed(x, w_q, w_uk, c_now)).max())
+    caught_shared = "mla_explicit" in _callee_names(mla_shared_ref)   # ← 探测器
+    caught_real = "mla_explicit" in _callee_names(mla_absorbed)
     print()
-    print("  C.4：★★ 对照组（M6）——「参照」与「被测」是**同一份代码**时：")
+    print("  C.4：★★ 对照组（M6）——「参照」是一个**直接调用被测实现**的假参照：")
     print("       逐元素差 = **%.1f**（精确 0.0！）而 A.1 的判据 `< %g` **照样通过**"
           % (d_shared, ABSORB_TOL))
     print("       真独立时同一个量 = %.3e ≠ 0.0 ⇒ 两种情形**只是量级不同**，"
           "容差**分辨不出来**" % d_indep)
+    print("       ★ 但 AST 调用表**分辨得出来**：假参照里含 `mla_explicit` = %s，"
+          "真参照里含 = %s" % (caught_shared, caught_real))
     check("C.4", d_shared == 0.0 and d_indep != 0.0
-          and inspect.getsource(mla_explicit) != inspect.getsource(mla_absorbed),
+          and caught_shared and not caught_real,
           "★ 假通过**可复现**：共享代码 ⇒ 差是**精确 `0.0`**（%.1f），独立路径 ⇒ %.3e "
-          "—— 两者都 `< %g`。★ 揭穿它的是**源码不等 + 调用计数为 0**（`A.3` / `A.2`），"
-          "不是容差" % (d_shared, d_indep, ABSORB_TOL))
+          "—— 两者都 `< %g`。★ 揭穿它的是**AST 调用表**（假参照 True / 真参照 False）"
+          "与调用计数为 0（`A.2`），**不是**容差" % (d_shared, d_indep, ABSORB_TOL))
 
 
 # ===========================================================================
 # 9. D 类：失败标记自检 + 口径钉住
 # ===========================================================================
 def _callee_names(func):
-    """★ 用 **AST** 列出 `func` 真正**调用**的函数名（不含注释/文档串里的提及）。"""
+    """★ 用 **AST** 列出 `func` 真正**调用**的函数名（不含注释/文档串里的提及）。
+
+    ★ 它同时是**参照实现独立性**的探测器（`D.6`）与**假通过**的探测器（`C.4`）。
+    """
     import textwrap
     tree = ast.parse(textwrap.dedent(inspect.getsource(func)))
     return {n.func.id for n in ast.walk(tree)
