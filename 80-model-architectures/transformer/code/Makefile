@@ -120,7 +120,7 @@ lint: check-env
 #   ⇒ 非零码**不再是**「设计如此」；见 `mutate.py` 顶部与 Chunk 1 的实施报告。
 mutate: check-env
 	@$(PYTHON) mutate.py || { rc=$$?; echo; \
-		echo "★ mutate.py 退出码 $$rc：1 = 有漏网（见上「漏网」清单）；"; \
+		echo "★ mutate.py 的退出码 = $$rc 。它的含义：1 = 有漏网（见上「漏网」清单）；"; \
 		echo "  2 = 仓库文件在本次运行中被改动，读数不可信；3 = 空分母（Chunk 0 骨架）。"; \
 		exit $$rc; }
 
