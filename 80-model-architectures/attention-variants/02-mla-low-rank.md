@@ -52,7 +52,7 @@ k = c · W_UK ,  v = c · W_UV
 ★ **本域的边界**：KV 字节的六项乘积正文在
 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`（正文在彼，此处回链）；
 RoPE 的旋转定义与两套实现约定的正文在 `80-model-architectures/positional-encoding/01-rope-definition`
-（**未建成**，前向声明）。本域只算**元素数**，只用 RoPE，不解释它。
+（已建成）。本域只算**元素数**，只用 RoPE，不解释它。
 
 ## 1. 原理
 
@@ -283,7 +283,7 @@ n_g = (d_c + d_h^R) / (2 d_h)                                    …… (4)
 | 「等于 GQA 的几组」 | 用 `n_g = (d_c + d_h^R)/(2 d_h)` 自己算：论文的两个比例代入得**精确 `9/4`** ⇒ 复现 `2.25 groups` |
 | 引用 `93.3%` 的减少 | 必须带上对比对象（**DeepSeek 67B**，一个具体 dense 模型）；论文自给的可比口径是「等于 GQA 的 **2.25 组**」；度量口径逐字 `number of elements, regardless of the storage precision` |
 | 见到论文里另一个 `93.3` | 那是 **ARC-Challenge 准确率**（同名不同指），不要与 KV 减少混为一谈 |
-| 要在本域引用 RoPE 的旋转定义 | 不在本文：正文在 `80-model-architectures/positional-encoding/01-rope-definition`（**前向声明**，未建成）。本文只用它 |
+| 要在本域引用 RoPE 的旋转定义 | 不在本文：正文在 `80-model-architectures/positional-encoding/01-rope-definition`（已建成）。本文只用它 |
 | 想知道 KV 的**字节**账 | 不在本文：正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76` |
 
 > ★ **表 A 的数值判据**（计划 §3 Chunk 2）：③ 吸收 vs 显式的差 `< 1e-12`（机器精度档）；
@@ -386,7 +386,7 @@ EOF
 **上游契约**
 
 - `40-kernels/attention/04-warp-specialization-and-variants.md:128`：「三个常见变体，本文只讲
-  **它们对 kernel 结构的影响**，**定义不重推**」—— 本文是那处**悬空让渡**的三份正文之一。
+  **它们对 kernel 结构的影响**，**定义不重推**」—— 本文是那处**原为悬空让渡**的三份正文之一。
 - `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184` 逐字含 RoPE 的
   「`jointly rotates pairs of channels by different angles depending on the position`」；
   本域建成后应回链到 `positional-encoding/01`（Chunk 6 的动作）。

@@ -447,7 +447,7 @@ UNSOURCED = (
 #
 #   · ★★ **变体的 kernel 后果**（滑窗改循环范围、ALiBi/softcap 改 `exp` 的输入）
 #     → `40-kernels/attention/04-warp-specialization-and-variants.md:126-156`。
-#     本主题只补**定义与出处**（那正是那处「悬空让渡」缺的东西）。
+#     本主题只补**定义与出处**（那正是那处「原为悬空让渡」缺的东西）。
 #
 #   · **位置编码自身的 FLOPs / 访存账**：本主题**不算** —— RoPE 是逐元素的旋转，
 #     它的计算量与 attention 主体的比值不属于本域（正文在 `40-kernels/attention`）。

@@ -43,7 +43,7 @@ updated: 2026-09-22
 `Bc = 128` 时的块数表）是**别的域**的正文，
 在 `40-kernels/attention/04-warp-specialization-and-variants.md:126-156`（正文在彼，此处回链）。
 **本文讲的是架构侧那一条**：`W` 这么小，为什么整体还能看很远。
-这正是那处「**定义不重推**」的悬空让渡里，**滑窗那一份**要接住的东西。
+这正是那处「**定义不重推**」的原为悬空让渡里，**滑窗那一份**要接住的东西。
 
 ## 1. 原理
 
@@ -164,7 +164,7 @@ slots(S, W) = min(S, W)                                          …… (2)
 ⇒ **这两类在结构上不同**：前者「少看一些位置」，后者「每个位置都看、但权重被改」。
 本域只写 SWA 这一侧；另外两类变体「改什么」的那一行表在
 `40-kernels/attention/04-warp-specialization-and-variants.md:130-134`（正文在彼，此处回链），
-其中 ALiBi 的完整定义归 `positional-encoding/03-extrapolation`（**未建成**，前向声明）。
+其中 ALiBi 的完整定义归 `positional-encoding/03-extrapolation`（已建成）。
 
 **配置侧的落点**：滑窗在 config 里是**两个字段**——`sliding_window`（窗口长度 `W`）
 与 `use_sliding_window`（是否启用）。★ **本域核实的是这两个字段的「存在性 + 取值」**，
@@ -302,11 +302,11 @@ Mistral 7B 论文摘要逐字：
 
 - **前置**：`01-mha-mqa-gqa`（头维那条轴）。**本文是位置维那条轴**。
 - **同主题**：`02-mla-low-rank`（每条 KV 有多宽）。三篇各是 KV 预算的一个因子。
-- **感受野的另一个用法**：`positional-encoding/03-extrapolation`（**未建成**，前向声明）——
+- **感受野的另一个用法**：`positional-encoding/03-extrapolation`（已建成）——
   外推那一侧问的是「训练时只见过这么长，位置编码能不能撑到更长」，与本文的
   「堆叠层把感受野撑开」是**两个方向**的账。
 - **kernel 侧**：正文在 `40-kernels/attention/04-warp-specialization-and-variants.md:126-156`
-  （正文在彼，此处回链）。★ 那处 `:128` 的「定义不重推」是一处**悬空让渡**，
+  （正文在彼，此处回链）。★ 那处 `:128` 的「定义不重推」是一处**原为悬空让渡**，
   滑窗这一份由本文接住。
 - **KV 的字节账**：正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`
   （正文在彼，此处回链）。
@@ -388,7 +388,7 @@ EOF
 **上游契约**
 
 - `40-kernels/attention/04-warp-specialization-and-variants.md:128`：「三个常见变体，本文只讲
-  **它们对 kernel 结构的影响**，**定义不重推**」—— 这是**悬空让渡**；本文接住**滑窗**那一份，
+  **它们对 kernel 结构的影响**，**定义不重推**」—— 这是**原为悬空让渡**；本文接住**滑窗**那一份，
   ALiBi 归 `positional-encoding/03`，softcap 属 logit 处理（不在本域）。
 - `40-kernels/attention/04:130-134` 那张「改什么」的一行表（滑窗 = KV 的**可见范围**）
   是本文的**对接面**：那边给一行，本文给它完整的定义与出处。

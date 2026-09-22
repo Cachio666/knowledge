@@ -367,7 +367,7 @@ slope_h = (2^{−8/n})^h,   h = 1..n
   ★ 那座桥是 `r_i = L/λ_i ≡ turns_i(L)`（`§1.2`）。
 - **相关的架构问题**：`attention-variants/03-window-and-hybrid` 讲**另一种**扩展上下文的方式
   （堆叠层的感受野 `W×L`），它与本文是**两件事**：一个是「看多远」、一个是「位置怎么表示」。
-- **上游的悬空让渡**：`40-kernels/attention/04:128` 说「三个常见变体，本文只讲它们对 kernel
+- **上游的原为悬空让渡**：`40-kernels/attention/04:128` 说「三个常见变体，本文只讲它们对 kernel
   结构的影响，定义不重推」—— 那一份让渡里 **ALiBi 归本文**（另两个：滑窗归
   `attention-variants/03`，softcap 属 logit 处理、不在本域）。
 
@@ -458,7 +458,7 @@ curl -sS -o /tmp/arx_2104.09864.html https://ar5iv.labs.arxiv.org/html/2104.0986
 **上游契约**
 
 - `40-kernels/attention/04-warp-specialization-and-variants.md:128`：「三个常见变体，本文只讲
-  **它们对 kernel 结构的影响**，**定义不重推**」—— 这是**悬空让渡**；本文接住 **ALiBi** 那一份。
+  **它们对 kernel 结构的影响**，**定义不重推**」—— 这是**原为悬空让渡**；本文接住 **ALiBi** 那一份。
 - `40-kernels/attention/04:130-134` 那张「改什么」的一行表（ALiBi = 在 `S` 上**加一项**与
   `(i−j)` 成正比的偏置）是本文的**对接面**：那边给一行，本文给它完整的定义、那条脚注、
   以及那条脚注的**可判定后果**。
