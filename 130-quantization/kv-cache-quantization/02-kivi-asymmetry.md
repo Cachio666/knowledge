@@ -181,7 +181,7 @@ KIVI §4.1 逐字（本次逐字读到）：
 **第三步：KVQuant 把 K 侧再往前推三步**（引用值，arXiv:2401.18079v4 逐字读到）：
 
 1. **per-channel K + per-token V 的基线本身**就带来 **3.82** 的 PPL 改善（LLaMA-7B / WikiText-2 / 3-bit）；
-2. **pre-RoPE 量化 K**（+0.82）：RoPE 会「jointly rotates pairs of channels by different angles depending on the position」，把原本一致的大幅值通道打散；先量化再套 RoPE 就绕开了；
+2. **pre-RoPE 量化 K**（+0.82）：RoPE 会「jointly rotates pairs of channels by different angles depending on the position」，把原本一致的大幅值通道打散；先量化再套 RoPE 就绕开了（那句**结构陈述**的定义——**哪两个通道配对**、为什么叫「成对旋转」——正文在 `80-model-architectures/positional-encoding/01-rope-definition.md`，此处回链；本文只引用它对**量化轴**的后果）；
 3. **per-vector dense-and-sparse**（+0.19）：只把 **1% 的 outlier** 单独存成稀疏格式。
 
 合起来的主张是 **3-bit 下 perplexity 退化 <0.1**，对应 **4.8× 更长的上下文**。

@@ -378,8 +378,8 @@ def part_C():
 
     # ── C.4 ★ 上游 `01:270` 让渡的那个问题：「槽位数 C 该取多少」 ────────────
     # ★ 上游逐字（`40-kernels/moe-kernels/01-moe-compute-pattern.md:270`）：
-    #   「**「槽位数 C 该取多少」是架构层的问题**（正文在 `80-model-architectures/moe`，
-    #     此处回链）」。
+    #   「**「槽位数 C 该取多少」是架构层的问题**（正文在 `80-model-architectures/moe/02-capacity-factor.md`
+    #     的 §1.6，此处回链）」。
     # ★★ 本域的可判定回答**不是**一个最优值，而是**一条依赖**：
     #   `cap = ceil((T/E)·cf)` 与「平均负载 `T·k/E`」的比 `cap/mean_load ≈ cf/k`
     #   **与 `E` 无关**（两处同时按 `1/E` 缩放）—— 但**丢弃率不随 `E` 不变**，

@@ -125,7 +125,7 @@ PV ：2·1·8 = 16 条 .m64n128k16
 
 ### 1.4 变体：只改结构，不改算法
 
-三个常见变体，本文只讲**它们对 kernel 结构的影响**，定义不重推：
+三个常见变体，本文只讲**它们对 kernel 结构的影响**，定义不重推（三个变体的**完整定义与出处**：滑窗的正文在 `80-model-architectures/attention-variants/03-window-and-hybrid.md`，ALiBi 的正文在 `80-model-architectures/positional-encoding/03-extrapolation.md`，而 softcap 属 logit 处理、**不在 `80-model-architectures`**（本库没有它的**定义与出处**那一份正文；本文只给出它对 kernel 结构的影响））：
 
 | 变体 | 改什么 | 对结构的影响 |
 |---|---|---|

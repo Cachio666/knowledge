@@ -267,7 +267,7 @@ permute、grouped GEMM、unpermute 的边界是三个全局同步点。融合的
 
 极端情形（90% 的 token 第一选择是专家 0）下，`tokens_per_expert` 是 `[3784, 609, 636, 641, 643, 613, 615, 651]`——**按最大填充的浪费比 72.94%**；而若把每个专家的 slot 数截断到均值 1024，被丢掉的 slot 占 **33.69%**，对应这一层 **0.6483 TFLOPs** 算了但不参与输出（推导值，`make verify` §C1）。注意截断只波及 **8 个专家里的 1 个**——**不均体现为「少数专家溢出」，不是「大家一起溢出」**，这决定了治理手段（对齐热点专家 vs 全局扩容量）完全不同。
 
-**规避**：把「填充」与「截断」当成两个独立的旋钮，分别记账。「槽位数 C 该取多少」是架构层的问题（正文在 `80-model-architectures/moe`，此处回链）；kernel 侧的责任是让 C 一旦定下来，**哪些 slot 要 mask、被丢的 token 在 unpermute 时怎么处理**这两件事有确定的说法（[03 篇 §2](03-permute-and-unpermute.md)）。
+**规避**：把「填充」与「截断」当成两个独立的旋钮，分别记账。「槽位数 C 该取多少」是架构层的问题（正文在 `80-model-architectures/moe/02-capacity-factor.md` 的 §1.6，此处回链）；kernel 侧的责任是让 C 一旦定下来，**哪些 slot 要 mask、被丢的 token 在 unpermute 时怎么处理**这两件事有确定的说法（[03 篇 §2](03-permute-and-unpermute.md)）。
 
 ### 4.3 记账时漏掉 down 投影
 

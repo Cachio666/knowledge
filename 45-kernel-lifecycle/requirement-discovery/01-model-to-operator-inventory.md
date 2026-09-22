@@ -320,7 +320,7 @@ vLLM 官方博客（2026-07-22 / 07-27）与 v0.28.0 的 release notes（**[B]**
 - 拿到清单之后的下一步——**每个算子在目标精度路径上是什么受限**，在 `45-kernel-lifecycle/requirement-discovery/02-roofline-verdict`（本域，正文在本域）。
 - 清单排完序之后——**先写哪个**，在 `45-kernel-lifecycle/requirement-discovery/03-optimization-priority`。
 - attention 为什么是 `2S²d`、MoE 的路由怎么走：**算子本体，回链** `40-kernels/attention/01-attention-as-a-kernel` 与 `40-kernels/moe-kernels/01-moe-compute-pattern`。
-- 模型结构**是什么**（transformer / GQA / MoE 的原理）：回链 `80-model-architectures/transformer`（**未建成**）。
+- 模型结构**是什么**（transformer / GQA / MoE 的原理）：回链 `80-model-architectures/transformer`。
 - roofline 模型的**原理与推导**：回链 `10-foundations/performance-models/01-roofline-model`。
 
 ## 编译与运行

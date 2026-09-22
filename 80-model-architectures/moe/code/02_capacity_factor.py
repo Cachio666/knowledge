@@ -6,10 +6,10 @@ r"""02_capacity_factor.py —— ★★ **容量因子的定义式**、取整口
 ★ 三类断言（A 算法正确性 / B 代价模型 / C 边界与反例）**全部在本程序内部**，
 失败时以**非零退出码**结束；**没有 `verify.py`**。
 
-★★ **本程序是上游 8 处指名让渡的落点之一**。`00-meta/glossary.md:239` 逐字：
-「容量因子 (capacity factor) … **定义与语义的正文在 `80-model-architectures/moe`**」；
+★★ **本程序是上游 8 处指名让渡的落点之一**。`00-meta/glossary.md:240` 逐字：
+「容量因子 (capacity factor) … **定义与语义的正文在 `80-model-architectures/moe/02-capacity-factor.md`**」；
 `40-kernels/moe-kernels/03-permute-and-unpermute.md:47` 逐字：
-「**容量因子本身的定义与语义不在本域**，正文在 `80-model-architectures/moe`（正文在彼，此处回链）」。
+「**容量因子本身的定义与语义不在本域**，正文在 `80-model-architectures/moe/02-capacity-factor.md`（正文在彼，此处回链）」。
 ⇒ **本程序的 `A` 段就是那 8 处指的正文的可执行形态。**
 
 ★★ 本程序的数字**全部是推导值或本机实测值**，测量条件是：
@@ -497,7 +497,7 @@ def part_C(x, idx, w, up, down):
     # ★ 上游两处**指名让渡**给本域的就是这一条：
     #   `40-kernels/moe-kernels/03-permute-and-unpermute.md:197` 逐字「丢掉之后要不要把幸存
     #   权重重新归一化、要不要给这类 token 补一条旁路，**属于架构层的决定（正文在
-    #   `80-model-architectures/moe`，此处回链）**」；
+    #   `80-model-architectures/moe/02-capacity-factor.md` 的 §1.4，此处回链）**」；
     #   同文 `:238` 逐字「**做 mask 之后输出并不是 `X[t]` 本身**：它是 `X[t] × 幸存权重之和`
     #   （…）。**要不要重新归一化是架构层的选择**」。
     # ★★ 两条路是**精确**相差一个因子的（与专家函数是什么无关）：
@@ -724,9 +724,9 @@ def main():
     print("    本机 macOS arm64 **无 GPU**：这些数不支撑任何关于真实模型或 GPU 的结论。")
     print("  ★ 失败标记 ASSERT_FAIL_MARK = %r（本主题自定义；不跨主题照抄）"
           % ASSERT_FAIL_MARK)
-    print("  ★★ 本段是上游 **8 处指名让渡**的落点：`00-meta/glossary.md:239` 与")
+    print("  ★★ 本段是上游 **8 处指名让渡**的落点：`00-meta/glossary.md:240` 与")
     print("     `40-kernels/moe-kernels/03:47` 都逐字写着「容量因子的定义与语义在")
-    print("     `80-model-architectures/moe`」。**本程序就是那条定义的可执行形态。**")
+    print("     `80-model-architectures/moe/02-capacity-factor.md`」。**本程序就是那条定义的可执行形态。**")
     print("  ★ 禁区（计划 §2）：本程序**不讲** permute/unpermute 的实现与 slot mask")
     print("     （正文在 40-kernels/moe-kernels/03）、**不算** FLOPs / 算术强度（在 01）、")
     print("     **不讲** grouped GEMM（在 02）。")

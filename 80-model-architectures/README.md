@@ -14,15 +14,16 @@
 
 本域不按「模型种类」分主题，而按**一个 block 的构成**分——每个主题回答一个固定的问题：
 
-| 层 | 主题 | 它回答 |
-|---|---|---|
-| **骨架** | `transformer` | 一个 block 由什么构成？**残差流**是什么？FFN 取什么形态？深度与宽度怎么换？ |
-| **元件** | `normalization` | 归一化用哪种、放在哪、为什么？ |
-| **元件** | `positional-encoding` | 位置信息怎么编码？能编多长？为什么外推会崩？ |
-| **取舍** | `attention-variants` | KV 用什么结构换？ |
-| **取舍** | `moe` | 参数用什么方式换激活？ |
+| 层 | 主题 | 它回答 | 状态 |
+|---|---|---|---|
+| **骨架** | [`transformer`](transformer/) | 一个 block 由什么构成？**残差流**是什么？FFN 取什么形态？深度与宽度怎么换？ | **已完成**（3 篇 / 3 程序） |
+| **元件** | [`normalization`](normalization/) | 归一化用哪种、放在哪、为什么？ | **已完成**（2 篇 / 2 程序） |
+| **元件** | [`positional-encoding`](positional-encoding/) | 位置信息怎么编码？能编多长？为什么外推会崩？ | **已完成**（3 篇 / 3 程序） |
+| **取舍** | [`attention-variants`](attention-variants/) | KV 用什么结构换？ | **已完成**（3 篇 / 3 程序） |
+| **取舍** | [`moe`](moe/) | 参数用什么方式换激活？ | **已完成**（3 篇 / 3 程序） |
 
-五个主题的依赖关系（`prerequisites` 的 DAG）以 `transformer/01` 为根，写作时逐个建立。
+五个主题全部建成（**14 篇文档 ↔ 14 个编号程序**；五个主题 `make run` / `make lint` / `mutate` 全绿）。
+依赖关系（`prerequisites` 的 DAG）以 `transformer/01` 为根。
 
 ## 本域不做什么（硬边界）
 
@@ -45,7 +46,7 @@
 | `normalization` | LayerNorm / RMSNorm 的**公式**、Welford 递推、`Σx²−nμ²` 灾难、`eps` 位置带来的数值差异 | `40-kernels/softmax-normalization/03-normalization-fusion.md:53-345`（公式在 `:55-71`）。★ 本域只写**位置之争、QK-norm、不变性的精确形态** |
 | `normalization` | 归约的访存账、融合形态 | `40-kernels/softmax-normalization/03-normalization-fusion.md:213-263`、`40-kernels/elementwise-fusion/01-memory-bound-limit.md` |
 | `positional-encoding` | —（★ **本域唯一没有禁区的主题**；**变体的 kernel 后果**那一类已在别处） | `40-kernels/attention/04-warp-specialization-and-variants.md:130-134`（那里只给出三个变体「**改什么**」的一行表，**定义与出处**正是本域要补的） |
-| **全主题** | `00-meta/glossary.md` **已有的**模型架构词条（GQA/MQA、MoE、容量因子） | `00-meta/glossary.md:236-239`。★ **本域不得另立同名词条**（否则会出现**同名两条**）；词条的定义正文在**本域**，glossary 只放短条目并回链（正文在本域，回链 `00-meta/glossary.md`） |
+| **全主题** | `00-meta/glossary.md` **已有的**模型架构词条（GQA/MQA、MoE、容量因子） | `00-meta/glossary.md:237-240`。★ **本域不得另立同名词条**（否则会出现**同名两条**）；词条的定义正文在**本域**，glossary 只放短条目并回链（正文在本域，回链 `00-meta/glossary.md`） |
 | **全主题** | roofline / 算术强度 / 逐算子判定 | `10-foundations/performance-models/01`、`02`、`03` |
 | **全主题** | 浮点误差模型与舍入（本域只写**不变性**，不写误差模型） | `10-foundations/floating-point/02-rounding-and-error-model.md:14`（该文件的 `related` 指向本域 `normalization`；本域**不写公式、不写误差模型**） |
 
@@ -72,7 +73,7 @@
 | **`ASSERT_FAIL_MARK`** | **每个主题一个，不跨主题照抄**（本库纪律）。五个取值：`transformer` = `!! FAIL: transformer` · `attention-variants` = `@@ FAIL: attention-variants` · `moe` = `## FAIL: moe` · `normalization` = `~~ FAIL: normalization` · `positional-encoding` = `$$ FAIL: positional-encoding`。**每个编号程序另加一条「标记自检」断言**（失败标记去重后**只有一个**、**等于**本主题的值、且**含 `FAIL`**）。`mutate.py` 用 **AST** 从编号程序里读出该值，**不得写死** |
 | **`mutate.py`** | ★ **每主题一份**，含**口径变异**（去掉 `1/√d_h`、把 `eps` 挪到分母外、把 `n−m` 写成 `m−n`）。只**在副本上**做，仓库文件只读；**断言捕获与崩溃捕获分开数** |
 | **`make lint`** | **AST** 检查（不是 grep：注释里出现框架名**不算违规**，真 `import` 才算）。★ 本域**任何第三方框架都不 import**，`numpy` 是唯一例外（`requirements.txt` 里只有它） |
-| **参考实现的独立性** | 定义在 `CONTRIBUTING` §2（正文在彼，此处回链；判据与「`maxdiff == 0.0` 的**两种相反含义**」见 `00-meta/glossary.md:240`）。★ **本域为什么把它单列一行**：本域的断言大多长成 `diff == 0` 或机器精度档的样子，**这一条是本域最容易自欺的地方**——两个操作被判据测出来「相等」，也可能只是**两边共用了一份代码** |
+| **参考实现的独立性** | 定义在 `CONTRIBUTING` §2（正文在彼，此处回链；判据与「`maxdiff == 0.0` 的**两种相反含义**」见 `00-meta/glossary.md:259`）。★ **本域为什么把它单列一行**：本域的断言大多长成 `diff == 0` 或机器精度档的样子，**这一条是本域最容易自欺的地方**——两个操作被判据测出来「相等」，也可能只是**两边共用了一份代码** |
 
 ## §5 用「判据表」形态（理由）
 
@@ -89,8 +90,8 @@
 ## 术语
 
 - 模型架构词条的**定义正文在本域**；`00-meta/glossary.md` 只放短条目并回链。
-  ★ **本域不得另立 `glossary` 已有的同名词条**（`00-meta/glossary.md:236`（GQA / MQA）、
-  `:237`（MoE）、`:239`（容量因子））——新词条建成时**并入**该节，**逐条去重**。
+  ★ **本域不得另立 `glossary` 已有的同名词条**（`00-meta/glossary.md` 的「模型架构」节：`:237`（GQA / MQA）、
+  `:239`（MoE）、`:240`（容量因子））——新词条建成时**并入**该节，**逐条去重**。
 - 术语的检索入口：`00-meta/glossary.md`；全库进度与主题清单：`00-meta/roadmap.md`。
 
 ## 与其他域的关系

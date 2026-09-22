@@ -44,7 +44,7 @@ updated: 2026-09-16
 2. 被容量截断丢掉的 slot，在 unpermute 时该怎么处理？
 3. 这一步值不值得优化？（先给答案：它的流量是同层专家权重的 **10.71%**——不是瓶颈，但也不小到可以乱写。）
 
-**容量因子本身的定义与语义不在本域**，正文在 `80-model-architectures/moe`（正文在彼，此处回链）。本文只讲它落到 kernel 上的那部分：**哪些 slot 要 mask、被丢的 token 在 unpermute 时怎么处理**。
+**容量因子本身的定义与语义不在本域**，正文在 `80-model-architectures/moe/02-capacity-factor.md`（正文在彼，此处回链）。本文只讲它落到 kernel 上的那部分：**哪些 slot 要 mask、被丢的 token 在 unpermute 时怎么处理**。
 
 ## 1. 原理
 
@@ -194,7 +194,7 @@ __global__ void unpermute_kernel(..., const int* dst_row,
 2. **无效，但同 token 还有别的有效选择**：跳过这一项，其余照算——输出是 `X[t] × 幸存权重之和`（见 §4.1）；
 3. **无效，且该 token 的 k 个选择全被截断**：前向输出恒为 0，**反向梯度也恒为 0**（`make verify` §C6：8 个 token 里有 2 个全丢，它们的 `‖y‖` 与 `max|∂L/∂y|` 都**恰好**是 0）。
 
-第 3 种是「这个 token 在本步训练里完全不存在」。它不是一个数值问题，是一个**语义**问题：丢掉之后要不要把幸存权重重新归一化、要不要给这类 token 补一条旁路，属于架构层的决定（正文在 `80-model-architectures/moe`，此处回链）；**kernel 侧的责任是让这个决定成为可能**——先得有 `valid` 数组，才谈得上怎么用它。
+第 3 种是「这个 token 在本步训练里完全不存在」。它不是一个数值问题，是一个**语义**问题：丢掉之后要不要把幸存权重重新归一化、要不要给这类 token 补一条旁路，属于架构层的决定（正文在 `80-model-architectures/moe/02-capacity-factor.md` 的 §1.4，此处回链）；**kernel 侧的责任是让这个决定成为可能**——先得有 `valid` 数组，才谈得上怎么用它。
 
 ### 2.5 跨设备：permute 之后还有一步
 

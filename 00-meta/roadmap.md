@@ -1,7 +1,7 @@
 # 实施进度表
 
-> 最后更新：2026-09-21
-> 进度：40 / 65 主题完成
+> 最后更新：2026-09-22
+> 进度：45 / 65 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -57,11 +57,11 @@
 - [x] jax
 
 ## 80-model-architectures
-- [ ] transformer
-- [ ] attention-variants
-- [ ] moe
-- [ ] normalization
-- [ ] positional-encoding
+- [x] transformer
+- [x] attention-variants
+- [x] moe
+- [x] normalization
+- [x] positional-encoding
 
 ## 90-training
 - [ ] autograd-and-backward

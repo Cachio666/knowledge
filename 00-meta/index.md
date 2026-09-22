@@ -176,7 +176,25 @@
   - [03-sharding-and-differences](../70-frameworks/jax/03-sharding-and-differences.md)
 
 ## 80-model-architectures
-尚未开始。
+- [transformer](../80-model-architectures/transformer/) —— 一个 block 的构成与残差流 / FFN 的形态与 `d_ff` 怎么定 / 深度与宽度
+  - [01-block-and-residual-stream](../80-model-architectures/transformer/01-block-and-residual-stream.md)
+  - [02-ffn-shapes](../80-model-architectures/transformer/02-ffn-shapes.md)
+  - [03-depth-and-width](../80-model-architectures/transformer/03-depth-and-width.md)
+- [attention-variants](../80-model-architectures/attention-variants/) —— MHA / MQA / GQA 与群组大小 `r` / MLA 的低秩与矩阵吸收 / 滑窗与叠加
+  - [01-mha-mqa-gqa](../80-model-architectures/attention-variants/01-mha-mqa-gqa.md)
+  - [02-mla-low-rank](../80-model-architectures/attention-variants/02-mla-low-rank.md)
+  - [03-window-and-hybrid](../80-model-architectures/attention-variants/03-window-and-hybrid.md)
+- [moe](../80-model-architectures/moe/) —— gating 与 routing（token choice vs expert choice）/ 容量因子与两条溢出协议 / 均衡与粒度
+  - [01-gating-and-routing](../80-model-architectures/moe/01-gating-and-routing.md)
+  - [02-capacity-factor](../80-model-architectures/moe/02-capacity-factor.md)
+  - [03-balance-and-granularity](../80-model-architectures/moe/03-balance-and-granularity.md)
+- [normalization](../80-model-architectures/normalization/) —— RMSNorm 与 LayerNorm 的不变性 / 放在哪（pre / post / final）与 QK-norm
+  - [01-rmsnorm-vs-layernorm](../80-model-architectures/normalization/01-rmsnorm-vs-layernorm.md)
+  - [02-placement-and-qk-norm](../80-model-architectures/normalization/02-placement-and-qk-norm.md)
+- [positional-encoding](../80-model-architectures/positional-encoding/) —— RoPE 的定义与两套实现约定 / `θ_i` 的谱、混叠与分辨窗口 / 外推方法
+  - [01-rope-definition](../80-model-architectures/positional-encoding/01-rope-definition.md)
+  - [02-spectrum-and-aliasing](../80-model-architectures/positional-encoding/02-spectrum-and-aliasing.md)
+  - [03-extrapolation](../80-model-architectures/positional-encoding/03-extrapolation.md)
 
 ## 90-training
 尚未开始。

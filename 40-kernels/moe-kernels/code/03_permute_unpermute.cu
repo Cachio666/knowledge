@@ -338,7 +338,7 @@ int main() {
         std::printf("不做 mask：max|Δ| vs 参考 = %.3e\n", eB);
         std::printf("↑ 前者的参考是「X[t] × 幸存权重之和」——**做 mask 之后拿回的\n");
         std::printf("  并不是 X[t] 本身**，因为被丢的那几个专家的权重没了。\n");
-        std::printf("  要不要把它重新归一化是架构层的选择（见 80-model-architectures/moe）；\n");
+        std::printf("  要不要把它重新归一化是架构层的选择（见 80-model-architectures/moe/02-capacity-factor.md）；\n");
         std::printf("  **kernel 侧的责任是让这个选择成为可能**——先得有 mask。\n");
         std::printf("  受影响的 token：%d / %d 行整行被污染。\n\n", bad, T);
         std::free(hDst); std::free(hValid); std::free(hA); std::free(hB);

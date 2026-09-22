@@ -221,6 +221,28 @@
 | SavedModel | — | 图离开进程时的落地格式。⚠ **「SavedModel 已被废弃」是过度概括**：`tf.saved_model.save` 在 v2.21.0 源码里**没有任何 `@deprecated`**，而且 **Keras 3 的 `Model.export()` 默认格式就是它**（`format="tf_saved_model"`）；被取代的是「把它当作 Keras 模型的**保存 / 再训练**格式」这件事（那用 `.keras`）。⚠ **导出 = 图 + 签名一起落地**：载入后**不产生任何追踪**，但形状假设被冻住（要留余量就用 `None` 维）。 |
 | `torch.library.custom_op` / `tf.custom_gradient` | 自定义算子入口 | PyTorch：`custom_op` 有三条硬约束——`mutates_args` 是 **keyword-only 且无默认值**、被包装函数**必须有类型标注**（schema 由它推导）、**返回的是 `CustomOpDef` 对象不是函数**（有 `register_kernel` / `register_fake`，**没有** `register_impl`）；自定义算子在 eager 上**与内置算子同层数**（1 次拦截）——注册是**交出契约**，不是绕开 dispatch。TF：官方次序是**先试着用现有 Python 算子组合，不行才写自定义 op**；`tf.custom_gradient` 是**给已有的组合换反向**，不是注册新 op。 |
 
+## 模型架构
+
+> **本节词条的正文在 `80-model-architectures`**（正文在彼，此处回链）。那一域的主线是
+> **「架构是一组取舍：每一个选择都在别处付账——参数、字节、数值条件、位置容量、或者训练稳定性」**；
+> 下表每一条都是那条主线上的一个**具体取舍**。★ 反方向（该域对本节的注记方向）见
+> `80-model-architectures/README.md`：「（正文在本域，回链 `00-meta/glossary.md`）」。
+
+| 英文 | 中文 | 说明 |
+|---|---|---|
+| 残差流 (residual stream) | 残差流 | 一个 `L` 层模型里**唯一贯穿全部层**的那个张量（宽度 `hidden_size`、长度 = 序列长）。一个 block 只做两件事：**读残差流、写一个修正量**。★ 归一化放在加法**内**还是加法**外**，决定的不是「哪个更好」，而是**残差流的范数随深度涨（pre-LN）还是不变（post-LN）**。（正文在 `80-model-architectures/transformer/01-block-and-residual-stream.md`，此处回链） |
+| pre-norm / post-norm | 前置 / 后置归一化 | 两种接法：`h + F(LN(h))`（归一化在残差**里面**）与 `LN(h + F(h))`。★ 后果分两半：post-LN 每层末尾把范数钉在 **`√D`**（`‖h_l‖ = √D` 在 eps=0 时是**恒等式**）；pre-LN 的范数**随深度增长** ⇒ 末层**必须**补 `final_norm`。★ 引用纪律（原论文自己的措辞）：结论词是 **`comparable`**、不是「更好」；`outperform` 全文出现 **1** 次、**主语是 `Wang et al. 2019`**；post-LN 梯度那句原文用 **`hypothesize`**。（正文在 `80-model-architectures/normalization/02-placement-and-qk-norm.md`，此处回链） |
+| `final_norm` | 末层归一化 | pre-LN 栈在 `lm_head` 之前补的那一次归一化。理由是一个**可手算的闭式**：`std(logits) ≈ ‖h_L‖ / √d` —— 不做它，logits 的尺度就与**深度耦合**（本机 24 层实测：未归一化 std `15.9234` → 归一化后 `1.0005`，比值 **15.915×**）。★ 判据：比值 `> 10×`。（正文在 `80-model-architectures/transformer/01-block-and-residual-stream.md` 的 §1.4 与判据③，此处回链） |
+| SwiGLU 的 `8d/3` | — | ★★ **它是推导，不是论文里的话**：论文只给「把隐藏单元数**缩小 `2/3`**」（原始字节计数：`\frac{2}{3}` = **2**、`8d/3` = **0**、`4d` = **0**）。由 `3·d·d_ff^{GLU} = 2·d·d_ff^{两层}`，**在前提「朴素 FFN 取 `d_ff = 4d`」（论文之外的约定）下**才得到 `(2/3)·4d = 8d/3`。⚠ **真实模型都不用这个数**（Llama-3-8B 的 `intermediate_size / hidden_size = 3.5`、Qwen3-30B-A3B 是 `3.0`）⇒ 「与两层 FFN 参数持平」这句话**只在 `4d` 这条前提上成立**。（正文在 `80-model-architectures/transformer/02-ffn-shapes.md`，此处回链） |
+| GQA / MQA | 分组/多查询注意力 | 多个 query 头共用一份 KV，**群组大小 `r = heads_q/heads_kv`**（文献惯例；MHA 时 `r=1`，MQA 是 `heads_kv=1` 即 `r=heads_q`）。decode 阶段**算术强度在数值上就等于 `r`**（fp16），**与序列长度和 head 维度都无关**——所以长上下文只让绝对时间线性变长，不改变瓶颈性质。（正文在 `80-model-architectures/attention-variants/01-mha-mqa-gqa.md`，此处回链） |
+| MLA (Multi-head Latent Attention) | 多头潜注意力 | 动的是**另一个因子**：把 K 与 V **联合**低秩压到一个 `d_c` 维潜向量 `c`（`c = x·W_DKV`、`k = c·W_UK`、`v = c·W_UV`），**cache 里存的是 `c`**。★ 这个新结构带来一个原结构没有的问题：用的时候要不要把 `k` 算回来（「吸收」）——**没有位置编码时可以**（`W_eff = W_Q·W_UK^T` 与序列长无关，可离线合并一次），**有 RoPE 时不行**（旋转矩阵夹在 `q` 与 `c` 之间，而矩阵乘不交换）；代价是 KV 元素数为 **`(d_c + d_h^R)·l`**，**不是** `d_c·l`。（正文在 `80-model-architectures/attention-variants/02-mla-low-rank.md`，此处回链） |
+| MoE (Mixture of Experts) | 混合专家 | 每 token 只过一个子集的专家（`top_k` 个）。计算量 `4·tokens·top_k·d_model·d_ff`（**两个 GEMM**：up + down；SwiGLU 三投影则是 6）——**与专家总数无关**。⚠ **省的是 FLOPs，不是显存**：全部专家的参数都要驻留，**权重流量随专家数线性上涨**，所以权重流量的算术强度 `2·T·top_k/(E·esize)` 随 `E` **反比下降**，拐点批大小 `T* = I*·E·esize/(2·top_k)` 随 `E` **线性上涨**。（定义正文在 `80-model-architectures/moe/01-gating-and-routing.md`，此处回链；⚠ 上面**算力 / 权重流量 / 拐点批大小**那一段的正文在 `10-foundations/performance-models`，**不在本域**） |
+| 容量因子 (capacity factor) | — | 每个专家开出的 slot 数上限。**定义与语义的正文在 `80-model-architectures/moe/02-capacity-factor.md`**，kernel 侧只关心它带来的三种状态：正常、被截断（要 mask）、以及**`k` 个选择全被截断**——最后这种 token 前向输出恰为 0、反向梯度也恰为 0，**在本步训练里完全不存在**。 |
+| 负载均衡损失 (aux loss) | 辅助损失 | Switch 式 (4) 逐字：`loss = α · N · Σ f_i · P_i` —— ★ **漏掉 `×N` 是最常见的错**（原文的理由逐字：让 loss 不随专家数变化）；`α` 是扫过 `1e-1`…`1e-5` 后取的 **`1e-2`**。`f_i` = 分给专家 `i` 的 token 占比；`P_i` = 路由概率在**全 `E` 个专家**上的列均值（**不是** top-k 归一化后的那 `k` 个权重）。★ 下界 `1.0` 是**代数的**（均匀时精确 `1`），不是有限样本的（实测 `1.0008` / `1.0012`）。⚠ GShard 的 aux loss 是**另一条式子**，不可与 Switch 的混用。（正文在 `80-model-architectures/moe/03-balance-and-granularity.md`，此处回链） |
+| RoPE 的 `θ_i` / 混叠周期 | — | `θ_i = base^{-2(i-1)/d}`（`i = 1 … d/2`）是一条约**几何阶梯**（高频密、低频疏）。★ **`θ₁ = base⁰ = 1` 是精确的，且与 `base` 无关** ⇒ 第 1 对的**混叠周期精确等于 `2π`**：位置 `m` 与 `m + 2π` 在最高频分量上不可区分。⇒ **提高 `base` 只把低频端拉长**（`λ_{d/2}`），最高频那一维**一动不动**。★ 「能分辨到多长」写成 `turns_i(S) = θ_i·S/2π`（≡ YaRN 的 `r = L/λ`）；它两端是**两种不同的失败**（高端混叠、低端分辨不出），且**两者不可能同时满足**。（正文在 `80-model-architectures/positional-encoding/02-spectrum-and-aliasing.md`，此处回链） |
+| 相位比 `Φ_ratio` | — | 本域写出的统一量（**[E]**）：`Φ_ratio_i := 扩展窗口下第 i 维的最大相位 ÷ 训练窗口下它的最大相位`；它的意义只有一句——**`Φ_ratio_i ≤ 1` 才叫「没有外推」**。⇒ 四种 RoPE 外推方法（PI / NTK-aware / NTK-by-parts / 不做任何事）是**同一个一参数族的四个成员**，差别只在**每维的频率缩放**：PI 恒 `1`（把不该缩的高频也缩了）；NTK-aware 的 `i = 1` 那一维 `= s` ⇒ **那一维被外推**；NTK-by-parts 恒落在 `[1/s, 1]`。（正文在 `80-model-architectures/positional-encoding/03-extrapolation.md`，此处回链） |
+| ALiBi | — | **另一条路**：不加位置编码，直接在 logits 上加一项与 `(i−j)` 成正比的偏置 —— `softmax(q_i K^⊤ + m·[−(i−1), …, −1, 0])`，其中 `m` 是**训练前固定的、每个 head 一个的 slope**（闭式 `slope_h = (2^{−8/n})^h`）。★★ **脚注 10 逐字**：那条偏置**不乘** `1/√d_k` ⇒ 近因效应与 `d_k` **无关**。位置越新权重越大 ⇒ 它是一个**纯近因核**。（正文在 `80-model-architectures/positional-encoding/03-extrapolation.md`，此处回链） |
+
 ## 训练与推理系统
 
 | 英文 | 中文 | 说明 |
@@ -233,10 +255,7 @@
 | FSDP (Fully Sharded Data Parallel) | 全分片数据并行 | ZeRO 思想在 PyTorch 中的实现。 |
 | all-reduce | 全规约 | 集合通信原语：所有参与者的数据求和后广播给所有人。 |
 | flash attention | — | 用在线 softmax 分块，**不物化 `S×S` 矩阵**。收益不是「提高了算术强度」，而是**绝对字节数从 O(S²) 降到 O(S·d)**（S=16384 时 65 倍）。⚠ 朴素 attention 的 AI **渐近于 `d` 且随 S 上升**，不要照抄「S² 太大所以 memory-bound」。 |
-| GQA / MQA | 分组/多查询注意力 | 多个 query 头共用一份 KV，**群组大小 `r = heads_q/heads_kv`**（文献惯例；MHA 时 `r=1`，MQA 是 `heads_kv=1` 即 `r=heads_q`）。decode 阶段**算术强度在数值上就等于 `r`**（fp16），**与序列长度和 head 维度都无关**——所以长上下文只让绝对时间线性变长，不改变瓶颈性质。 |
-| MoE (Mixture of Experts) | 混合专家 | 每 token 只过一个子集的专家（`top_k` 个）。计算量 `4·tokens·top_k·d_model·d_ff`（**两个 GEMM**：up + down；SwiGLU 三投影则是 6）——**与专家总数无关**。⚠ **省的是 FLOPs，不是显存**：全部专家的参数都要驻留，**权重流量随专家数线性上涨**，所以权重流量的算术强度 `2·T·top_k/(E·esize)` 随 `E` **反比下降**，拐点批大小 `T* = I*·E·esize/(2·top_k)` 随 `E` **线性上涨**。 |
 | grouped GEMM | 分组矩阵乘 | 把变长的一批小 GEMM 合成一次调用，**N、K 相同、只有 M 变长**——所以问题归结为「M 不规整」。**按实际长度分组**的浪费只来自「`M_e` 不是 `BM` 的整数倍」（与分布无关）；**按最大专家填充**的浪费是 `1 − 均值/最大值`（均匀 ~4%、幂律 >60%）。⚠ 网格调度比填充策略重要得多：**一个专家一个 block** 只填满 `E/槽位数` 的机器，**一个 tile 一个 block** 能到 99%。 |
-| 容量因子 (capacity factor) | — | 每个专家开出的 slot 数上限。**定义与语义的正文在 `80-model-architectures/moe`**，kernel 侧只关心它带来的三种状态：正常、被截断（要 mask）、以及**`k` 个选择全被截断**——最后这种 token 前向输出恰为 0、反向梯度也恰为 0，**在本步训练里完全不存在**。 |
 | reference implementation | 参考实现 | 与**被测实现独立**的对照实现。⚠ **独立性是硬要求，不是风格**：两者共享代码 `S` 时（`F = S∘f`、`R = S∘r`），比对 `S` 直接产出的量时差值**恒为 0**——捕获数 **`0`**、报出的最大误差 **`0.0`**，而它**看起来完全正常**（能通过最紧的容差）。机械判据两条：**参考实现不得调用被测实现的任何函数**（给共享代码装调用计数器，参考实现跑完后计数必须恰好为 `0`）、**且不得比被测实现更复杂**（否则出错时无法归因）。⚠ `maxdiff == 0.0` 有**两种相反含义**：同一实现的两条路径比 ⇒ 正确；共享代码的参考实现比 ⇒ **测不出来**。 |
 | kernel cache key | kernel 缓存键 | 决定「这次调用复用哪个**已构建**的 kernel」的哈希键。**key 必须覆盖所有改变构建结果的字段**——dtype、layout、以及**可选参数是否出现**（是「是否」，不是它的取值）。⚠ 漏一项的后果是**静默**的：`key(A) == key(B)`、只构建 1 次、两个调用方拿到同一个对象，**没有任何一方看到错误**。⚠ 三类东西必须分开：**契约字段**（跨调用不变的**模式**，**不进** key）、**调用级输入**（**进** key）、以及 `stream` / device context 这类**运行期**值（两者都不是 ⇒ **不该**进 key）。 |
 | contract（算子契约） | 算子契约 | 一个算子的接口声明。**判据不是「输入输出形状」，而是「是否改变构建出哪个 kernel」**——形状规则 / dtype / layout / 可选参数是否存在 / 输出精度 / 确定性 / 边界行为**都算**。⚠ **可测性判据**：一个字段**可测** ⟺ 它的取值域承诺了**可观察的区别**；被声明成 `unspecified` 的字段使这份契约**不存在任何能失败的测试**（可测性是 **`0`**，不是「较弱」）。⚠ 契约的作用域是**构建期**、后果出现在**测量期**——漏字段时不会有即时反馈，错误一路传导到性能数字上，那时已无法区分「设计不好」与「跑的其实是另一个 kernel」。 |

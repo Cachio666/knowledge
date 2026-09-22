@@ -884,11 +884,11 @@ def c1_extreme_imbalance():
     check("极端不均下 padded 的算力是 grouped 的 3 倍以上",
           padded_m / grouped_m > 3.0, f"{padded_m / grouped_m:.2f}×")
 
-    # 容量截断后的丢弃率（slot 数 C 的语义见 80-model-architectures/moe）
+    # 容量截断后的丢弃率（slot 数 C 的语义见 80-model-architectures/moe/02-capacity-factor.md）
     mean_c = T * k // E
     print()
     print(f"    若每个专家只开 C = 均值 = {mean_c} 个 slot（C 的**语义**不在本域，"
-          f"见 80-model-architectures/moe）：")
+          f"见 80-model-architectures/moe/02-capacity-factor.md）：")
     dropped = int(np.maximum(counts - mean_c, 0).sum())
     frac_drop = dropped / counts.sum()
     print(f"      被丢的 slot = Σ max(0, M_e − C) = {dropped} / {counts.sum()}"
@@ -1168,7 +1168,7 @@ def s0_scope():
     print("⚠ 三处边界，全文遵守：")
     print("  · MoE 的 **all-to-all 通信量**不在本域——正文只回链 110-communication/collectives；")
     print("  · **容量因子的定义与语义**不在本域——正文只讲它对 kernel 的影响，"
-          "定义回链 80-model-architectures/moe；")
+          "定义回链 80-model-architectures/moe/02-capacity-factor.md；")
     print("  · **segmented 归约**的正文在 40-kernels/reduce-scan/01，**访存合并**在")
     print("    20-gpu-architecture/memory-system/02，**bank 冲突**在 .../03——本域只代入。")
 
