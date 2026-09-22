@@ -1,0 +1,144 @@
+# 80-model-architectures/moe 示例构建
+#
+# ★ 本目录与同域另外四个主题是**同一形态**（CONTRIBUTING §2 的第二种情形）：
+#   编号程序是纯 `.py`，**默认 `python3` 下可跑** ⇒ **三类断言放在编号程序内部**，
+#   失败时以**非零退出码**结束 —— 即「断言失败 ⇒ `make run` 非零」。**没有 `verify.py`**，
+#   也**没有** `meta_falsify.py`（那是 `50-performance` 这种**测量域**的形态，见域 README）。
+#
+# ★★ Chunk 3 状态：**三个编号程序已落盘**（`SCRIPTS` 已填）。
+#    `make run` 现在**真的跑断言**：任一断言失败 ⇒ 非零退出。
+#    `make mutate` 现在有**分母**了 —— 它报「测 N / 捕获 M / 漏网 K」，
+#    漏网逐条列出（每条都要在 Chunk 报告里给出解释）。
+#    ★ R17 的 driver 修复（提交 `dfcf1f7`）已在本目录的 `mutate.py` 里：
+#      辅助模块（`specs.py`）的变异体由**全部编号程序**驱动，任一捕获即算捕获。
+#    ★ R18 的「标记自检必须做**字面量比较**」已落在每个编号程序的 `mark_part()` 里。
+#    ★★ Chunk 2 确立的 **D 段拆成 `pin_part`（跑在 A 之前）+ `mark_part`（跑在 C 之后）**
+#       在本目录同样是硬要求：`pin_part` 里**键名先钉、取值后钉** ——
+#       `mutate.py` 的分母含**字典的键**，键名被改后按名取值会抛 `KeyError`，
+#       那是**崩溃捕获**（不算真捕获）。本主题实测：崩溃捕获 **0**。
+#
+# 用法：
+#   make                    同 make run
+#   make run                依次跑本目录全部编号程序（任一断言失败即非零退出）
+#   make <程序名>           只跑一个（省略 .py 后缀）
+#   make lint               AST 检查：本目录**全部** .py 里没有 import 目标框架
+#   make mutate             ★ 叶子级变异测试（非编号工具 mutate.py；**不进 run**）
+#   make lines              列出本目录各 .py 的行数
+#   make clean              清理 __pycache__ 与临时文件
+#
+# ── 非编号文件（不计入「文档数 = 编号程序数」的核对，CONTRIBUTING §2）───────────
+#   specs.py        外部事实常量源：本主题**真的会断言**的那批常量。
+#                   ★ 每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`；
+#                   ★★ **来源分三类**（域 README §「代码约定」）：来自
+#                     `45-kernel-lifecycle/requirement-discovery/code/specs.py` 的字段标 **[B]**，
+#                     经镜像取得的字段**必须带「未与官方 repo 比对 sha256」的限定语**，
+#                     论文正文里的 hyperparameter 标 **[C]**（须给 arXiv 号 + 抓取日 + 字节计数）。
+#   mutate.py       ★ **叶子级变异测试**（计划 §1.4 的决定）。用 **AST** 从编号程序里
+#                   读出 `ASSERT_FAIL_MARK`（**不得写死**），逐个叶子改值，看断言是否捕获。
+#                   **只在副本上做**（仓库文件只读）。分母为 0 时以**说明性非零码**退出。
+#   Makefile / requirements.txt   构建入口
+#
+# ── 本机的硬约束 ──────────────────────────────────────────────────────────────
+#   **无 GPU**；`python3` = 3.13.5、`numpy` = 2.4.4（已装）。
+#   ★ **本域不 import 任何目标框架**（CONTRIBUTING §2 的「永不 import 目标框架」；
+#     计划 §0.2 更严：「任何第三方框架都不 import」，`numpy` 是唯一例外，见 requirements.txt）。
+#   ★ **本主题不需要网络**：`make run` 只读本目录的文件。
+#     （表 B 的引用判据要用 `curl` 取论文原文，那是**正文里记录的一次性动作**，
+#       **不塞进 `make run`** —— 见 `02-capacity-factor.md` 的「参考」小节。）
+
+PYTHON  ?= python3
+# ★★ Chunk 3 落盘的三个编号程序（**编号即外键**：与同目录的
+#    `01-gating-and-routing.md` / `02-capacity-factor.md` / `03-balance-and-granularity.md`
+#    一一对应；`CONTRIBUTING` §2：`<名称>` 与 `<程序名>` 不要求相同 ——
+#    文档名讲**讲什么**、程序名讲**这个程序做什么**）。
+SCRIPTS := 01_gating_routing 02_capacity_factor 03_balance_granularity
+
+.PHONY: all run lint mutate lines clean check-env
+
+all: run
+
+run: check-env
+	@if [ -z "$(SCRIPTS)" ]; then \
+		echo "=== 本主题当前有 0 个编号程序 ==="; \
+		echo "    ★ 此刻 make run **不构成任何证据** —— 它一条断言也没跑，"; \
+		echo "      不要把它当成「绿」写进任何文档。"; \
+		exit 0; \
+	fi
+	@rm -f .last_out
+	@for s in $(SCRIPTS); do \
+		echo "=== $$s ==="; \
+		$(PYTHON) $$s.py > .last_out 2>&1 || { cat .last_out; echo; \
+			echo "!! $$s.py 非零退出 —— 断言失败（详情见上）"; \
+			rm -f .last_out; exit 1; }; \
+		cat .last_out; \
+		echo; \
+	done
+	@rm -f .last_out
+	@echo "=== 全部 $(words $(SCRIPTS)) 个编号程序退出码 0 ==="
+	@echo "    （失败标记的纪律在**每个程序内部**：它只打印本主题自己的 ASSERT_FAIL_MARK，"
+	@echo "      并有一条「标记自检」断言守着；跨主题照抄标记由 mutate.py 的 AST 读取挡住。）"
+
+# ★ 这个目标的第一个动作是**空值检查**，不是靠 `PYTHON ?=` 的默认值兜底。
+#   `?=` 的语义是「**未被赋值时**才赋值」，而命令行传 `PYTHON=`（**空值**）也算
+#   「已赋值」—— 默认值不会被填上，探测被整个跳过（CONTRIBUTING:178-181）。
+check-env:
+	@if [ -z "$(PYTHON)" ]; then \
+		echo "!! PYTHON 是空的。"; \
+		echo "   make 的 ?= 在命令行传空值时不会填默认值，所以这里必须再查一次。"; \
+		echo "   请显式给一个解释器： make run PYTHON=python3"; \
+		exit 1; \
+	fi
+	@if ! command -v "$(PYTHON)" >/dev/null 2>&1 && [ ! -x "$(PYTHON)" ]; then \
+		echo "!! 找不到解释器: $(PYTHON)"; \
+		echo "   ★ make **不做** ~ 展开：若你写 PYTHON=~/env/bin/python，"; \
+		echo "     引号里的 ~ 是字面量，[ -x ] 必然失败。请改用 \$$HOME/env/bin/python。"; \
+		exit 1; \
+	fi
+	@$(PYTHON) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' \
+		|| { echo "!! 需要 python >= 3.9"; exit 1; }
+	@$(PYTHON) -c 'import numpy' 2>/dev/null \
+		|| { echo "!! 缺 numpy。请先: $(PYTHON) -m pip install -r requirements.txt"; exit 1; }
+
+# ★ `ast` 而非 grep：注释与文档串里出现 "torch" 这个词**不算违规**，真 import 才算。
+#   ★ 扫的是本目录**全部** `*.py`（含 specs.py / mutate.py 与编号程序）——
+#     只扫编号程序会漏掉辅助模块，那种 lint 是假绿。
+#   ★ 本域比 `50-performance` 的 lint 更严：那边禁的是 torch/triton/numba/cuda 四类，
+#     这边禁的是**全部深度学习框架与运行时**（计划 §0.2：本域**任何第三方框架都不 import**，
+#     requirements.txt 里只有 numpy）。
+#   ⚠ 某个 .py 有**语法错误**时，`ast.parse` 会抛异常、lint 以非零码结束 —— 这是**故意的**：
+#     一个读不了的源文件不该被静默跳过。
+lint: check-env
+	@$(PYTHON) -c 'import ast,glob,sys; \
+	BAN={"torch","tensorflow","jax","flax","triton","numba","cupy","vllm","transformers","flash_attn","tensorrt","deepspeed","bitsandbytes"}; \
+	F=sorted(glob.glob("*.py")); \
+	hit=[(f,n.lineno,m) for f in F for n in ast.walk(ast.parse(open(f,encoding="utf-8").read(),f)) \
+	     if isinstance(n,(ast.Import,ast.ImportFrom)) \
+	     for m in ([a.name for a in n.names] if isinstance(n,ast.Import) else [n.module or ""]) \
+	     if m.split(".")[0] in BAN]; \
+	[print("!! 违规 import: %s:%d  import %s" % (f,ln,m)) for f,ln,m in hit]; \
+	print("lint: 扫了 %d 个 .py 文件（%s），违规 %d 处" % (len(F), ", ".join(F) if F else "-", len(hit))); \
+	print("lint: numpy 是唯一允许的第三方库（见 requirements.txt）"); \
+	sys.exit(1 if hit else 0)'
+
+# ★ **不进 `run`**：变异测试要跑很多副本，慢；而且它的结论是「元层」的。
+# ★ 退出码的含义（Chunk 1 起）：
+#   0 = 全部捕获 · 1 = **有漏网**（逐条列出）· 2 = 读数不可信（仓库文件被改过）·
+#   3 = 空分母（Chunk 0 的骨架行为，现在走不到）。
+mutate: check-env
+	@$(PYTHON) mutate.py || { rc=$$?; echo; \
+		echo "★ mutate.py 的退出码 = $$rc 。它的含义：1 = 有漏网（见上「漏网」清单）；"; \
+		echo "  2 = 仓库文件在本次运行中被改动，读数不可信；3 = 空分母（Chunk 0 骨架）。"; \
+		exit $$rc; }
+
+lines:
+	@$(PYTHON) -c 'import os; [print("%-32s %5d" % (f, sum(1 for _ in open(f, encoding="utf-8")))) for f in sorted(os.listdir(".")) if f.endswith((".py", ".txt", ".md"))]'
+
+# 单独跑一个编号程序（显式目标优先于下面的模式规则）
+$(SCRIPTS): check-env
+	@$(PYTHON) $@.py
+
+%:
+	@$(PYTHON) $@.py
+
+clean:
+	rm -rf __pycache__ .last_out .run_summary
