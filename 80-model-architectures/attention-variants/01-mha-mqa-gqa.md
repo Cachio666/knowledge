@@ -291,8 +291,9 @@ GQA 的全部机制就是**一张映射表**，它的账是 KV 元素数按 `1/G
   两者是同一笔账（KV 的预算）的两条路。
 - **`03-window-and-hybrid`** 讲**感受野**那一侧的取舍，并说明它与 GQA 是**叠加**的（不是二选一）。
 - **KV 的字节账与 decode 的算术强度**：正文在 `130-quantization/kv-cache-quantization/01:48-76`
-  与 `40-kernels/attention/05-decoding-attention.md`（正文在彼，此处回链）。★ 那边有一句
-  本域不重复但必须知道的话：decode 的算术强度在数值上就等于群组大小 `r`，**与序列长度无关**。
+  与 `40-kernels/attention/05-decoding-attention.md`（正文在彼，此处回链）。
+  ★ 那边有一条与本域这一轴直接相邻的结论（`r` 与 decode 侧那个量的关系）——
+  **它是那一侧的正文，本域不重复也不改写**。
 - **变体对 kernel 结构的影响**：正文在 `40-kernels/attention/04-warp-specialization-and-variants.md:126-156`
   （正文在彼，此处回链）。
 
