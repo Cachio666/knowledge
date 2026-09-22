@@ -113,11 +113,15 @@ lint: check-env
 	print("lint: numpy 是唯一允许的第三方库（见 requirements.txt）"); \
 	sys.exit(1 if hit else 0)'
 
-# ★ **不进 `run`**：变异测试要跑很多个副本，慢；而且它的结论是「元层」的。
+# ★ **不进 `run`**：变异测试要跑很多副本，慢；而且它的结论是「元层」的。
+# ★ 退出码的含义（Chunk 1 起）：
+#   0 = 全部捕获 · 1 = **有漏网**（逐条列出）· 2 = 读数不可信（仓库文件被改过）·
+#   3 = 空分母（Chunk 0 的骨架行为，现在走不到）。
+#   ⇒ 非零码**不再是**「设计如此」；见 `mutate.py` 顶部与 Chunk 1 的实施报告。
 mutate: check-env
 	@$(PYTHON) mutate.py || { rc=$$?; echo; \
-		echo "★ 非零退出码 $$rc 在本阶段是**设计如此**：Chunk 0 的变异分母为 0，"; \
-		echo "  没有对象可变异。见 mutate.py 顶部说明与计划 §3 Chunk 0 的验收 5。"; \
+		echo "★ mutate.py 退出码 $$rc：1 = 有漏网（见上「漏网」清单）；"; \
+		echo "  2 = 仓库文件在本次运行中被改动，读数不可信；3 = 空分母（Chunk 0 骨架）。"; \
 		exit $$rc; }
 
 lines:
