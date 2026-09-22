@@ -1,0 +1,8 @@
+# 80-model-architectures/normalization 的依赖
+#
+# ★ 只有 numpy。本域**不 import 任何第三方框架**（计划 §0.2）：
+#   `CONTRIBUTING:127` 的原话是「不 import **目标框架**」，比 torch 宽 —— 本域任何
+#   深度学习框架与运行时都不 import。`make lint` 用 AST 检查这一点。
+#
+# 本机实测（本目录全部数字的测量条件）：python3 3.13.5 + numpy 2.4.4，macOS arm64，**无 GPU**。
+numpy>=2.0
