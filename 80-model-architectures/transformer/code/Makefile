@@ -5,13 +5,12 @@
 #   失败时以**非零退出码**结束 —— 即「断言失败 ⇒ `make run` 非零」。**没有 `verify.py`**，
 #   也**没有** `meta_falsify.py`（那是 `50-performance` 这种**测量域**的形态，见域 README）。
 #
-# ★★ Chunk 0 状态：**本主题的编号程序尚未建立**（`SCRIPTS` 为空）。
-#    因此 `make run` 目前只打印一段骨架说明并以 0 退出 —— **它一条断言都没跑，
-#    不构成任何证据**。第一批编号程序在 Chunk 1 落盘
-#    （`01_block_and_residual_stream` / `02_ffn_shapes` / `03_depth_and_width`），
-#    届时**只改 `SCRIPTS` 一行**，其余目标自动开始真跑。
-#    同理，`make mutate` 此刻是**空分母自检**（报「测 0 / 捕获 0 / 漏网 0」并**非零退出**）——
-#    那个非零码是**设计如此**，不是故障；真正的口径变异验收移到 Chunk 1 之后。
+# ★★ Chunk 1 状态：**三个编号程序已落盘**（`SCRIPTS` 已填）。
+#    `make run` 现在**真的跑断言**：任一断言失败 ⇒ 非零退出。
+#    `make mutate` 现在有**分母**了 —— 它报「测 N / 捕获 M / 漏网 K」，
+#    漏网逐条列出（每条都要在 Chunk 报告里给出解释）。
+#    ★ Chunk 0 的「空分母自检」分支仍保留在 `mutate.py` 里（那是它的骨架行为），
+#      但那一段现在**不会**被走到。
 #
 # 用法：
 #   make                    同 make run
@@ -40,10 +39,11 @@
 #   ★ **本主题不需要网络**：`make run` 只读本目录的文件。
 
 PYTHON  ?= python3
-SCRIPTS :=
-# ★ Chunk 0 的**空分母**。计划 §3 Chunk 0 的验收 5 明说「此时一个编号程序都还没有」
-#   ⇒ 变异验收改为「空分母自检」，真正的口径变异留到 Chunk 1 之后
-#   （计划 §3 Chunk 0 的验收把原稿的「完整变异」列在此处，是 P3：**那时没有对象**）。
+# ★★ Chunk 1 落盘的三个编号程序（**编号即外键**：与同目录的
+#    `01-block-and-residual-stream.md` / `02-ffn-shapes.md` / `03-depth-and-width.md` 一一对应；
+#    `CONTRIBUTING` §2：`<名称>` 与 `<程序名>` 不要求相同 —— 文档名讲**讲什么**、
+#    程序名讲**这个程序做什么**）。
+SCRIPTS := 01_block_residual 02_ffn_shapes 03_depth_width
 
 .PHONY: all run lint mutate lines clean check-env
 
