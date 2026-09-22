@@ -297,11 +297,24 @@ def main():
             skipped += 1
             continue
         total += 1
-        # 变异体在 `specs.py` 里时，驱动它跑的是**第一个编号程序**（它 `import specs`）；
-        # 两者都要放进临时目录，且 `specs.py` 用改写后的版本。
-        owner = f if f in marks else programs[0]
-        rc, out = run_once(owner, mutated=(f, patched))
-        kind = classify(rc, out, marks[owner])
+        # ★★ R17 修复（2026-09-22）—— 原来的规则是
+        #       owner = f if f in marks else programs[0]
+        #   它让**整个 `specs.py` 只被第一个编号程序检验**：若那个程序不 import specs
+        #   （骨架篇就是这样），改 specs 里任何值，它的输出都**逐字节不变** ⇒
+        #   Chunk 1 实测 **44/44 全部漏网**（全部在 specs.py）。
+        #   新语义 = 「**这条变异体被本主题的测试集捕获了吗**」：
+        #   遍历全部编号程序，**任一捕获即算捕获**（短路，平均只多跑一点点）。
+        if f in marks:
+            drivers = [f]                    # 变异体就在某个编号程序里 ⇒ 只它自己
+        else:
+            drivers = list(programs)         # 变异体在辅助模块里 ⇒ 全部编号程序都有资格
+        kind = None
+        for cand in drivers:
+            rc, out = run_once(cand, mutated=(f, patched))
+            k = classify(rc, out, marks[cand])
+            if k is not None:                # 捕获了（None = 未捕获）
+                kind = k
+                break
         if kind == "assert":
             caught_a += 1
         elif kind == "crash":

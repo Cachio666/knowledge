@@ -527,6 +527,16 @@ def part_D():
           "公开值 8.03 B、45 的逐位断言 8029995008、模型名里的 nominal 30 B —— 五项逐位一致")
     check("D.4", specs.PUBLISHED_PARAM_COUNT_B == {"Meta-Llama-3-8B": 8.03},
           "公开参数量表**只有** Llama-3-8B 一项（Qwen3 的是 MoE，按 `E` 算，属 `moe` 主题 —— P15）")
+    # ★ D.4c（2026-09-22 控制者加）：`UNSOURCED` 是**记录**而不是真值 —— 它没有任何
+    #   数值消费者，所以 R17 修复后剩下的**唯一 3 条漏网**正是它。
+    #   控制者没有把它从分母里静默排除（那正是 `mutate.py` 反对的做法），
+    #   而是**给它一个消费者**：把三项逐位钉住。改任何一项（或改名），这里立刻失败。
+    check("D.4c", specs.UNSOURCED == ("llama2_70b_config",
+                                      "qwen3_30b_a3b_shared_expert_size",
+                                      "llama3_8b_head_dim_native_field"),
+          "★ `UNSOURCED` 的三项**逐位钉住**（%d 项）：它是「本域不写、但记下为什么」的清单，"
+          "钉住它使它不再是一份「改掉也无人发现」的待办 —— 见计划 §4 R17 的修复说明"
+          % len(specs.UNSOURCED))
     check("D.5", HEAD_DIM_EXAMPLE_BACKLINK
           == "45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md:270-276",
           "★ 判据 ⑦ 的**表 B** 那一条：引用 `head_dim` 时的回链目标写死在这里（%s）"
