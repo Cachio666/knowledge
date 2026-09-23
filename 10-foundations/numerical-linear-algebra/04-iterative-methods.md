@@ -383,7 +383,7 @@ make 08_iterative_methods
 3. **CG 的 `√κ` 只在 `n ≫ √κ` 时兑现**。n = 800、tol = 1e-6 时，κ = 1e4 已经只剩 9% 余量，κ ≥ 1e5 直接撞上限。这使预条件成为**可行性**要求而非加速选项。
 4. **κ 相同不等于工作量相同**。同为 κ = 1e4，对数均匀谱要 664 步，「两端聚集」只要 2 步——相差 332 倍。这与 [01](01-norms-and-condition-number.md) 的结论同源：κ 是界，不是预测值。
 
-向外的两处落点。**训练侧**：[90-training/mixed-precision](../../90-training/mixed-precision.md)（正文在该域，此处回链）把本文的对应表落成具体的工程约定——主权重、优化器状态、loss scaling 三者的类型选择；[90-training/optimizers](../../90-training/optimizers.md) 处理的是「更新量 Δw 在什么精度下算」这一侧，正是本文 §1 第二步里 `d` 的角色。**数值侧**：本文的判据链（`κ` → `κ·u` → 收缩因子）与 [03-matrix-factorization-stability](03-matrix-factorization-stability.md) 的分解选择是同一条线的两端——先选一个在目标 κ 范围内稳定的分解，再用精化把它的精度推到自己能达到的极限。
+向外的两处落点。**训练侧**：[90-training/mixed-precision](../../90-training/mixed-precision/01-type-selection.md)（正文在该域，此处回链）把本文的对应表落成具体的工程约定——主权重、优化器状态、loss scaling 三者的类型选择；[90-training/optimizers](../../90-training/optimizers/01-sgd-and-momentum.md)（正文在该域，此处回链）处理的是「更新量 Δw 在什么精度下算」这一侧，正是本文 §1 第二步里 `d` 的角色。**数值侧**：本文的判据链（`κ` → `κ·u` → 收缩因子）与 [03-matrix-factorization-stability](03-matrix-factorization-stability.md) 的分解选择是同一条线的两端——先选一个在目标 κ 范围内稳定的分解，再用精化把它的精度推到自己能达到的极限。
 
 ## 参考
 
