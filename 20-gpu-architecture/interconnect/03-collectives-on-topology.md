@@ -176,7 +176,7 @@ hidden 8192、top-2、BF16）：
 1.0 倍（N=8 时）——到了 N=64 就是 8 倍。**所以「all-to-all 比 all-reduce 贵」这句话
 不能脱离规模说**：在 8 卡内它是搬运量更小的那个，在 64 卡以上它才是被切口卡住的那个。
 
-（MoE 的 all-to-all 细节正文在 [40-kernels/moe-kernels](../../40-kernels/moe-kernels.md)，
+（MoE 的 all-to-all 细节正文在 [40-kernels/moe-kernels](../../40-kernels/moe-kernels/)，
 此处回链。）
 
 ### 第四步：分层——两段串行相加，以及配比决定哪段是瓶颈
