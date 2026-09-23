@@ -5,9 +5,24 @@
 #   失败时以**非零退出码**结束 —— 即「断言失败 ⇒ `make run` 非零」。**没有 `verify.py`**，
 #   也**没有** `meta_falsify.py`（那是 `50-performance` 这种**测量域**的形态，见域 README）。
 #
-# ★★ **Chunk 0 只落骨架**（2026-09-23）：本目录**尚无任何编号程序** ⇒ `SCRIPTS` 为空，
-#    `make run` 走「空分母」分支（见下），**它不构成任何证据**。
-#    ★ Chunk 0 也**尚未落 `mutate.py`** ⇒ 此刻 `make mutate` 会报「找不到 mutate.py」。**这是预期行为。**
+# ★★ **Chunk 1 已落盘**（2026-09-23）：三个编号程序与 `mutate.py` 都已就位 ⇒
+#    `make run` 走**非空分母**分支，`SCRIPTS` 一行就是下面那三个。
+#    01_grad_averaging.py ↔ 01-gradient-averaging.md   （DP 的语义：平均不是求和）
+#    02_grad_sync.py      ↔ 02-gradient-synchronization.md（DP 的工程：梯度分桶）
+#    03_redundancy.py     ↔ 03-redundancy-and-limits.md（DP 的冗余账：N 个副本）
+#    （**编号即外键**：与同目录的三篇文档一一对应；`CONTRIBUTING` §2：`<名称>` 与
+#     `<程序名>` 不要求相同 —— 文档名讲**讲什么**、程序名讲**这个程序做什么**。）
+#    ★★ **本主题的禁区（两条回链，一行都不重写）**：
+#      · **梯度规约的算法**（ring allreduce / `V(N) = 2(N−1)/N × S`）与**扩展效率模型**
+#        （Amdahl / Gustafson / `N₅₀`）→ `110-communication` 与
+#        `10-foundations/performance-models/02-amdahl-and-scaling.md`；
+#      · **梯度累积与 batch 放大的等价性（含归一化层时的失效）** →
+#        `90-training/autograd-and-backward/03-gradient-lifecycle.md:71,223-224`；
+#      · **`16Ψ` 的组成与字节分解** → `90-training/checkpointing/01-state-and-bytes.md`。
+#    ★★★ **本主题最要紧的一处形态风险**：三个程序**全是模拟器**（`all_reduce = Σ局部`）
+#      ⇒ A 类判据极易写成**自证**。落法：**每条 A 类都配一个「把参照/划分故意改错」的守卫**
+#      （`CONTRIBUTING:235`），而那些「改错的目标」全部是**模块级常量** ⇒ 它们会进
+#      `make mutate` 的分母（本主题因此**特别需要**下面那个 `mutate` 目标）。
 #
 # 用法：
 #   make                    同 make run
@@ -25,9 +40,10 @@
 #                     **把「某实现的文档」当成「规范的文档」**（B 级当 A 级）。
 #                   ★★ 本域所有数值常量**一律 `< 2^53`**（`mutate.py` 的浮点变异是 `v + 1.0`），
 #                     且**幂次写成十进制字面量**（`_walk()` 不下钻 `BinOp`）。
-#   mutate.py       ★ **叶子级变异测试**（**Chunk 0 尚未落**，Chunk 1 起与编号程序同时落盘）。
-#                   用 **AST** 从编号程序里读出 `ASSERT_FAIL_MARK`（**不得写死**），逐个叶子改值，
-#                   看断言是否捕获。**只在副本上做**（仓库文件只读）。分母为 0 时以**说明性非零码**退出。
+#   mutate.py       ★ **叶子级变异测试**（**Chunk 1 已落盘**；从 `90-training/optimizers/code/`
+#                   逐字复制，只改主题名与临时目录前缀）。用 **AST** 从编号程序里读出
+#                   `ASSERT_FAIL_MARK`（**不得写死**），逐个叶子改值，看断言是否捕获。
+#                   **只在副本上做**（仓库文件只读）。分母为 0 时以**说明性非零码**退出。
 #   Makefile / requirements.txt   构建入口
 #
 # ── 本机的硬约束 ──────────────────────────────────────────────────────────────
@@ -49,7 +65,7 @@
 #   ★ 同域的 `../probes/` 是**域级**探测目录（**只打印、不断言**），**不在本 Makefile 的扫描范围内**。
 
 PYTHON  ?= python3
-SCRIPTS :=
+SCRIPTS := 01_grad_averaging 02_grad_sync 03_redundancy
 
 .PHONY: all run lint mutate lines clean check-env
 
@@ -125,7 +141,6 @@ lint: check-env
 	sys.exit(1 if hit else 0)'
 
 # ★ **不进 `run`**：变异测试要跑很多副本，慢；而且它的结论是「元层」的。
-# ★ Chunk 0 **尚未落 `mutate.py`** ⇒ 此刻本目标会以「没有 mutate.py」失败，**这是预期行为**。
 # ★ 退出码的含义（Chunk 1 起）：
 #   0 = 全部捕获 · 1 = **有漏网**（逐条列出）· 2 = 读数不可信（仓库文件被改过）·
 #   3 = 空分母。
