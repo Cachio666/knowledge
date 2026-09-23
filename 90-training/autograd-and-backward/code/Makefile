@@ -44,11 +44,13 @@
 #     （它不参与「文档数 = 编号程序数」的核对，口径见域 README 与 `../probes/README.md`）。
 
 PYTHON  ?= python3
-# ★★ Chunk 0：空。Chunk 1 落盘后填成
-#    `SCRIPTS := 01_backward 02_checkpointing 03_grad_lifecycle`
+# ★★ Chunk 1 已落盘（2026-09-23）：
+#    01_backward.py        ↔ 01-backward-from-scratch.md   （反向传播本身 + 数值梯度对拍的方法学）
+#    02_checkpointing.py   ↔ 02-gradient-checkpointing.md  （重算换显存：√n 的存储 / ≈2n 的前向）
+#    03_grad_lifecycle.py  ↔ 03-gradient-lifecycle.md      （训练循环里的梯度：累积 / 清零 / 裁剪 / 二阶）
 #    （**编号即外键**：与同目录的三篇文档一一对应；`CONTRIBUTING` §2：`<名称>` 与
 #     `<程序名>` 不要求相同 —— 文档名讲**讲什么**、程序名讲**这个程序做什么**）。
-SCRIPTS :=
+SCRIPTS := 01_backward 02_checkpointing 03_grad_lifecycle
 
 .PHONY: all run lint mutate lines clean check-env
 
