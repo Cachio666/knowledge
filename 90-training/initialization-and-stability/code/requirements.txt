@@ -1,0 +1,25 @@
+# 90-training/initialization-and-stability 的运行依赖
+#
+# ★ 只有 numpy。本域**任何第三方框架都不 import**（计划 §0.2；CONTRIBUTING §2 的
+#   「永不 import 目标框架」，原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
+#
+# ★★ 本主题**特别需要写清这一点**：三个程序讲的**都是某个实现**的规格 ——
+#    `torch.nn.init.kaiming_uniform_` 的 `bound` 与它的两个默认值、
+#    `xavier_uniform_` 的 `a` 与 `calculate_gain` 表、`clip_grad_norm_` 的返回值口径
+#    与 `error_if_nonfinite=False`、`clip_grad` 分母上的那个 `1e-6` ——
+#    但**三个程序一行都不 import 它们**。
+#    做法是把那些规格当作 `specs.py` 里的 **[B] 级常量**（逐条写明实现与版本），
+#    再按**该实现文档/源码里逐字写的规则**在 numpy 上重演一遍。
+#    ⇒ 由此得到的数**不是「PyTorch 在本机跑出来的」**，而是
+#      「按 PyTorch 的**文档与源码**在本机推出来的」⇒ 一律标为**推导值**。
+#    ★ 这个区别是 `CONTRIBUTING` §2「同一个域里若并存真系统实测与迷你实现实测，
+#      必须逐处写明是哪一档」在本主题的落法。
+#
+# ★★ **本主题的禁区（计划 §2 的四行）**：`warmup` 的**机制解释**
+#    （`80-model-architectures/normalization/02`）、**残差流的范数随深度增长**
+#    （`80-…/transformer/01`）、**误差沿深度的传播**（`130-…/theory/03`）、
+#    **MoE 的 aux loss 尺度**（`80-…/moe/03`）—— 本主题只写**工程判据与设定**。
+#    ★★ 顺带：优化器状态的**分片与通信量**属 `100-parallelism/README.md:14`。
+#
+# 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
+numpy>=2.0
