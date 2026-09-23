@@ -293,7 +293,7 @@ Tensor Core 的矩阵指令（Volta 起的 `mma`、Hopper 的 `wgmma`、Blackwel
 
 ### 主流：分块累加
 
-第二步把 K 切块（`K_tile` 常常取 16 或 32），每块内部顺序累加，块间再累加。动机本来是**访存局部性**——把 A、B 的 tile 留在寄存器/共享内存里复用，减少 HBM 流量（正文在 [40-kernels/gemm](../../40-kernels/gemm/README.md)，此处回链）。但它顺带改善了误差：归约从一条长度 K 的链变成一棵两层树，误差按层高而不是按项数累积。
+第二步把 K 切块（`K_tile` 常常取 16 或 32），每块内部顺序累加，块间再累加。动机本来是**访存局部性**——把 A、B 的 tile 留在寄存器/共享内存里复用，减少 HBM 流量（正文在 [40-kernels/gemm/02-shared-memory-tiling](../../40-kernels/gemm/02-shared-memory-tiling.md)，此处回链）。但它顺带改善了误差：归约从一条长度 K 的链变成一棵两层树，误差按层高而不是按项数累积。
 
 需要这一步的原因是：顺序累加的误差界随 K 线性增长（`γ_K ≈ K·u`），而注意力、大模型的 FFN 里 K 动辄上万——K = 16384 时 `γ_K = 9.7752e-04`，已经吃掉三位有效数字。
 
@@ -386,7 +386,7 @@ make 06_gemm_error
 2. **`√K` 来自分母，不来自累加。** `B = Σ|x·y|/|xᵀy| ≈ 0.85√K`，这才是 [floating-point/04](../floating-point/04-low-precision-formats.md) 那条「相对误差 ∝ `√K·u`」里 `√K` 的全部来源（`04` 实测的「误差 / √K·u」落在 0.10 ~ 0.31，中位数 0.27）。
 3. **界从不被逼近。** `界/实测` 稳定在 253 ~ 640 倍（受控实验）与 223.6 倍（GEMM），而这个比值本身稳定——信形状，不信数值。
 
-两条延伸。**算法侧**：[40-kernels/gemm](../../40-kernels/gemm/README.md)（正文在该域，此处回链）讲分块与 split-K 的工程实现，本文提供的判据是「分块改善误差、split-K 恶化且破坏可复现性」。**精度侧**：[04-iterative-methods](04-iterative-methods.md) 把本文的分解反过来用——既然低精度算出的近似可以靠高精度残差修正，那么「低精度算子 + 高精度状态」就是通用的模式，而它的可行性判据是一个 `κ·u` 量级的不等式。
+两条延伸。**算法侧**：[40-kernels/gemm/02-shared-memory-tiling](../../40-kernels/gemm/02-shared-memory-tiling.md) 与 [06-split-k-and-stream-k](../../40-kernels/gemm/06-split-k-and-stream-k.md)（正文在该域，此处回链）讲分块与 split-K 的工程实现，本文提供的判据是「分块改善误差、split-K 恶化且破坏可复现性」。**精度侧**：[04-iterative-methods](04-iterative-methods.md) 把本文的分解反过来用——既然低精度算出的近似可以靠高精度残差修正，那么「低精度算子 + 高精度状态」就是通用的模式，而它的可行性判据是一个 `κ·u` 量级的不等式。
 
 ## 参考
 

@@ -44,7 +44,7 @@ with torch.inference_mode():
 > **反向图保存的中间结果，就是 autograd 这一层「固化」下来的东西。**
 > 它与「图」那条路的主线（guard 固化假设）是同一个问题的两个面：**省下来的每一步，都是一条将来可能被打破的约束**。
 
-本文**不**讨论 `torch.compile` 如何用 guard 固化形状/类型（见 [04-custom-operators](04-custom-operators.md) §3），也**不**讨论优化器怎么用梯度（回链 `90-training`）。
+本文**不**讨论 `torch.compile` 如何用 guard 固化形状/类型（见 [04-custom-operators](04-custom-operators.md) §3），也**不**讨论优化器怎么用梯度（正文在 [90-training/optimizers/01-sgd-and-momentum](../../90-training/optimizers/01-sgd-and-momentum.md)，此处回链）。
 
 ### 最容易记错的三条
 
@@ -136,7 +136,7 @@ with torch.autograd.graph.saved_tensors_hooks(pack_fn, unpack_fn):
 | `y.backward()` | **写** | **累加**（实测连调两次 `.grad` 从 `[1,1,1]` 变 `[2,2,2]`） | `None` |
 | `torch.autograd.grad(y, x)` | **不写**（实测跑完 `x.grad is None`） | — | 梯度元组 |
 
-这条区别在写训练循环时很实际：**用 `autograd.grad` 做梯度裁剪/二阶导时，别指望 `.grad` 里有东西**。
+这条区别在写训练循环时很实际：**用 `autograd.grad` 做梯度裁剪/二阶导时，别指望 `.grad` 里有东西**（训练循环里这两件事的正文在 [90-training/autograd-and-backward/03-gradient-lifecycle](../../90-training/autograd-and-backward/03-gradient-lifecycle.md)，此处回链）。
 
 ### 3.2 `retain_graph` 的默认值
 
@@ -253,4 +253,4 @@ docstring 也印证了这次变更：2.7.1 的文案里写着「entering inferen
 - 纯 python3 复核入口：`code/verify.py`（**不 import torch**，其中 `ref_is_leaf` 是 `is_leaf` 判据的独立实现）
 - 外部事实与版本锚点：`code/specs.py`
 - 上游：`10-foundations/numerical-linear-algebra`（链式法则与数值微分）
-- 下游：`90-training`（优化器怎么用梯度）
+- 下游：`90-training`（优化器怎么用梯度 ⇒ [01-sgd-and-momentum](../../90-training/optimizers/01-sgd-and-momentum.md)）

@@ -73,7 +73,7 @@
 | **`ASSERT_FAIL_MARK`** | **每个主题一个，不跨主题照抄**（本库纪律）。五个取值：`transformer` = `!! FAIL: transformer` · `attention-variants` = `@@ FAIL: attention-variants` · `moe` = `## FAIL: moe` · `normalization` = `~~ FAIL: normalization` · `positional-encoding` = `$$ FAIL: positional-encoding`。**每个编号程序另加一条「标记自检」断言**（失败标记去重后**只有一个**、**等于**本主题的值、且**含 `FAIL`**）。`mutate.py` 用 **AST** 从编号程序里读出该值，**不得写死** |
 | **`mutate.py`** | ★ **每主题一份**，含**口径变异**（去掉 `1/√d_h`、把 `eps` 挪到分母外、把 `n−m` 写成 `m−n`）。只**在副本上**做，仓库文件只读；**断言捕获与崩溃捕获分开数** |
 | **`make lint`** | **AST** 检查（不是 grep：注释里出现框架名**不算违规**，真 `import` 才算）。★ 本域**任何第三方框架都不 import**，`numpy` 是唯一例外（`requirements.txt` 里只有它） |
-| **参考实现的独立性** | 定义在 `CONTRIBUTING` §2（正文在彼，此处回链；判据与「`maxdiff == 0.0` 的**两种相反含义**」见 `00-meta/glossary.md:259`）。★ **本域为什么把它单列一行**：本域的断言大多长成 `diff == 0` 或机器精度档的样子，**这一条是本域最容易自欺的地方**——两个操作被判据测出来「相等」，也可能只是**两边共用了一份代码** |
+| **参考实现的独立性** | 定义在 `CONTRIBUTING` §2（正文在彼，此处回链；判据与「`maxdiff == 0.0` 的**两种相反含义**」见 `00-meta/glossary.md` 的「reference implementation（参考实现）」条）。★ **本域为什么把它单列一行**：本域的断言大多长成 `diff == 0` 或机器精度档的样子，**这一条是本域最容易自欺的地方**——两个操作被判据测出来「相等」，也可能只是**两边共用了一份代码** |
 
 ## §5 用「判据表」形态（理由）
 

@@ -317,7 +317,7 @@ make 01_fp8_formats PYTHON=$HOME/PyCharmMiscProject/.venv/bin/python    # torch 
 
 **这条主线在 §0.8 的三角上是哪条边**：**范围 vs 精度**。`e4m3` 与 `e5m2` 消耗同样的 8 个比特，只是把它们放在不同的地方；fnuz 的 bias 偏移则是「拿范围换一个 binade」——三角上的每一步交换都有代价。
 
-延伸有三条。**往下**：`e8m0` 把这条边推到极限——**0 位尾数、8 位全给指数**，于是它只能表示 2 的整数次幂，而「块共享一个 scale」这个用法正是为它设计的（[02-e8m0-and-mx](02-e8m0-and-mx.md)）。**往旁边**：定点格式的取舍在另一个方向——那里没有「指数」这个自由度，只有零点与步长（[04-integer-formats](04-integer-formats.md)）。**往硬件**：fp8 的四个变体在 Tensor Core 上的支持矩阵与累加器宽度，正文在 [10-foundations/floating-point/04-low-precision-formats](../../10-foundations/floating-point/04-low-precision-formats.md)（本文不复述，此处回链）。
+延伸有四条。**往训练**：训练循环里**哪个张量用哪个变体、scale 从哪来、溢出怎么办**，正文在 [90-training/mixed-precision/03-fp8-training.md](../../90-training/mixed-precision/03-fp8-training.md)（本文不复述，此处回链）。**往下**：`e8m0` 把这条边推到极限——**0 位尾数、8 位全给指数**，于是它只能表示 2 的整数次幂，而「块共享一个 scale」这个用法正是为它设计的（[02-e8m0-and-mx](02-e8m0-and-mx.md)）。**往旁边**：定点格式的取舍在另一个方向——那里没有「指数」这个自由度，只有零点与步长（[04-integer-formats](04-integer-formats.md)）。**往硬件**：fp8 的四个变体在 Tensor Core 上的支持矩阵与累加器宽度，正文在 [10-foundations/floating-point/04-low-precision-formats](../../10-foundations/floating-point/04-low-precision-formats.md)（本文不复述，此处回链）。
 
 ## 参考
 

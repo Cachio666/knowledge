@@ -190,6 +190,7 @@ TORCH_CLIP_COEF_DENOM_EPS = 1e-6
 # (c) 已知的**同名不同指**（写正文时必须带着的边界声明，不是常量）：
 #       · **`checkpoint`**：**建域前**全库（除 `docs/` 与本域）`checkpoint` 忽略大小写共 **11 处**，
 #         其中 **10 处是「权重/模型检查点」的用例**，第 11 处是 `00-meta/roadmap.md:71` 的**主题名**
+#         （★ 扫描当时写作 `- [ ] checkpointing`；**本域建成后那一行已置 `- [x]`**，行号不变）
 #         （2026-09-23 逐行扫描 `.md`/`.py`/`.cu` 确认：`10-foundations/floating-point/01:232`、
 #          `20-gpu-architecture/interconnect/01:43`、`80-…/positional-encoding/01:50,177`、
 #          `80-…/positional-encoding/code/01_rope_definition.py:409`、

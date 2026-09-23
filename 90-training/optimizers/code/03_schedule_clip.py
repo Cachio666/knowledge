@@ -772,7 +772,7 @@ def main():
     print("  ★★ **同名不同指（M9）**：本程序写的是 **LR warmup（学习率 warmup）** ——")
     print("     它与 `00-meta/glossary.md:146` 已收录的 `warmup`（**benchmark 预热**，")
     print("     `45-kernel-lifecycle/.../01-benchmark-hygiene.md` 里 23 次）**不是同一件事**。")
-    print("     本程序**一律写全 `LR warmup`**，并带上这句限定语（glossary 的改名是收尾 chunk 的动作）。")
+    print("     本程序**一律写全 `LR warmup`**，并带上这句限定语（glossary 那两条已在收尾时分开）。")
     print("  ★★ **边界声明跟着知识点走**：`LR warmup` 的**机制解释**（post-LN 的平均场理由、")
     print("     `hypothesize` 的措辞纪律）**正文在**")
     print("     `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100` ——")

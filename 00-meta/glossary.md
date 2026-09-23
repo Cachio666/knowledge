@@ -143,7 +143,7 @@
 | determinism | 确定性 | 同一输入逐位可复现的性质。⚠ **它不是规范保证的**：PTX ISA 明写 `wmma.mma` 的**累加顺序未规定**；`atomicAdd` 系列（`index_add_` / `scatter_add_` / `bincount`）官方文档自陈 "no simple way of avoiding nondeterminism"。**所以「逐位可复现」是必须自己保证的性质**——契约里写 `bitwise_reproducible` 等于对实现提了一个规范不保证的要求。 |
 | accumulation order | 累加顺序 | 浮点求和的次序。归约、`atomicAdd`、split-K 都会让它**不确定**；它同时决定误差随求和长度的增长形态。⚠ 它与 `determinism` 是**同一条链的两端**：顺序不定 ⇒ 结果不逐位可复现。 |
 | run-to-run variance | 跑间波动（σ） | 同一实现重复测量的离散程度。**它是本域几乎所有判定的分母**——最小可检出差异 ≈ `4σ/√n`（两组等样本）。⚠ 只报一个数而不报 `σ` 与 `n`，那个数**无法用来判定**；⚠ **紧得可疑的 σ 反而可疑**——它可能来自**确定性输出**而非稳定性能。 |
-| warmup | 预热 / 丢弃前导测量 | 丢掉前 `k` 次测量以避开冷启动期。⚠ **正确做法是丢弃前 `k` 次，而不是靠中位数稳健**：冷启动值被保留时，中位数名次被推向稳态**上尾**，`k/n = 0.49` 时偏差已达 **`+0.1026`**（> 一个 σ），而 `k/n = 0.10` 只有 `+0.0072`。⚠ 官方 `do_bench` 的 `warmup=25` 单位是**毫秒**（不是 25 次）；不足时同一个 kernel 能「凭空快 27.8%」。 |
+| warmup（benchmark 预热） | 预热 / 丢弃前导测量 | 丢掉前 `k` 次测量以避开冷启动期。⚠ **正确做法是丢弃前 `k` 次，而不是靠中位数稳健**：冷启动值被保留时，中位数名次被推向稳态**上尾**，`k/n = 0.49` 时偏差已达 **`+0.1026`**（> 一个 σ），而 `k/n = 0.10` 只有 `+0.0072`。⚠ 官方 `do_bench` 的 `warmup=25` 单位是**毫秒**（不是 25 次）；不足时同一个 kernel 能「凭空快 27.8%」。★ **同名不同指**：本条一律指 **benchmark 预热**（丢弃前导测量）；训练里的**学习率 warmup** 是**另一件事**（见「训练与推理系统」节的 `学习率 warmup` 条）。 |
 | steady state | 稳态 | 冷启动之后的性能分布；**测量值 = 稳态 + 冷启动摊销**。两条反直觉的定量事实：`k < n/2` 时中位数污染**被稳态上尾封顶在 ≈ `2σ`、与冷启动倍数无关**（1.5×–9× 同值），把 `σ` 放大 10 倍上界也放大 10 倍 ⇒ **决定污染大小的是「稳态有多散」，不是「冷启动有多慢」**。 |
 | regression gate | 防回归门限（speed gate） | 判定「这次改动是不是真的更快」的门限。**必须逐架构标定，不能跨架构共用**（[C] 预印本与 [D] 社区项目两个独立主体都主张）。⚠ **同一改动跨架构可以反向**（L40S `+9.4%` / A100 SXM4 `−50%`，[C] 级预印本，措辞用「已有报告显示」）；⚠ 门限本身会被**测量噪声**越过——一次纯粹的 warmup 差异就给出 `+27.8%` 的假加速。 |
 
@@ -245,6 +245,10 @@
 
 ## 训练与推理系统
 
+> ★ **本节与 `120-inference` 共享**：**训练部分**的正文在 `90-training`；
+> **推理部分**的正文在 `120-inference`（未建成）。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
+> （★ 另两条不属本节的归口：`ZeRO` / `FSDP` 的正文在 `100-parallelism` 的 `zero-fsdp`，此处只回链。）
+
 | 英文 | 中文 | 说明 |
 |---|---|---|
 | KV cache | 键值缓存 | 自回归解码时缓存历史 token 的 K/V，避免重复计算。 |
@@ -259,3 +263,13 @@
 | reference implementation | 参考实现 | 与**被测实现独立**的对照实现。⚠ **独立性是硬要求，不是风格**：两者共享代码 `S` 时（`F = S∘f`、`R = S∘r`），比对 `S` 直接产出的量时差值**恒为 0**——捕获数 **`0`**、报出的最大误差 **`0.0`**，而它**看起来完全正常**（能通过最紧的容差）。机械判据两条：**参考实现不得调用被测实现的任何函数**（给共享代码装调用计数器，参考实现跑完后计数必须恰好为 `0`）、**且不得比被测实现更复杂**（否则出错时无法归因）。⚠ `maxdiff == 0.0` 有**两种相反含义**：同一实现的两条路径比 ⇒ 正确；共享代码的参考实现比 ⇒ **测不出来**。 |
 | kernel cache key | kernel 缓存键 | 决定「这次调用复用哪个**已构建**的 kernel」的哈希键。**key 必须覆盖所有改变构建结果的字段**——dtype、layout、以及**可选参数是否出现**（是「是否」，不是它的取值）。⚠ 漏一项的后果是**静默**的：`key(A) == key(B)`、只构建 1 次、两个调用方拿到同一个对象，**没有任何一方看到错误**。⚠ 三类东西必须分开：**契约字段**（跨调用不变的**模式**，**不进** key）、**调用级输入**（**进** key）、以及 `stream` / device context 这类**运行期**值（两者都不是 ⇒ **不该**进 key）。 |
 | contract（算子契约） | 算子契约 | 一个算子的接口声明。**判据不是「输入输出形状」，而是「是否改变构建出哪个 kernel」**——形状规则 / dtype / layout / 可选参数是否存在 / 输出精度 / 确定性 / 边界行为**都算**。⚠ **可测性判据**：一个字段**可测** ⟺ 它的取值域承诺了**可观察的区别**；被声明成 `unspecified` 的字段使这份契约**不存在任何能失败的测试**（可测性是 **`0`**，不是「较弱」）。⚠ 契约的作用域是**构建期**、后果出现在**测量期**——漏字段时不会有即时反馈，错误一路传导到性能数字上，那时已无法区分「设计不好」与「跑的其实是另一个 kernel」。 |
+| initialization (He / Xavier) | 初始化 | 从哪开始：ReLU 系配 He（`Var[W] = 2/fan_in`）、tanh/linear 配 Xavier（`Var[W] = 2/(fan_in+fan_out)`，**均匀**分布）。★ Xavier 的 `2/(n_i+n_{i+1})` 是**前向与反向两个约束的折中**，**不是** `N(0, 1/n)`；★ He 只保**前向**（反向增益是 `2·fan_out/fan_in`）。⚠「只想同方差」时：`kaiming_uniform_(mode='fan_in')` 与 He **同方差**，`mode='fan_out'` 在 `(256,4096)` 上差 **16 倍**（= `fan_out/fan_in`）。（正文在 `90-training/initialization-and-stability/01-initialization.md`，此处回链） |
+| master weights | 主权重 | fp32 的那一份权重副本 —— 优化器更新的是它，前向用的低精度副本每步从它降下来。★ **为什么必须宽**不是保守：判据是「**这个量跨不跨步存活**」，跨步存活的量把误差**攒起来**。★ 这条链上最容易出错的一步是**更新被静默吞掉**：`Δw < ULP(w)/2` 时 `w + Δw == w` **逐位**成立。（正文在 `90-training/mixed-precision/01-type-selection.md`，此处回链；★「必须 fp32」的**数值**理由在 `10-foundations/numerical-linear-algebra/04-iterative-methods.md:229-266`，正文在彼） |
+| loss scaling | 损失缩放 | 反向前把 loss 乘 `S`、更新前除回来，用来把 fp16 下溢的梯度抬进可表示范围。★ `×S ÷S` 能是**恒等**这件事，**只因为 `S` 取 2 的幂**（换成 `1000` 就不再逐位相等）；★ 初值有**两个官方数**（NVIDIA 的 `2^24` 与 PyTorch 的 `65536`）。（正文在 `90-training/mixed-precision/02-amp-execution.md`，此处回链；★「为什么 fp16 要它、bf16 不要」**整块**的正文在 `10-foundations/floating-point/04-low-precision-formats.md`） |
+| AMP / GradScaler | 自动混合精度 / 梯度缩放器 | 「哪些算子走低精度」由框架的 `autocast` 决定；`GradScaler` 负责 `S` 的自适应（成长 `×2`、回退 `×0.5`）与溢出检测（检测到就**跳步**，权重精确不变）。★ 最容易写错的是**一条顺序**：`unscale` 在 `backward` **之后**、`clip` **之前**。⚠ `autocast` 的算子白名单 / 黑名单**属框架 API 语义**（各框架互不相同），正文在 `70-frameworks/`，此处回链。（正文在 `90-training/mixed-precision/02-amp-execution.md`，此处回链） |
+| 优化器状态 (`m`, `v`) | — | Adam 跨步存活的**一阶矩 `m`** 与**二阶矩 `v`**（以及 `step`），每步更新。★ 它**不在「参数量 `Ψ`」那一格**：类型选择与字节账都要单独算，并且它是「跨步存活 ⇒ 必须宽」的第二个实例（与主权重并列）。（更新式的正文在 `90-training/optimizers/02-adam-and-adamw.md`；字节账的正文在 `90-training/checkpointing/01-state-and-bytes.md`；此处回链） |
+| gradient clipping | 梯度裁剪 | 按全局范数上限 `max_norm` 缩放梯度（`clip_grad_norm_` 那一族）。★ **阈值与判据的正文**在 `90-training/autograd-and-backward/03-gradient-lifecycle.md` 的表 A ⑦（在那里只写一次）；★ **监控量**的口径（取裁剪前还是裁剪后、判 `>` 还是 `isfinite`、全局还是逐张量）在 `90-training/initialization-and-stability/02-clipping-and-monitoring.md`。⚠ 它与「最优 clipping / ACIQ」那条的 `clip`（**量化**意义：学一个裁剪上界）**不是一回事**。 |
+| 学习率 warmup（LR warm-up） | 学习率预热 | 训练开头**若干步**把 `lr` 从 ~0 抬到峰值，再交给调度衰减。★ **与「性能工程与测量」节的 `warmup（benchmark 预热）` 是同名不同指**（那条是丢弃前导测量）。★ 它**不改变总步长预算、只改变分配**：实测 `Σ lr(t) = lr_max·T/2`，**与 `W` 无关**。（正文在 `90-training/optimizers/03-schedules-and-clipping.md`，此处回链；★ **机制解释**（post-LN 的平均场理由）的正文在 `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100`） |
+| loss spike | 损失尖峰 | 训练中 loss 在某一两步突然放大。★ **本库的立场**：机制层**没有一手结论** —— 能写的只有**现象**（Adam 的更新量在 spike 那一步**变小**、随后几百步被压低）、**已被证伪**的归因（坏数据；以及「开了 clip 就不会 spike」）、和**仍是假设**的归因（梯度范数突增）。（正文在 `90-training/initialization-and-stability/03-instability-and-spikes.md`，此处回链） |
+| 重算换显存 (gradient checkpointing / recompute) | 重算换显存 | 前向**丢掉**中间激活、反向时**重算**它们，把 `n` 层的激活账压到 `O(√n)`；代价记在**时间**上（前向次数从 `n` 到 `2n − ⌈√n⌉`）。★ **两个口径必须分开**：`O(√n)` 是**内存**、`≈2n` 是**前向次数**。★★ **中文「检查点」不得用于它**；英文 `checkpointing` 在这里只在**论文术语**（Chen 2016）的意义上用。（正文在 `90-training/autograd-and-backward/02-gradient-checkpointing.md`，此处回链；★ 与本节的 `sharded checkpoint` 是**同名不同指**） |
+| sharded checkpoint | 分片检查点 | 把训练状态切成 `N` 份分别落盘。★ **它不省总字节**（多出 `N × 每片头开销`），省的是**单卡峰值**；★ 而「拼得回来」**完全依赖元数据**（头里的 `start` / 摘要 / 覆盖率或全局元数据，**三层缺一不可**）。★ 检查点**不含梯度** ⇒ 它的字节账与「训练显存」（ZeRO 那个 `16Ψ`）**差一个梯度项**。（正文在 `90-training/checkpointing/02-sharded-save-and-load.md` 与 `90-training/checkpointing/01-state-and-bytes.md`，此处回链） |

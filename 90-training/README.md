@@ -70,7 +70,7 @@
 | `initialization-and-stability` | MoE 的 aux loss 尺度（`×N` 漏项） | `80-model-architectures/moe/03-balance-and-granularity.md:260`；`00-meta/glossary.md:241` |
 | `checkpointing` | 导出 / 推理格式的选择（`.keras` vs SavedModel） | `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；`00-meta/glossary.md:221` |
 | **全主题** | 框架的**精度 API 语义**（`autocast` 的算子白名单 / 黑名单） | `70-frameworks/`（**各框架互不相同**，属框架 API 语义）。★ 本域写的是**工程约定**，不是某个框架的 API 行为 |
-| **全主题** | `00-meta/glossary.md` **已有的**本域相关词条（`autograd` / `grad_fn` / `is_leaf` / `saved tensors` / `inference_mode` / FP32·FP16·BF16 / ZeRO / iterative refinement / SavedModel） | `00-meta/glossary.md:81,126,203-211,221,254` ⇒ **本域不得另立同名词条**（否则会出现**同名两条**） |
+| **全主题** | `00-meta/glossary.md` **已有的**本域相关词条（`autograd` / `grad_fn` / `is_leaf` / `saved tensors` / `inference_mode` / FP32·FP16·BF16 / ZeRO / iterative refinement / SavedModel） | `00-meta/glossary.md` 的格式条（`FP32 / FP16 / BF16` / `FP8` / `MX` / `NVFP4` / `eps` 等）、`iterative refinement`、`autograd` / `grad_fn` / `is_leaf` / `saved tensors` / `inference_mode` 五条、`SavedModel`、`ZeRO` ⇒ **本域不得另立同名词条**（否则会出现**同名两条**） |
 
 ★ **反向的入口**：本域的立足点是**上游指名的让渡**，它们正是本域必须接住的正文——
 `10-foundations/numerical-linear-algebra/04-iterative-methods.md:386`（**最具体的一处**：
@@ -96,7 +96,7 @@
   `80-model-architectures/positional-encoding/01-rope-definition.md:50,177`（及其 `code/01_rope_definition.py:409`）、
   `80-model-architectures/attention-variants/01-mha-mqa-gqa.md:192,206,212,215`、
   `40-kernels/attention/05-decoding-attention.md:354`（那是**论文标题**里的 `Checkpoints`）；
-  **第 11 处**是 `00-meta/roadmap.md:71` 的**主题名**（`- [ ] checkpointing`），不是用例。
+  **第 11 处**是 `00-meta/roadmap.md:71` 的**主题名**（扫描当时写作 `- [ ] checkpointing`；**本域建成后那一行已置 `- [x]`**，行号不变），不是用例。
   ★ **量法口径的坑**：`40-kernels/attention/05:354` 用的是**大写** `Checkpoints` ⇒
   **大小写敏感地数会少 1 处**（10 vs 11）。引用这个数时**必须写明是不是忽略大小写**。
 - **讲「重算」的那一处，全库用的是 `重算` / `recompute`**：
@@ -118,9 +118,9 @@
   `optimizers/03-schedules-and-clipping`（**这是「同一个词指两件事」，比 ① 更硬**：
   glossary 已经收了其中一件）。
 - ⇒ **本域纪律**（计划 §2 末尾的处置）：
-  - glossary 的那条改成 **`warmup（benchmark 预热）`**，本域新增
-    **`学习率 warmup（LR warm-up）`**，两条**互相指认**。★ 这两步是**收尾 chunk** 的动作
-    （术语迁入时一并做）；**在它做完之前，本域任何提到 warmup 的地方都要自己带上这句限定语**。
+  - glossary 的那条已改成 **`warmup（benchmark 预热）`**，并已新增
+    **`学习率 warmup（LR warm-up）`**，两条**互相指认**（★ **本域收尾时已做**，
+    见 `00-meta/glossary.md` 的这两条）；★ 即便如此，本域**一律写全 `LR warmup`** 并带上限定语。
   - ★★ **边界声明必须跟着知识点走**（而不是只写在某一篇的抬头）：
     凡本域写 LR warmup 的地方，都要回链「机制解释（post-LN 的平均场理由）在
     `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100`」。
@@ -164,8 +164,12 @@ C 边界与反例）放在编号程序内部**，失败时以**非零退出码**
 
 - 本域相关词条的**定义正文在本域**；`00-meta/glossary.md` 只放短条目并回链。
 - ★ **本域不得另立 `glossary` 已有的同名词条**（本域相关的九条在
-  `00-meta/glossary.md:81,126,203-211,221,254`）—— 新词条建成时**并入**并**逐条去重**。
-- ★★ **建域时已识别的两处同名不同指见上**（`checkpoint` / `warmup`）；
+  `00-meta/glossary.md` 的格式条（`FP32 / FP16 / BF16` / `FP8` / `MX` / `NVFP4` / `eps` 等）、`iterative refinement`、`autograd` / `grad_fn` / `is_leaf` / `saved tensors` / `inference_mode` 五条、`SavedModel`、`ZeRO`）—— 新词条建成时**并入**并**逐条去重**。
+  ★ **收尾时已办**：本域新增的十条（`学习率 warmup` / `主权重` / `loss scaling` / `AMP·GradScaler` /
+  `优化器状态 (m, v)` / `重算换显存` / `梯度裁剪` / `初始化 (He / Xavier)` / `loss spike` /
+  `分片检查点`）已按**只新增 + 在共享节加注记**的方式落进 `00-meta/glossary.md` 的
+  「训练与推理系统」节，**未做迁入**（与 `80` 不同）。
+- ★★ **建域时已识别的两处同名不同指见上**（`checkpoint` / `warmup`）——两处的处置都已在收尾时落地；
   新增词条时**先查 glossary**，冲突的按上面的处置办。
 - 术语的检索入口：`00-meta/glossary.md`；全库进度与主题清单：`00-meta/roadmap.md`。
 

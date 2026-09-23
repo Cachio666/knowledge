@@ -197,7 +197,26 @@
   - [03-extrapolation](../80-model-architectures/positional-encoding/03-extrapolation.md)
 
 ## 90-training
-尚未开始。
+- [autograd-and-backward](../90-training/autograd-and-backward/) —— 反向传播与数值梯度对拍 / 重算换显存 / 训练循环里的梯度（累积、清零、裁剪）
+  - [01-backward-from-scratch](../90-training/autograd-and-backward/01-backward-from-scratch.md)
+  - [02-gradient-checkpointing](../90-training/autograd-and-backward/02-gradient-checkpointing.md)
+  - [03-gradient-lifecycle](../90-training/autograd-and-backward/03-gradient-lifecycle.md)
+- [mixed-precision](../90-training/mixed-precision/) —— 类型选择表（主权重 / 梯度 / 优化器状态 / loss）/ AMP 与 unscale 的时机 / fp8 训练循环
+  - [01-type-selection](../90-training/mixed-precision/01-type-selection.md)
+  - [02-amp-execution](../90-training/mixed-precision/02-amp-execution.md)
+  - [03-fp8-training](../90-training/mixed-precision/03-fp8-training.md)
+- [checkpointing](../90-training/checkpointing/) —— 状态的组成与字节账 / 分片保存与恢复 / 一致性恢复（RNG、dataloader、优化器状态）
+  - [01-state-and-bytes](../90-training/checkpointing/01-state-and-bytes.md)
+  - [02-sharded-save-and-load](../90-training/checkpointing/02-sharded-save-and-load.md)
+  - [03-consistency-and-fault-tolerance](../90-training/checkpointing/03-consistency-and-fault-tolerance.md)
+- [optimizers](../90-training/optimizers/) —— SGD 与动量（更新式与状态）/ Adam 与 AdamW（weight decay 的两种语义）/ 学习率调度与梯度裁剪
+  - [01-sgd-and-momentum](../90-training/optimizers/01-sgd-and-momentum.md)
+  - [02-adam-and-adamw](../90-training/optimizers/02-adam-and-adamw.md)
+  - [03-schedules-and-clipping](../90-training/optimizers/03-schedules-and-clipping.md)
+- [initialization-and-stability](../90-training/initialization-and-stability/) —— He / Xavier / μP 初始化 / 裁剪与范数监控 / loss spike（现象与归因）
+  - [01-initialization](../90-training/initialization-and-stability/01-initialization.md)
+  - [02-clipping-and-monitoring](../90-training/initialization-and-stability/02-clipping-and-monitoring.md)
+  - [03-instability-and-spikes](../90-training/initialization-and-stability/03-instability-and-spikes.md)
 
 ## 100-parallelism
 尚未开始。

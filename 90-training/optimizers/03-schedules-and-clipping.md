@@ -38,9 +38,9 @@ updated: 2026-09-23
 本文写的是 **LR warmup（学习率 warmup）** —— **完全不同的两件事**。
 
 ⇒ ★★ **本文一律写全 `LR warmup`**，并**每处都带上这句限定语**。
-（`00-meta/glossary.md` 那条改成 `warmup（benchmark 预热）`、以及新增
-`学习率 warmup（LR warm-up）` 并互相指认，是**收尾 chunk** 的动作；
-**在它做完之前，凡是提到 `warmup` 的地方都要自己带上限定语**。）
+（`00-meta/glossary.md` 那条已改成 `warmup（benchmark 预热）`、并已新增
+`学习率 warmup（LR warm-up）` 并互相指认 —— ★ **本域收尾时已做**；
+即便如此，凡是提到 `warmup` 的地方仍然要自己带上限定语。）
 
 ### ★★ 边界声明跟着知识点走：机制解释在别处
 

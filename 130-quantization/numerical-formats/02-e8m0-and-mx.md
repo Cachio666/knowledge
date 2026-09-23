@@ -390,7 +390,7 @@ make 02_e8m0_and_mx         # 只跑本文对应的程序
 
 **这条主线在 §0.8 的三角上是哪条边**：**粒度 vs scale 开销**。块从 32 缩到 16，精度涨了（+1.65 dB），但 scale 的开销涨了一倍（0.25 → 0.50 bit/元素）。NVFP4 的选择是「花更多 bit 存 scale，换更细的粒度 + 更贴合的 scale 格式」。
 
-延伸有三条。**往旁边**：`per-tensor → per-channel → per-token → per-group` 这四种粒度里，**per-group 的「组」怎么切**在不同论文里并不统一（Q-BERT 沿输出维、GPTQ 沿输入维、Dettmers 把张量拉平），**引用 group 相关数字时不写这一维，数字就不可比**（正文在 [theory/02-granularity](../theory/02-granularity.md)，此处只回链）。**往上**：MX 的 epilogue 融合与块 scale 在 GEMM 内部的施加方式，正文在 [quantized-kernels](../quantized-kernels/)。**往格式**：e4m3 与 e5m2 之间的取舍、以及溢出行为的版本断点，正文在 [01-fp8-family](01-fp8-family.md)。
+延伸有四条。**往训练**：块 scale 与各粒度进到训练循环里怎么用（哪个张量用哪个编码、scale 从哪来、溢出怎么办），正文在 [90-training/mixed-precision/03-fp8-training.md](../../90-training/mixed-precision/03-fp8-training.md)（本文不复述，此处回链）。**往旁边**：`per-tensor → per-channel → per-token → per-group` 这四种粒度里，**per-group 的「组」怎么切**在不同论文里并不统一（Q-BERT 沿输出维、GPTQ 沿输入维、Dettmers 把张量拉平），**引用 group 相关数字时不写这一维，数字就不可比**（正文在 [theory/02-granularity](../theory/02-granularity.md)，此处只回链）。**往上**：MX 的 epilogue 融合与块 scale 在 GEMM 内部的施加方式，正文在 [quantized-kernels](../quantized-kernels/)。**往格式**：e4m3 与 e5m2 之间的取舍、以及溢出行为的版本断点，正文在 [01-fp8-family](01-fp8-family.md)。
 
 ## 参考
 

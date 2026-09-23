@@ -1,7 +1,7 @@
 # 实施进度表
 
-> 最后更新：2026-09-22
-> 进度：45 / 65 主题完成
+> 最后更新：2026-09-23
+> 进度：50 / 65 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -64,11 +64,11 @@
 - [x] positional-encoding
 
 ## 90-training
-- [ ] autograd-and-backward
-- [ ] mixed-precision
-- [ ] optimizers
-- [ ] initialization-and-stability
-- [ ] checkpointing
+- [x] autograd-and-backward
+- [x] mixed-precision
+- [x] optimizers
+- [x] initialization-and-stability
+- [x] checkpointing
 
 ## 100-parallelism
 - [ ] data-parallel
