@@ -160,7 +160,11 @@ def _walk(node, suffix=""):
     elif isinstance(node, ast.Dict):
         for k, v in zip(node.keys, node.values):
             if k is not None:
-                out += _walk(k, "{key}%s" % suffix)
+                # ★ T29 修复（2026-09-23）：原来写的是字面量 "{key}"，**不含键名**
+                #   ⇒ 一个 dict 的多个键得到**完全相同的标签**（Chunk 1 实测
+                #   `_REC{key}` 在漏网清单里出现 3 次一模一样，分不出是哪个键）。
+                #   与下面 `v` 的处理保持一致，用键的**实际值**。
+                out += _walk(k, "{%r}%s" % (getattr(k, "value", "?"), suffix))
             out += _walk(v, "[%r]%s" % (getattr(k, "value", "?"), suffix))
     return out
 
