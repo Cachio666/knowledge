@@ -69,7 +69,7 @@ show("F1'", f"  eps = 2^-7 = {beps:.10f}")
 show("F1'", f"  ⇒ 与 fp32 的动态范围之比 = "
             f"{np.log10(bmax/btiny) / np.log10(r32_norm):.4f}（**应精确为 1**，因为指数位相同）")
 show("F1'", f"  ⇒ bf16 的 eps = {beps:.6f} 而 fp16 的 eps = "
-            f"{float(np.finfo(np.float16).eps):.6f} ⇒ bf16 精度**低 4 倍**")
+            f"{float(np.finfo(np.float16).eps):.6f} ⇒ bf16 精度**低 8 倍**")  # ★ 0.0078125/0.000977 ≈ 8
 
 # ============================================================
 # A2 ★★ 推广：Adam+L2 与 AdamW 的差，机制到底是什么？
