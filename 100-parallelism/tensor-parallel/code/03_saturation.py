@@ -607,41 +607,50 @@ def part_D():
     print("D. specs 常量逐位钉住 · 独立性证据 · **出处纪律** · 边界锚点的扩散检查")
     print("=" * 74)
 
-    check("D.5", specs.MEGATRON_PP_ARXIV_ID == "2104.04473"
-          and specs.MEGATRON_PP_TITLE
-          == "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM"
-          and specs.MEGATRON_PP_AR5IV_URL
-          == "https://ar5iv.labs.arxiv.org/html/2104.04473"
-          and specs.MEGATRON_PP_PAGE_BYTES == 208446
-          and specs.MEGATRON_PP_PAGE_SHA256_16 == "9dea9fa431b59daf"
-          and specs.MEGATRON_PP_COMMENTS_QUOTE == "Accepted to SC 2021"
-          and specs.MEGATRON_TP_FWD_BWD_QUOTE
-          == "uses all-reduce communication (two all-reduce operations each in the forward and "
-             "backward pass, see"
-          and specs.MEGATRON_TP_COMM_QUOTE
-          == "twice each in the forward and backward pass for each layer, leading to a total "
-             "communication of"
-          and specs.MEGATRON_TP_COMM_CALIBER_QUOTE == "per device for each microbatch."
-          and specs.MEGATRON_TP_COMM_MULTIPLIER == 8
-          and specs.MEGATRON_TP_COMM_OPS_PER_LAYER == 4
-          and specs.MEGATRON_TP_NODE_TAKEAWAY_QUOTE
-          == "tensor model parallelism should generally be used up to degree"
-          and specs.MEGATRON_TP_NODE_TAKEAWAY_TAIL_QUOTE
-          == "-GPU servers, and then pipeline model parallelism can be used to scale up to "
-             "larger models across servers."
-          and specs.MEGATRON_TP_NODE_REASON_QUOTE
-          == "is larger than the number of GPUs in a single node, the overhead of performing "
-             "tensor model parallelism across slower inter-node links can be impractical."
-          and specs.MEGATRON_TAKEAWAY1_LABEL == "Takeaway #1:"
-          and specs.RING_ALLREDUCE_VOLUME_FACTOR == 2.0
-          and specs.DP_COMM_SATURATION_MULTIPLE == 2.0
-          and specs.TP_BOUNDARY_REF
-          == "10-foundations/performance-models/02-amdahl-and-scaling.md:223",
+    # ★★ 常量逐个钉住，**条数由 `len()` 数出来**（照 `D.3`/`D.4` 的形态）。
+    #    ★ 原先把条数写成字面量「十七条」：它**看起来是**「18 项 − 1 个边界锚点路径常量
+    #      `TP_BOUNDARY_REF`」，但那套口径**没有写在任何地方** ⇒ 读者无法分辨「口径」与「数错了」
+    #      （`01`/`02` 的 `D.5` 也各写「十三条」，同属这一族，但它们同为「减掉那 1 项」）。
+    #    ⇒ 现在既**由 `len()` 数出**，又在消息里**写明口径**（含那 1 项）⇒ 两种读法下都不会再错（`P1`）。
+    d5_expect = {
+        "MEGATRON_PP_ARXIV_ID": "2104.04473",
+        "MEGATRON_PP_TITLE": "Efficient Large-Scale Language Model Training on GPU "
+                             "Clusters Using Megatron-LM",
+        "MEGATRON_PP_AR5IV_URL": "https://ar5iv.labs.arxiv.org/html/2104.04473",
+        "MEGATRON_PP_PAGE_BYTES": 208446,
+        "MEGATRON_PP_PAGE_SHA256_16": "9dea9fa431b59daf",
+        "MEGATRON_PP_COMMENTS_QUOTE": "Accepted to SC 2021",
+        "MEGATRON_TP_FWD_BWD_QUOTE": "uses all-reduce communication (two all-reduce operations "
+                                     "each in the forward and backward pass, see",
+        "MEGATRON_TP_COMM_QUOTE": "twice each in the forward and backward pass for each layer, "
+                                  "leading to a total communication of",
+        "MEGATRON_TP_COMM_CALIBER_QUOTE": "per device for each microbatch.",
+        "MEGATRON_TP_COMM_MULTIPLIER": 8,
+        "MEGATRON_TP_COMM_OPS_PER_LAYER": 4,
+        "MEGATRON_TP_NODE_TAKEAWAY_QUOTE": "tensor model parallelism should generally be used "
+                                           "up to degree",
+        "MEGATRON_TP_NODE_TAKEAWAY_TAIL_QUOTE": "-GPU servers, and then pipeline model parallelism "
+                                               "can be used to scale up to larger models across "
+                                               "servers.",
+        "MEGATRON_TP_NODE_REASON_QUOTE": "is larger than the number of GPUs in a single node, the "
+                                         "overhead of performing tensor model parallelism across "
+                                         "slower inter-node links can be impractical.",
+        "MEGATRON_TAKEAWAY1_LABEL": "Takeaway #1:",
+        "RING_ALLREDUCE_VOLUME_FACTOR": 2.0,
+        "DP_COMM_SATURATION_MULTIPLE": 2.0,
+        "TP_BOUNDARY_REF": "10-foundations/performance-models/02-amdahl-and-scaling.md:223",
+    }
+    d5_got = {k: getattr(specs, k) for k in d5_expect}
+    d5_diff = {k: (v, d5_got[k]) for k, v in d5_expect.items() if d5_got[k] != v}
+    check("D.5", not d5_diff and len(d5_expect) == 18,
           "★★ [C] `%s`（**同行评审：是** —— 一手依据是 abs 页的 `Comments:` 字段逐字 "
-          "`%s`）与本库正文的**十七条**常量逐位一致；★ **`RING_ALLREDUCE_VOLUME_FACTOR` 与 "
+          "`%s`）与本库正文的**%d** 条常量逐位一致%s（★ **条数由 `d5_expect` 的 `len()` 数出**，"
+          "不写字面量；口径 = **`d5_expect` 里全部 18 项**，含边界锚点路径常量 `TP_BOUNDARY_REF`）；"
+          "★ **`RING_ALLREDUCE_VOLUME_FACTOR` 与 "
           "`DP_COMM_SATURATION_MULTIPLE` 同值但不同项**（一个是单次 all-reduce 的系数、"
           "一个是 DP 的饱和倍数）⇒ 分开存放、**不得合并**"
-          % (specs.MEGATRON_PP_ARXIV_ID, specs.MEGATRON_PP_COMMENTS_QUOTE))
+          % (specs.MEGATRON_PP_ARXIV_ID, specs.MEGATRON_PP_COMMENTS_QUOTE, len(d5_expect),
+             "" if not d5_diff else " ← 差异 %s" % d5_diff))
 
     # ── ★★ 出处纪律（可执行的落法）─────────────────────────────────────────
     print()

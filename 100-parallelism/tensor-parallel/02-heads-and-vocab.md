@@ -23,7 +23,7 @@ updated: 2026-09-23
 
 > **TP 的两处「不整」要用两种完全不同的办法处理。**
 > **头**能整除（`8` 个头分给 `4` 张卡）：QKV 按列并行，**每个 head 的矩阵乘在本卡本地算**
-> —— 原文用的词是 `doesn't require any **immediate** communication`，★ **「立即」是关键**。
+> —— 原文用的词是 `doesn’t require any **immediate** communication`，★ **「立即」是关键**。
 > **词表**经常不能整除（`50257` 不是 `1024` 的倍数）：只有三种处置 ——
 > **`np.split` 直接抛错**（★ **这是一道防线**）· **静默截断**（★ 部分 token **恒不可预测**）·
 > **补齐**（★ **必须配一个「屏蔽」**，否则概率算错）。
@@ -53,7 +53,7 @@ updated: 2026-09-23
 | 本文**写** | 本文**不写**（回链目标） |
 |---|---|
 | **头怎么分给设备**（QKV 列并行、每个 head 本地算、以及「立即」的作用域） | ★★★ **注意力变体的结构**（MHA / MQA / GQA 的定义、KV head 与 Q head 的**配比**）→ `80-model-architectures/attention-variants/01-mha-mqa-gqa.md` |
-| **vocab 并行**的两侧：输入 embedding 列切 ⇒ 一次 all-reduce；输出侧 `b×s×v` 的 all-gather 与融合交叉熵 | ★★★ **TP 的通信模式与规模上限**（通信在每一层内部 · ∝ 激活 · 限于单节点 8 卡）—— 已由 `10-foundations/performance-models/02-amdahl-and-scaling.md:223` **逐字写完** ⇒ **本文一字不重写** |
+| **vocab 并行**的两侧：输入 embedding 列切 ⇒ 一次 all-reduce；输出侧 `b×s×v` 的 all-gather 与融合交叉熵 | ★★★ **TP 的通信模式与规模上限**（通信在每一层内部 · ∝ 激活 · 限于单节点 8 卡）—— 已由 `10-foundations/performance-models/02-amdahl-and-scaling.md:223` **逐字写完** ⇒ **本文不重写它的【结论】**（★ 本文在 §2 的 `output Linear` 那一行**复述**了「一层的**前向**共 `2` 次」那一句，并**回链**到 `01`/`03`） |
 | **「不整除」的三种处置**及其后果（抛错 / 截断 / 补齐） | **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S`）→ `110-communication/collectives`（**未建成**）、`performance-models/02:209` |
 | **「补齐」为什么要配「屏蔽」**（本库构造的反例） | **GEMM 的 tiling / 分块**（本域只写「矩阵怎么切到设备上」）→ `40-kernels/gemm/`、`30-gpu-programming/cutlass/02-hierarchical-tiling.md` |
 | —— | **`S×S` 矩阵的访存账 / 注意力内核** → `40-kernels/attention/`；**注意力的数值细节** → `10-foundations/floating-point/` |
@@ -74,7 +74,7 @@ updated: 2026-09-23
 那个 head 的 `softmax(QKᵀ)V` 就**本地算完**，不需要别的卡参与。
 
 ★★★ **一处极易被外推错的措辞 —— 作用域必须写清**：原文的完整说法是
-`doesn't require any **immediate** communication to complete the self-attention`。
+`doesn’t require any **immediate** communication to complete the self-attention`。
 **「立即」这个词是关键**：紧接着的 output `Linear` **仍然按行并行**
 ⇒ 那次 all-reduce **照旧发生**（只是可以**晚一点**发）。
 ⇒ ★★ **不得写成「头切分不需要通信」** —— 那是一句**错的**话。
@@ -293,7 +293,7 @@ of 50,257`）⇒ 它是本层里**最大**的一次通信；融合之后它降�
 
 **⑤ ★ 把原文的「不**立即**通信」读成「不需要通信」。**
 - **现象**：在文档/代码注释里写「头切分不需要通信」。
-- **成因**：原文的词是 `doesn't require any immediate communication` ——
+- **成因**：原文的词是 `doesn’t require any immediate communication` ——
   **「立即」限定的是时机**；紧接着的 output `Linear` 仍按行并行，那次 all-reduce 照旧。
 - **规避**：引用时**把限定词一起引**（本文 §1.1 两处都标了粗）；★
   并且记住：**一个层的 all-reduce 次数是 `2`**（两个块各一次，见
@@ -332,6 +332,10 @@ of 50,257`）⇒ 它是本层里**最大**的一次通信；融合之后它降�
 > `TOL_MACHINE = 1e-12`、`TOL_GUARD = 1e-6`、`TOL_ERR = 1e-3`。
 > ★★ **一处口径替身**：`VOCAB_PER_GPU_MULTIPLE = 4` 是 [C] 的 `128` 的**玩具替身**
 > —— 真实那一组数（`128 × 8 = 1024`、`50257 → 51200`）在 `B.2` 里**单独引一次**。
+> ★★ **一处可移植性（必须写明）**：本表的判据（`D.10` 的「头切分差**恒为 `0.0`**」与
+> 「vocab 纵列切的五种形状里**至少一种非零**」）**都是本机 BLAS 依赖的** ——
+> 换 BLAS / 换机器时，分块与向量化的选择会变 ⇒ ★ **本机实测值与阈值的对应关系可能需要重新标定**
+> （可能误报失败）。这正是本域「本机实测值」限定语的一个**具体落法**。
 
 ## 6. 小结与延伸
 
@@ -415,14 +419,22 @@ python3 02_heads_vocab.py      # 只跑本程序
   ★★ **它【不是】「TP 限于单节点」的出处**（那句在 `2104.04473 §3.2` 的 `Takeaway #1`，
   见 [`03-saturation-and-limits.md`](03-saturation-and-limits.md) 的 `D.10`）。
 - **[E]** 本库正文 `10-foundations/performance-models/02-amdahl-and-scaling.md:223`（TP 的三条）
-  与 `:209`（`V(N)`）—— **本文只回链、只引用，一行都不重写**。
+  与 `:209`（`V(N)`）—— **本文只回链、只引用，不重写它的【结论】**。
+  ★★ **一处转写口径（复核前必读）**：`V(N) = 2(N−1)/N × S` 里的减号，本库正文
+  （含本域）**绝大多数**写成 **U+2212 `−`**，而 `:209` 那一行写的是 **ASCII `-`**
+  ⇒ ★ **对这两处做 `count()` 复核时先统一减号**，否则会得到「计 0 次」的假象。
+  ★ 本文**不**去改本库其它文件的写法（那会造成新的不一致）。
 
 **上游契约与边界声明**
 
 - ★★★ **本文【不写】TP 的通信模式与规模上限**（「通信发生在每一层内部」·「通信量 ∝ 激活」·
   「只在高带宽互联上可用 / 通常限于单节点 8 卡」）—— 那三条已经由
   `10-foundations/performance-models/02-amdahl-and-scaling.md:223` **逐字写完** ⇒
-  **本文一个字都不重写**（否则是 `P2`「同一个载体重复」）。
+  **本文不重写它的【结论】**（否则是 `P2`「同一个载体重复」）。
+  ★★ **本文复述它哪一句**（写清这一点，是因为「一个字都不重写」比实际行为强一点）：
+  §2 那张执行映射表里「`output Linear`（行并行）⇒ 一层的**前向**共 `2` 次」**复述了 `:223` 的结论**；
+  ★ 而 `:223` **漏了的 backward 那 `2` 次**与 `8` 的由来**不在本文**，在
+  [`03-saturation-and-limits.md`](03-saturation-and-limits.md)。
   ★★ **这条边界有可执行的检查**：`code/02_heads_vocab.py` 的 `D.5c` 会读**本文档**并检查
   上面那个路径逐字在（`P1`「订正不扩散」的落法）。
 - ★★ **本文【不写】注意力变体的结构**（MHA / MQA / GQA 的定义、KV head 与 Q head 的配比）

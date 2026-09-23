@@ -172,7 +172,7 @@ MEGATRON_FIG4_QUOTE = "There are 4 total communication operations in the forward
 MEGATRON_HEAD_LOCAL_QUOTE = "in a column parallel fashion such that the matrix multiply corresponding to each attention head is done locally on one GPU"
 # 来源：[C] Megatron-LM TP（同上），§3 的 self-attention 段，**原始字节 1 次**。
 # 口径：★★★ **头切分的原文依据**：QKV 按列并行 ⇒ **每个 head 的矩阵乘在本卡本地算**。
-#       ★★ **作用域**：原文接着说 `and doesn't require any immediate communication to complete
+#       ★★ **作用域**：原文接着说 `and doesn’t require any immediate communication to complete
 #         the self-attention` —— 「**立即**」这个词很重要：**紧接着的 output linear 层是按行并行的**
 #         ⇒ 那次 all-reduce 仍然发生（只是可以晚一点）⇒ **不得写成「头切分不需要通信」**。
 #       ★★ 与本域 `80-model-architectures/attention-variants/01` 的**边界**：那边讲 MHA/MQA/GQA
