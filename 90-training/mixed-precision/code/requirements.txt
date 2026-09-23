@@ -1,0 +1,16 @@
+# 90-training/mixed-precision 的运行依赖
+#
+# ★ 只有 numpy。本域**任何第三方框架都不 import**（计划 §0.2；CONTRIBUTING §2 的
+#   「永不 import 目标框架」，原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
+#
+# ★★ 本主题**特别需要写清这一点**：`02` 与 `03` 讲的都是**某个实现**的东西
+#    （PyTorch 的 `GradScaler`、Apex 的 `O0–O3`、NVIDIA 的 loss scale 初值）——
+#    但本主题的程序**一行都不 import 它们**。做法是把那些实现的**规格**当作
+#    `specs.py` 里的 **[B] 级常量**，再按**该实现文档里逐字写的规则**在 numpy 上重演一遍。
+#    ⇒ 由此得到的数**不是「PyTorch 在本机跑出来的」**，而是
+#      「按 PyTorch/Apex 的**文档**在本机推出来的」⇒ 一律标为**推导值**。
+#    ★ 这个区别是 `CONTRIBUTING` §2「同一个域里若并存真系统实测与迷你实现实测，
+#      必须逐处写明是哪一档」在本主题的落法。
+#
+# 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
+numpy>=2.0
