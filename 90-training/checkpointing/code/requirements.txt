@@ -1,0 +1,30 @@
+# 90-training/checkpointing 的运行依赖
+#
+# ★ 只有 numpy。本域**任何第三方框架都不 import**（计划 §0.2；CONTRIBUTING §2 的
+#   「永不 import 目标框架」，原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
+#
+# ★★ 本主题**特别需要写清这一点**：三个程序讲的**都是某个实现的契约** ——
+#    `torch.distributed.checkpoint` 的 `save` / `load` / `FileSystemWriter` /
+#    `DefaultLoadPlanner` / `StateDictOptions` 的语义、`finish()` 写元数据、
+#    `allow_partial_load` 的默认值、恢复优化器状态的时序约束 ——
+#    但**三个程序一行都不 import 它**（连 `torch` 这个名字都只出现在注释与文档串里）。
+#    做法是把那份文档（[B] PyTorch 2.14，`Distributed Checkpoint` 页）的**逐字**当作
+#    `specs.py` 里的 **[B] 级常量**，再按它**逐字写的规则**在本机用 numpy 重演一遍。
+#    ⇒ 由此得到的数**不是「PyTorch 在本机跑出来的」**，而是
+#      「按 PyTorch 的**文档**在本机推出来的」—— 一律标为**推导值**。
+#    ★ 这个区别是 `CONTRIBUTING` §2「同一个域里若并存真系统实测与迷你实现实测，
+#      必须逐处写明是哪一档」在本主题的落法。
+#
+# ★★ **本主题的禁区（计划 §2 只有一行）**：**导出/推理格式的选择**
+#    （`.keras` vs SavedModel）→ `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`。
+#    ★ 另有两条**接口级**回链（不是禁区，是分工）：
+#      · **异步落盘 / 通信-计算重叠** → `110-communication/README.md:12`；
+#      · **优化器状态的分片与通信量** → `100-parallelism/README.md:14`。
+#
+# ★★ **本主题不需要网络**：`make run` 只读 `code/` 里的文件 + 写**系统临时目录**
+#    （分片要落盘才能量字节；`02`/`03` 跑完清理自己的临时目录）。
+#    `specs.py` 里登记的两个**载体指纹**（DCP 文档的 967566 B / sha256[:16]、
+#    ar5iv 页的字节数）是**抓取日**的读数，用于**同一性核对**，不是运行期依赖。
+#
+# 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
+numpy>=2.0
