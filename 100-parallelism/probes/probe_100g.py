@@ -50,6 +50,10 @@ for k, v in PER_TOKEN.items():
 show("G1", f"     {'逐 token 类小计':<16} {small:>12,d}  （占合计 {100.0 * small / total:5.2f}%）")
 show("G1", f"     {'softmax 概率 (b,a,s,s)':<16} {PROBS:>12,d}  （占合计 {100.0 * PROBS / total:5.2f}%）")
 show("G1", f"     合计 {total:,d} 元素/层；{LAYERS} 层 ⇒ {total * LAYERS:,d} 元素")
+show("G1", "     ★★ **清单口径**：本段是 **5 项**（4 项逐 token + 1 项 softmax 概率）。")
+show("G1", "        计划 §0.7-D 的 D11 行用的是**另一份 8 项清单**（多 QKV 投影 / attention 输出 / MLP 中间）")
+show("G1", "        ⇒ 它的 `14.58% / 66.67%` 与本段的 `20.00% / 80.00%` **分母不同、不可比**；")
+show("G1", "        两组数各自自洽。★★ **凡报占比必须一并给出【完整清单】与【总元素数】**。")
 
 print()
 show("G2", "── 同上，把 s 从 1024 提到 4096（其余不变）──")

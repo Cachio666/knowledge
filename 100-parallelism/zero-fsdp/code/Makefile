@@ -136,6 +136,7 @@ mutate: check-env
 	@$(PYTHON) mutate.py || { rc=$$?; echo; \
 		echo "★ mutate.py 的退出码 = $$rc 。它的含义：1 = 有漏网（见上「漏网」清单）；"; \
 		echo "  2 = 仓库文件在本次运行中被改动，读数不可信；3 = 空分母。"; \
+		echo "  ★ 若本主题还没有 mutate.py（Chunk 0），也会给 2 —— 那是「文件不存在」，不是读数不可信。"; \
 		exit $$rc; }
 
 lines:
