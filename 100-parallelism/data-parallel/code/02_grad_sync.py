@@ -13,13 +13,33 @@ r"""02_grad_sync.py —— DP 的**工程**：梯度怎么与参数**对齐**（
 
 ★★★ **本程序的核心判据是「梯度分桶的划分必须【完备且不重叠】」**，而它**不是**一条
   「桶划分后的结果 == 单桶的结果」—— 那一条**实测三种划分（`1` 桶 / `8` 桶等分 / 不等分 `3` 桶）
-  与「不再分桶」的结果全部逐位相同（`max|diff| = 0.000e+00`）**
+  与「不再分桶」的结果全部**逐位相同**（`np.array_equal(...) == True`）**
   （纯搬运 ⇒ **恒真**，计划 `D22`）⇒ **不能当 A 类**。
   ★ 本程序的落法有两条：
-    · **A 类**钉在「**完备性**」上：一个划分**完备且不重叠** ⇒（i）每个元素在**所有 rank 上
-      完全相同**（跨 rank 极差 == `0.0`）、（ii）结果与**单卡大 batch** 一致（机器精度档）；
-    · ★★ **反向那一半才是信息量所在**（`D22` 的教训）：**漏一个桶**或**重叠一个桶**，
-      同一个判据**必须失败** —— 这就是 `CONTRIBUTING:235` 的守卫，`A.3` 逐条量它。
+    · **A 类**钉在「**与单卡大 batch 一致**」上（机器精度档）—— ★★ 这是 `A.1` **唯一**的判据：
+      漏桶会让它**变大** ⇒ 它**能失败**；
+    · ★★ **反向那一半才是信息量所在**（`D22` 的教训）：**漏一个桶**（有未覆盖区）或
+      **重叠一个桶**（那部分变 `N` 倍），判据**必须失败** —— 这就是 `CONTRIBUTING:235`
+      的守卫，`A.3` 逐条量它。
+  ★★★ **本轮订正的一处【恒真当成判据】**：跨 rank 极差（`cross_rank_ptp`）在 `A.1`/`A.2`/`A.3`
+    **都**被写进了 `cond`，而它**恒为 `0.0`** —— 理由**不是**「划分完备」，而是
+    `bucket_sync` 的每个桶都是 `out[:, lo:hi] = Σ_rank out[:, lo:hi]`：
+    **只要某元素被【至少一个桶】覆盖，各 rank 在该元素上算的就是同一个表达式**。
+    实测：`PLAN_OVERLAP`（**错误**的划分）的极差**也是 `0.0`**，只有 `PLAN_MISS`
+    （**有未覆盖区**）才 `> 0`。⇒ ★ 极差的**全部**信息量 = 「有没有未覆盖区」，
+    与「重叠」「划分对不对」都无关 ⇒ 现在它**只被打印**（是 `C.1` 那条判据的量），
+    **不再进任何 `cond`**。
+
+★★★ **一条判据性的自查**（计划 §1.3.3，放在每个 `code/` 的头部）：
+  > **问：如果我把「被测的那段逻辑」删掉，这条断言还会通过吗？**
+  > 答「**会**」⇒ 它是自证的，**不是判据**。
+  > 答「不会」⇒ 它至少钉住了某段逻辑；**再问下一步**：那段逻辑**是不是就是断言自己写的那行**。
+  ★ 本程序的答案落点：`A.1` 若删掉 `bucket_sync`（被测逻辑）⇒ `d_full`/`d_eq8` 无从算起
+    （不会通过）；★ 但**极差那两项**删掉 `bucket_sync` 也照样「成立」——
+    因为它量的是**模拟器自己的广播语义**（本轮已移出判据）。
+  ★ 同理：`A.1` 原来那个 `and same_as_unbucketed` 就是自查问句的**反面样本** ——
+    `sync_eq8` 与 `sync_full` 都是 `bucket_sync` 的输出 ⇒ 那一项**答「会」**
+    ⇒ 本轮已把它从 `cond` 里移到**只打印**（与文档的说法一致；见 `A.1` 的注释）。
 
 ★★ **一处必须写明的口径**（本程序报的每一个「极差 / 比值」都挂在这三件事上）：
   · **累加的实现**：`allreduce_sum()` 用 **Python 内建 `sum()`**（对 rank 列表**顺序累加**）；
@@ -38,9 +58,10 @@ r"""02_grad_sync.py —— DP 的**工程**：梯度怎么与参数**对齐**（
     ⇒ 本程序**只写接口**（桶的作用是让通信能**尽早发起**），回链 `110-communication` 的 `overlap`。
 
 ★★ 可证伪断言（把下面任一条改错，本程序必须非零退出）：
-  · `A.1`  ★★ 划分**完备且不重叠** ⇒ 每个元素的**跨 rank 极差 == `0.0`**，且结果与
-             **单卡大 batch** 的梯度一致（机器精度档）；★★ 而「与**不再分桶**的结果」
-             是**逐位相同**（纯搬运 ⇒ **那一半恒真**，本程序把它**写出来**而不是当判据用）；
+  · `A.1`  ★★ 划分**完备且不重叠** ⇒ 结果与**单卡大 batch** 的梯度一致（机器精度档）；
+             ★★ **只有这一条进 `cond`**。另有两条**恒真**的只打印、不当判据：
+             「与**不再分桶**的结果逐位相同」（纯搬运）与「跨 rank 极差 == `0.0`」
+             （**覆盖的产物**，见头部订正）；
   · `A.2`  ★ **不等分但完备**的划分（`[100,60,32]`）**也通过** —— 桶**不必等大**；
   · `A.3`  ★★★ **守卫**：同一个判据在**漏一个桶**与**重叠一个桶**的划分上**必须失败**；
   · `B.1`  ★ 桶的峰值缓冲 == `最大桶的元素数 × itemsize`（本机 `192` 元素下
@@ -84,8 +105,17 @@ _PASS = collections.Counter()
 _CALLS = collections.Counter()
 
 
-def check(name, cond, detail=""):
-    """`name` 形如 `A.1` —— **首字母就是类别**（A/B/C/D），与 `CONTRIBUTING` §4 对齐。"""
+def check(name, cond, detail="", detail_fail=None):
+    """`name` 形如 `A.1` —— **首字母就是类别**（A/B/C/D），与 `CONTRIBUTING` §4 对齐。
+
+    ★★★ **失败路径【不复述结论】**（2026-09-23 订正，本库 `P12` 家族的一个**输出层**形态）：
+      `detail` 一律是**判据成立时**的措辞（里面满是「判据成立」「必须失败」「⇒ 这证明
+      `A.1` 不是恒真的」这类断言）⇒ 若把它原样打在失败行上，输出会**自相矛盾**：
+        `%% FAIL: data-parallel A.3   ★★★ 守卫成立：同一个判据在坏划分上真的会失败`
+      ⇒ 所以 `cond` 为假时走**另一版文案**：默认只报「这条判据【不成立】」；
+        调用方若真的想给失败版文案，用 `detail_fail=` 显式给一份。
+      ★ 这是**输出层**的纪律，改动**不碰**记账（`FAILS` / `_TOTAL` / `_PASS` 三条路径照旧）。
+    """
     cls = name[0]
     _TOTAL[cls] += 1
     if cond:
@@ -94,7 +124,10 @@ def check(name, cond, detail=""):
     else:
         FAILS.append(name)
         MARKS_USED.add(ASSERT_FAIL_MARK)
-        print("  %s %-6s %s" % (ASSERT_FAIL_MARK, name, detail))
+        print("  %s %-6s %s" % (ASSERT_FAIL_MARK, name,
+                                detail_fail if detail_fail is not None else
+                                "★★ 这条判据【不成立】—— ★ 上面那一版「判据成立 / 必须失败 / "
+                                "⇒ 不是恒真的」的措辞是**成立时**的文案，**本轮没有成立**"))
     return bool(cond)
 
 
@@ -277,12 +310,28 @@ def part_A():
     print("        会把「已同步」与「未同步」的分界从 `0`/非 `0` 变成一个带容差的比较。")
     print("     ★★★ 而「**与不再分桶的结果**逐位相同」= **%s** ⇒ **那一半是纯搬运、恒真**，"
           "**不能当判据**（计划 `D22`）" % same_as_unbucketed)
-    check("A.1", ptp_full == TOL_EXACT and ptp_eq8 == TOL_EXACT
-          and d_full <= TOL_REL * max(scale, 1.0) and d_eq8 <= TOL_REL * max(scale, 1.0)
-          and same_as_unbucketed,
-          "★★ **完备且不重叠 ⇒ 两个后果同时成立**：每个元素的**跨 rank 极差 == `0.0`**"
-          "（所有 rank 拿到同一个值），且与**单卡大 batch** 一致（`%.3e` / `%.3e`，`g` 量级 %.3f）。"
-          "★ 与「不再分桶」逐位相同 ⇒ 那一半**恒真**，信息量在 `A.3` 的反向" % (d_full, d_eq8, scale))
+    # ★★ 两个**当场量出来**的对照（不写成注释里的断言）：坏划分的极差与有未覆盖区的极差
+    ptp_ovl_probe = cross_rank_ptp(bucket_sync(local, PLAN_OVERLAP, N_SYNC))
+    ptp_miss_probe = cross_rank_ptp(bucket_sync(local, PLAN_MISS, N_SYNC))
+    print("     ★★★ **【本轮订正】跨 rank 极差也是恒真的 —— 但它恒真的理由【不是】"
+          "「划分完备」**：")
+    print("        `bucket_sync` 的每个桶都是 `out[:, lo:hi] = Σ_rank out[:, lo:hi]` ⇒")
+    print("        **只要某个元素被【至少一个桶覆盖】，各 rank 在该元素上算的就是【同一个"
+          "表达式】** ⇒ 逐元素极差**恒为 `0.0`**。")
+    print("        ★★ **实测**：`PLAN_OVERLAP`（第 `95` 个元素被覆盖**两次**、错误的划分）"
+          "的极差**同样是 `%.1f`** —— 而 `PLAN_MISS`（有未覆盖区）才给出 `%.3e`。"
+          % (ptp_ovl_probe, ptp_miss_probe))
+    print("        ⇒ ★ `ptp` 的**全部**信息量 = 「**有没有未覆盖区**」，"
+          "与「重叠」「划分对不对」**都无关**；")
+    print("          **它不是「完备性」的证据，也不是 `A.1` 的判据**（本程序只把它**打印**"
+          "出来，它是 `C.1` 那条判据的量）。")
+    print("        ★★ 订正前 `A.1`/`A.2`/`A.3` 都把 `ptp == TOL_EXACT` 写进了 `cond`"
+          " —— 那是把**恒真**当判据（`P12`），且失败行还会打出「判据成立」⇒ 本轮一并改了。")
+    check("A.1", d_full <= TOL_REL * max(scale, 1.0) and d_eq8 <= TOL_REL * max(scale, 1.0),
+          "★★ **完备且不重叠 ⇒ 结果与【单卡大 batch】一致**（`%.3e` / `%.3e`，`g` 量级 %.3f）"
+          "—— ★★ **这是 `A.1` 唯一的判据**（`d_full`/`d_eq8` 会因漏桶而变大 ⇒ **能失败**）。"
+          "★ 另两半（跨 rank 极差 `%.1f`、与「不再分桶」逐位相同）**都是恒真的**，"
+          "只作打印（见上面两段反面教材）" % (d_full, d_eq8, scale, ptp_full))
 
     # ── A.2 ★ 不等分但完备也通过 ───────────────────────────────────────────
     print()
@@ -295,13 +344,17 @@ def part_A():
     print("     桶大小 = **%s**（`Σ = %d` = `Ψ`）· 跨 rank 极差 = **%.3e** · "
           "`max|− 单卡大 batch|` = **%.3e**" % (sizes, sum(sizes), ptp_uneq, d_uneq))
     print("     ★★ 与**不再分桶**的结果逐位相同 = **%s**（★ 三种划分下都是 —— "
-          "这就是「那一半恒真」的第三种证据）" % same_uneq)
+          "这就是「那一半恒真」的第三种证据；**只作打印**）" % same_uneq)
+    print("     ★★ 跨 rank 极差 = **%.1f** —— ★ 它**同样是恒真的**（见 `A.1` 那段订正），"
+          "**不进 `A.2` 的判据**" % ptp_uneq)
     print("     ⇒ ★★ 判据只要求**完备且不重叠**，**不要求等大** ⇒ 分桶是**实现自由**，"
           "不是数学约束（这一条正是 `B.1` 的立足点：可以为了峰值缓冲去改桶大小）。")
-    check("A.2", ptp_uneq == TOL_EXACT and d_uneq <= TOL_REL * max(scale, 1.0)
-          and sum(sizes) == DIM and len(set(sizes)) > 1 and same_uneq and same_uneq,
-          "★★ **不等分但完备的划分同样通过**（`%s`，极差 `%.3e`）⇒ 桶的**大小**不是判据，"
-          "**覆盖**才是" % (sizes, ptp_uneq))
+    check("A.2", d_uneq <= TOL_REL * max(scale, 1.0)
+          and sum(sizes) == DIM and len(set(sizes)) > 1,
+          "★★ **不等分但完备的划分同样通过**（`%s`，与单卡大 batch 差 `%.3e`）⇒ 桶的**大小**"
+          "不是判据，**覆盖**才是。★ 订正（2026-09-23）：原来这里写着 `and same_uneq and "
+          "same_uneq`（同一个恒真条件**写了两遍**）与 `ptp_uneq == TOL_EXACT`（恒真）"
+          "⇒ 两条都已移出判据，只留打印" % (sizes, d_uneq))
 
     # ── A.3 ★★★ 守卫：漏一个桶 / 重叠一个桶 ⇒ 同一判据必须失败 ─────────────
     print()
@@ -315,10 +368,12 @@ def part_A():
           "**漏掉区极差 `%.3e`**" % (miss_lo, DIM, cross_rank_ptp(sync_miss[:, :miss_lo]), ptp_miss))
     print("     · **重叠一个桶**（`[0:96]` 与 `[95:192]`）：第 95 个元素被归约两次 ⇒ "
           "该元素 = **%.6f 倍**均值" % ratio_ovl)
-    check("A.3", ptp_miss > TOL_GUARD and ptp_ovl == TOL_EXACT
-          and abs(ratio_ovl - N_SYNC) <= TOL_RATIO * N_SYNC,
-          "★★★ **守卫成立**：同一个判据在坏划分上**真的会失败** —— 漏桶 ⇒ 极差 `%.3e` > `%g`；"
-          "重叠 ⇒ 那部分变成 `N` 倍。★ 这证明 `A.1` 不是恒真的" % (ptp_miss, TOL_GUARD))
+    print("       ★★ 而它的跨 rank 极差 = **%.1f**（**不是**判据 —— 见 `A.1` 那段订正："
+          "覆盖到的元素各 rank 算的是同一个表达式 ⇒ 极差恒 `0.0`）" % ptp_ovl)
+    check("A.3", ptp_miss > TOL_GUARD and abs(ratio_ovl - N_SYNC) <= TOL_RATIO * N_SYNC,
+          "★★★ **守卫成立**：同一个判据在坏划分上**真的会失败** —— 漏桶 ⇒ **有未覆盖区**、"
+          "极差 `%.3e` > `%g`；重叠 ⇒ 那部分变成 `N` 倍（`%.6f`）。★ 这证明 `A.1` 不是恒真的"
+          % (ptp_miss, TOL_GUARD, ratio_ovl))
 
 
 # ===========================================================================
@@ -398,10 +453,12 @@ def part_C():
           "`max|− 正确值|` = **%.3e**" % (lo, DIM, ptp_unc, d_unc))
     print("     ⇒ ★★ **各卡不再持有同一个梯度** —— 下一步 `w ← w − lr·g` 之后，"
           "**每个 rank 的参数都不同**（副本**发散**）。")
-    check("C.1", ptp_cov == TOL_EXACT and ptp_unc > TOL_GUARD
-          and d_unc > TOL_REL * max(scale, 1.0),
-          "★★ **漏桶的后果是可量的**：已同步部分极差 `%.3e`（全同），漏掉部分极差 **`%.3e`** "
-          "⇒ 那部分梯度**根本没参与归约**，各卡保留各自的本地值 ⇒ **复制品发散**" % (ptp_cov, ptp_unc))
+    print("       ★ 已同步部分那一半（`%.3e`）是**恒真**的（覆盖到的元素各 rank 算的是同一个"
+          "表达式，见 `A.1` 那段订正）—— **不进判据**，只作对照" % ptp_cov)
+    check("C.1", ptp_unc > TOL_GUARD and d_unc > TOL_REL * max(scale, 1.0),
+          "★★ **漏桶的后果是可量的**：**漏掉部分**（**有未覆盖区**）的极差 **`%.3e`** "
+          "⇒ 那部分梯度**根本没参与归约**，各卡保留各自的本地值 ⇒ **复制品发散**"
+          "（★ 判据只用**未覆盖区**那一段 —— 覆盖区的极差恒 `0.0`，没有信息量）" % (ptp_unc,))
 
     # ── C.2 ★★ 重叠 ⇒ 重复计数（求和口径下 = N 倍）────────────────────────
     print()
@@ -416,11 +473,11 @@ def part_C():
     print("        ⇒ 再求和一次 = `N × Σ`，最后统一除以 `N` ⇒ 那部分变成 **`N × 均值`**。")
     print("        ★★ 这是 **[B] NCCL 的 `SUM` 口径**（`%s`）的直接后果："
           "**重叠在 `SUM` 下会重复计数，在 `AVE` 下不会**。" % specs.TORCH_ALLREDUCE_DEFAULT_OP_QUOTE)
-    check("C.2", abs(float(ratios) - N_SYNC) <= TOL_RATIO * N_SYNC and ptp_ovl == TOL_EXACT
+    check("C.2", abs(float(ratios) - N_SYNC) <= TOL_RATIO * N_SYNC
           and specs.TORCH_ALLREDUCE_DEFAULT_OP_QUOTE == "ReduceOp.SUM",
           "★★ **重叠 ⇒ 重复计数：那部分恰好是 `N = %d` 倍**（本机 `%.6f`）——"
-          "★ 注意**各卡仍是一致的**（极差 `%.3e`）：这个错**不会**让副本发散，"
-          "它让**所有副本一起朝错的方向走**（比 `C.1` 更隐蔽）"
+          "★ 注意**各卡仍是一致的**（极差 `%.3e`：**这一条恒真**，见 `A.1` 那段订正）："
+          "这个错**不会**让副本发散，它让**所有副本一起朝错的方向走**（比 `C.1` 更隐蔽）"
           % (N_SYNC, float(ratios), ptp_ovl))
 
     # ── C.3 ★ 错一个下标 ⇒ 恰好一个元素被重复计数 ─────────────────────────
@@ -543,10 +600,11 @@ def part_D():
           "★★ `Ψ` 的口径（**参数个数**）与 `16Ψ` 的**中文限定语**成对钉住 ——"
           "本程序把 `Ψ` 当**参数个数**用（`DIM = %d`），与那两条一致" % DIM)
     check("D.6", specs.UNSOURCED == ("nccl_allreduce_default_op",
-                                     "data_parallel_redundancy_ratio_definition",
-                                     "data_parallel_ring_allreduce_volume"),
-          "★★ `specs.UNSOURCED` 的 **3** 项逐位钉住 —— ★ 第 3 项 (`data_parallel_ring_allreduce_volume`) "
-          "正是本程序**必须不写**的那一块（`V(N)`）")
+                                     "data_parallel_redundancy_ratio_definition"),
+          "★★ `specs.UNSOURCED` 的 **2** 项逐位钉住。★★ 订正（2026-09-23）："
+          "原来还钉着第 3 项 `data_parallel_ring_allreduce_volume` —— 它**已移出**，"
+          "因为它的性质是「**不在本主题**」（`V(N)` 的那一块，本程序**必须不写**）"
+          "而不是「找不到来源」：它有来源，只是不在本域")
 
     # ── 独立性 ─────────────────────────────────────────────────────────────
     src_a = inspect.getsource(allreduce_sum)
@@ -577,10 +635,14 @@ def part_D():
     _, _, loc2 = toy_gradients(N_SYNC, PER_RANK_ROWS, DIM, SEED)
     synced = bucket_sync(loc2, PLAN_FULL, N_SYNC)
     std_v = float(np.std(synced, axis=0).max())
-    check("D.8", cross_rank_ptp(synced) == TOL_EXACT and std_v > TOL_EXACT,
+    ptp_v = cross_rank_ptp(synced)          # ★ 订正：原来是写死的字面量 `0.0`，现在**真的量**
+    check("D.8", ptp_v == TOL_EXACT and std_v > TOL_EXACT,
           "★★ **量法口径的现场**：同一个「各卡是否一致」的**全同**结果 —— "
-          "**极差** = `%.1f`（干净），而 `np.std` = **`%.3e`**（`mean` 那一步的舍入）⇒ "
-          "用 `std` 就必须给判据加容差、于是「已同步 / 未同步」的**分界变模糊**" % (0.0, std_v))
+          "**极差** = `%.1f`（**当场量出来的**：`cross_rank_ptp(synced)`，干净），"
+          "而 `np.std` = **`%.3e`**（`mean` 那一步的舍入）⇒ "
+          "用 `std` 就必须给判据加容差、于是「已同步 / 未同步」的**分界变模糊**"
+          "（★ 订正 2026-09-23：原来那个 `0.0` 是**写死的字面量**，不是 `cross_rank_ptp` 的结果"
+          " ⇒ 读者分不出哪一半是量的）" % (ptp_v, std_v))
     check("D.9", MARKS_USED <= {ASSERT_FAIL_MARK},
           "★ 打印失败行时用的标记 ⊆ {%r}（本次实际用到 %d 个）"
           % (ASSERT_FAIL_MARK, len(MARKS_USED)))

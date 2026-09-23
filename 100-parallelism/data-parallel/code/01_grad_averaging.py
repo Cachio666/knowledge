@@ -22,9 +22,24 @@ r"""01_grad_averaging.py —— DP 的**语义**：为什么梯度是**平均**�
       （`_CALLS`），参照跑完后必须**恰好为 `0`**（`D.7b`），且**先证明这个计数器非空**
       （被测路径跑一次必须 > 0；否则那是一条恒真的「没调用」）。
 
-★★ **覆盖边界（必须写明，`CONTRIBUTING:238` 的反面）**：本程序的 A 类守的是
+★★★ **一条判据性的自查**（计划 §1.3.3，放在每个 `code/` 的头部）：
+  > **问：如果我把「被测的那段逻辑」删掉，这条断言还会通过吗？**
+  > 答「**会**」⇒ 它是自证的，**不是判据**。
+  > 答「不会」⇒ 它至少钉住了某段逻辑；**再问下一步**：那段逻辑**是不是就是断言自己写的那行**。
+  ★ 本程序的答案落点：`A.1` 若删掉 `dp_average_gradient`（被测逻辑）⇒ `g_dp` 无从算起
+    （不会通过）；`A.2`/`A.3`/`C.1`/`C.2` 同理。
+  ★★ **一处对答案的反面样本（本轮已改）**：`A.3` 原来还多钉了一条
+    `abs(mean(cells[0][1] / base) - 1.0) <= TOL_RATIO` —— 而 `cells[0]` 与 `base` 是
+    **同参数同函数的两次调用**（`pooled_gradient(..., False, True)`）⇒ 比值**恒为 `1.0`**
+    ⇒ 删掉被测逻辑它照样「成立」⇒ 已从 `cond` 移除（`ok` 那四项仍然有效）。
+
+★★ **覆盖边界（必须写明 —— 计划 §2 的第 3 条）**：本程序的 A 类守的是
   「**切分做对了没有**」（除数在哪一边、损失口径与除数配不配对、累加顺序变了多少），
   **不守**「算子本身对不对」（那由 `numpy` 保证）⇒ **不得声称 A 类验证了更多东西**。
+  ★★ **订正（2026-09-23）**：原句在这里引了 `CONTRIBUTING:238`，**引错了** ——
+  `:238` 讲的是**另一件事**：「C 类断言成立时程序应当失败 ⇒ 凡断言「成功行为」的
+  （如「变换前后语义等价」）归 A 类或 B 类，不要塞进 C 类」。两件事都在
+  `CONTRIBUTING`/计划里有出处，但**不是同一条**（★ 这正是「引文作用域不匹配」的形态）。
 
 ★★★ **两条必须落在程序里的口径纪律**（计划 §0.4.1 与 §D.4①）：
   1. **凡报「N/M 次非零」这类计数，必须同时报三件事**：**除法的位置**、
@@ -38,8 +53,8 @@ r"""01_grad_averaging.py —— DP 的**语义**：为什么梯度是**平均**�
     `10-foundations/performance-models/02-amdahl-and-scaling.md`；
   · **梯度累积与 batch 放大的等价性（含归一化层时的失效）**已经由
     `90-training/autograd-and-backward/03-gradient-lifecycle.md` 写过
-    （`:71` 的 `4.173e-01`、判据表 `:223-224`）⇒ 本程序**只写「无归一化层」那一支并回链**，
-    **不重写**那一条及其失效条件；
+    （`:71` 与判据表 `:223-224` —— ★ 失效条件的**实测值**与**机制**都在那边）
+    ⇒ 本程序**只写「无归一化层」那一支并回链**，**不重写**那一条及其失效条件；
   · **`16Ψ` 的组成与字节分解**（`2Ψ+2Ψ+KΨ=16Ψ`）已经由
     `90-training/checkpointing/01-state-and-bytes.md` 写过（§1.3 + 判据表 +
     `code/01_state_bytes.py:310` 的 `A.3`）⇒ 本程序只**消费**那个系数（`B.1`），不重推分解。
@@ -96,8 +111,17 @@ _PASS = collections.Counter()
 _CALLS = collections.Counter()
 
 
-def check(name, cond, detail=""):
-    """`name` 形如 `A.1` —— **首字母就是类别**（A/B/C/D），与 `CONTRIBUTING` §4 对齐。"""
+def check(name, cond, detail="", detail_fail=None):
+    """`name` 形如 `A.1` —— **首字母就是类别**（A/B/C/D），与 `CONTRIBUTING` §4 对齐。
+
+    ★★★ **失败路径【不复述结论】**（2026-09-23 订正，本库 `P12` 家族的一个**输出层**形态）：
+      `detail` 一律是**判据成立时**的措辞（里面满是「判据成立」「必须失败」「⇒ 这证明
+      `A.1` 不是恒真的」这类断言）⇒ 若把它原样打在失败行上，输出会**自相矛盾**：
+        `%% FAIL: data-parallel A.1   ★★ 判据成立：N 卡平均 == 单卡大 batch（…）`
+      ⇒ 所以 `cond` 为假时走**另一版文案**：默认只报「这条判据【不成立】」；
+        调用方若真的想给失败版文案，用 `detail_fail=` 显式给一份。
+      ★ 这是**输出层**的纪律，改动**不碰**记账（`FAILS` / `_TOTAL` / `_PASS` 三条路径照旧）。
+    """
     cls = name[0]
     _TOTAL[cls] += 1
     if cond:
@@ -106,7 +130,10 @@ def check(name, cond, detail=""):
     else:
         FAILS.append(name)
         MARKS_USED.add(ASSERT_FAIL_MARK)
-        print("  %s %-6s %s" % (ASSERT_FAIL_MARK, name, detail))
+        print("  %s %-6s %s" % (ASSERT_FAIL_MARK, name,
+                                detail_fail if detail_fail is not None else
+                                "★★ 这条判据【不成立】—— ★ 上面那一版「判据成立 / 必须失败 / "
+                                "⇒ 不是恒真的」的措辞是**成立时**的文案，**本轮没有成立**"))
     return bool(cond)
 
 
@@ -266,11 +293,12 @@ def part_A():
     print("  ── A.1 ★★ `N=%d` 卡各自算梯度再平均 vs 单卡一次算 `N×B=%d` 行的梯度 ──"
           % (N_CARDS, N_CARDS * PER_CARD_ROWS))
     x, y = toy_batch(N_CARDS * PER_CARD_ROWS, DIM, SEED)
-    print("     ★★ **前提（必须写出来）**：**没有按片统计的归一化层** —— "
-          "BatchNorm 这类层用的是**当前这一片**的均值/方差 ⇒ 那片数据上的梯度与大 batch 的")
-    print("        不是同一个函数。★ 该等价性的**失效条件**已经由 "
-          "`90-training/autograd-and-backward/03-gradient-lifecycle.md` 写过")
-    print("        （`:71` 本机相对差 `4.173e-01`、判据表 `:223-224`）⇒ **本程序只有「无归一化层」这一支**。")
+    print("     ★★ **前提（必须写出来）**：**没有按片统计的归一化层**。")
+    print("        ★★ 该等价性与它的**失效条件**的正文在 "
+          "`90-training/autograd-and-backward/03-gradient-lifecycle.md`（`:71` / 判据表 "
+          "`:223-224`）⇒ **本程序只有「无归一化层」这一支，机制不回述**"
+          "（★ 订正 2026-09-23：原来这里抄了 `90` 的机制从句与它的实测值 `4.173e-01`，"
+          "违反 `CONTRIBUTING` §7.2 的「只放链接、不复制内容」）。")
     g_dp = dp_average_gradient(x, y, N_CARDS, PER_CARD_ROWS)
     g_one = single_card_gradient(x, y)
     diff = float(np.abs(g_dp - g_one).max())
@@ -351,10 +379,12 @@ def part_A():
     print("     ⇒ ★★ **「平均」不是可选的写法**：`loss` 的 reduction 口径（除 `B` 还是不除）"
           "与卡间的除数（除 `N` 还是不除）**乘起来必须等于 `1/(N·B)`**，"
           "四格只有两格满足；另两格分别差 `N·B` 与 `B` 倍。")
-    check("A.3", ok and abs(float(np.mean(cells[0][1] / base)) - 1.0) <= TOL_RATIO,
+    check("A.3", ok,
           "★★ **四格的比值恰好是 `{1, N, B, N·B}`**（本机 `1.000000 / %.0f / %.0f / %.0f`）"
-          "⇒ 这条判据**能失败**（把口径写错，比值就离开 1）" % (N_CARDS, PER_CARD_ROWS,
-                                                             N_CARDS * PER_CARD_ROWS))
+          "⇒ 这条判据**能失败**（把口径写错，比值就离开 1）。★ 订正（2026-09-23）："
+          "原来还多钉了一条 `abs(mean(cells[0][1]/base) − 1) <= TOL_RATIO` —— "
+          "`cells[0]` 与 `base` 是**同参数同函数的两次调用** ⇒ 它**恒真**，已移除"
+          % (N_CARDS, PER_CARD_ROWS, N_CARDS * PER_CARD_ROWS))
 
 
 # ===========================================================================
@@ -611,11 +641,12 @@ def part_D():
           "**参照路径**跑完 ⇒ 计数 = **%d**（必须**恰好为 0**）⇒ "
           "「参照不调用被测」不是靠读代码相信的" % (seen, left))
     check("D.8", specs.UNSOURCED == ("nccl_allreduce_default_op",
-                                     "data_parallel_redundancy_ratio_definition",
-                                     "data_parallel_ring_allreduce_volume"),
-          "★★ `specs.UNSOURCED` 的 **3** 项逐位钉住 —— ★ 第 1 项是本轮**真的撞到**的"
-          "来源错配（NCCL 的文档**没有** `op` 的默认值）、第 3 项是**禁区**"
-          "（`V(N)` 不在本主题）")
+                                     "data_parallel_redundancy_ratio_definition"),
+          "★★ `specs.UNSOURCED` 的 **2** 项逐位钉住 —— ★ 第 1 项是本轮**真的撞到**的"
+          "来源错配（NCCL 的文档**没有** `op` 的默认值）。★★ 订正（2026-09-23）："
+          "原来的第 3 项 `data_parallel_ring_allreduce_volume`（`V(N)`）**已移出** —— "
+          "它的性质是「**不在本主题**」而不是「找不到来源」（它有来源），"
+          "留着它就违反 `CONTRIBUTING:65` 的「不得既保留数字又记 `UNSOURCED`」")
     check("D.9", MARKS_USED <= {ASSERT_FAIL_MARK},
           "★ 打印失败行时用的标记 ⊆ {%r}（本次实际用到 %d 个）"
           % (ASSERT_FAIL_MARK, len(MARKS_USED)))

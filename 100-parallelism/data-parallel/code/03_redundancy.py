@@ -14,20 +14,33 @@ r"""03_redundancy.py —— ★★★ DP 的**冗余账**：`N` 个副本用 `N 
 ★★★ **本程序的头号风险与它的解药**（计划 §1.3.3 的第 3 条）：
   「`N` 卡下每卡显存不随 `N` 下降」这句话，若实现里它就是常量 `16Ψ`，
   那么 `assert per_card == 16 * Psi` 是**算术恒真**（**模拟器同时是被测对象**）。
-  ⇒ 本程序的落法是：**真的建出 `N` 份状态**（`make_state()` / `make_full_state()`），
+  ⇒ 本程序的落法是：**真的建出 `N` 份状态**（`make_state()` / `make_full_state()` /
+    `broadcast_full_replicas()` —— ★★ **每份的每个数组都是 `.copy()` 出来的独立内存**），
     量它们的 **`nbytes`**、算它们的 **sha256 摘要** —— 判据钉在「**副本一致性**」上，
     **不钉在乘法上**：
       · `A.1` 的判据是「**`N` 份的【参数】逐位相同**」（摘要相等）—— **这才是 DP 的隐含假设**；
       · `A.3`/`C.1` 证明它**可证伪**（把一份换成独立建的 ⇒ 摘要**必须**不同）；
-      · `B.2` 的「每卡常量」是**从建出来的数组量出来的**，并且**按计划 §1.3.3 的裁定**：
-        「**加卡不能解决显存问题**」这一条在此**只作陈述 + 回链**，**不另给判据**。
+      · `B.2` 的判据只钉**两条有内容的**：「所有卡的 `nbytes` 全相同」与「它 ==
+        `specs.ZERO_TOTAL_MULTIPLE × Ψ`」—— ★★ 而「总量 ∝ `N`」**是推论、不另立判据**
+        （它在本形态下**恒真**：`totals` 与 `[每卡 × N]` 的相等是**重写**，程序把这两条
+        **打印出来当反面教材**，见 `B.2` 的「`D22` 形态」那一行）；
+      · 并且**按计划 §1.3.3 的裁定**：「**加卡不能解决显存问题**」这一条在此
+        **只作陈述 + 回链**，**不另给判据**。
+
+★★★ **一条判据性的自查**（计划 §1.3.3，放在每个 `code/` 的头部）：
+  > **问：如果我把「被测的那段逻辑」删掉，这条断言还会通过吗？**
+  > 答「**会**」⇒ 它是自证的，**不是判据**。
+  > 答「不会」⇒ 它至少钉住了某段逻辑；**再问下一步**：那段逻辑**是不是就是断言自己写的那行**。
+  ★ 本程序的答案落点：`A.1` 若删掉 `broadcast_replicas` 就**没有可量的副本**（不会通过）；
+    `B.1` 若删掉 `broadcast_replicas` 同理；★★ 而 `B.2` 原来那一版**答「会」**
+    —— 因为那里的 `totals` 就是**断言自己写的那行乘法**（本轮已改）。
 
 ★ **本主题的禁区**（回链，不重写）：
   · **`16Ψ` 的组成与字节分解**（`2Ψ+2Ψ+KΨ=16Ψ`）已经由
     `90-training/checkpointing/01-state-and-bytes.md` 写过（§1.3 + 判据表 +
     `code/01_state_bytes.py:310` 的 `A.3`）⇒ 本程序**只消费**那个系数（`A.2` 把它的
     **四项**建出来量一遍），**不重推分解**；
-  · ★★ **「按 `N` 分片后怎么变」不在本主题** —— 那是 `zero-fsdp/01` 的正文
+  · ★★ **「按 `N` 分片后怎么变」不在本主题** —— 那是 `zero-fsdp/01`（**未建成，Chunk 6**）的正文
     （`P_os` 在 `N=512` 仍要 `4.0234Ψ`、「分片不是除法」）⇒ 本程序**只写 DP 的账**，
     并在 `B.2` 里给出**接口 + 回链**；
   · **梯度规约的算法**（ring allreduce / `V(N)`）⇒ `110-communication`。
@@ -39,7 +52,9 @@ r"""03_redundancy.py —— ★★★ DP 的**冗余账**：`N` 个副本用 `N 
              它与 `90-training/checkpointing` 的账**同值**，本程序**不重推分解**；
   · `A.3`  ★★ **守卫**：把第 `DRIFT_RANK` 份换成**独立建的** ⇒ 同一个摘要判据**必须失败**；
   · `B.1`  ★★ **冗余度 `(N−1)/N`** —— `N = 1/2/4/8/16` 上 `0.0 / 0.5 / 0.75 / 0.875 / 0.9375`；
-  · `B.2`  ★ **每卡状态的字节数与 `N` 无关**（从建出来的数组量），而**总**字节随 `N` 线性涨；
+  · `B.2`  ★★ **每卡状态的字节数与 `N` 无关**（**真的建出 `N` 份独立分配的状态**再逐份量
+             `nbytes`：全部相同，且 == `specs.ZERO_TOTAL_MULTIPLE × Ψ`）——
+             ★ 而「总量 ∝ `N`」**是推论、不另立判据**（见上）；
   · `C.1`  ★★ **一个 rank 漂掉** ⇒ 「所有 rank 相同」**失败**（本机：不同的 rank == `[3]`）；
   · `C.2`  ★★ **每一份都独立初始化**（忘掉广播）⇒ **`N/N` 个 rank 全不同**；
   · `C.3`  ★ **加卡不能让单卡装下更大的模型**：`Ψ` 翻倍 ⇒ **每卡**字节翻倍（`N` 无关）。
@@ -80,8 +95,17 @@ _PASS = collections.Counter()
 _CALLS = collections.Counter()
 
 
-def check(name, cond, detail=""):
-    """`name` 形如 `A.1` —— **首字母就是类别**（A/B/C/D），与 `CONTRIBUTING` §4 对齐。"""
+def check(name, cond, detail="", detail_fail=None):
+    """`name` 形如 `A.1` —— **首字母就是类别**（A/B/C/D），与 `CONTRIBUTING` §4 对齐。
+
+    ★★★ **失败路径【不复述结论】**（2026-09-23 订正，本库 `P12` 家族的一个**输出层**形态）：
+      `detail` 一律是**判据成立时**的措辞（里面满是「判据成立」「必须失败」「⇒ 这证明
+      `A.1` 不是恒真的」这类断言）⇒ 若把它原样打在失败行上，输出会**自相矛盾**：
+        `%% FAIL: data-parallel A.3   ★★ 守卫成立：改掉一份 ⇒ 同一条摘要判据真的会失败`
+      ⇒ 所以 `cond` 为假时走**另一版文案**：默认只报「这条判据【不成立】」；
+        调用方若真的想给失败版文案，用 `detail_fail=` 显式给一份。
+      ★ 这是**输出层**的纪律，改动**不碰**记账（`FAILS` / `_TOTAL` / `_PASS` 三条路径照旧）。
+    """
     cls = name[0]
     _TOTAL[cls] += 1
     if cond:
@@ -90,7 +114,10 @@ def check(name, cond, detail=""):
     else:
         FAILS.append(name)
         MARKS_USED.add(ASSERT_FAIL_MARK)
-        print("  %s %-6s %s" % (ASSERT_FAIL_MARK, name, detail))
+        print("  %s %-6s %s" % (ASSERT_FAIL_MARK, name,
+                                detail_fail if detail_fail is not None else
+                                "★★ 这条判据【不成立】—— ★ 上面那一版「判据成立 / 必须失败 / "
+                                "⇒ 不是恒真的」的措辞是**成立时**的文案，**本轮没有成立**"))
     return bool(cond)
 
 
@@ -175,9 +202,34 @@ def broadcast_replicas(seed, n_replicas):
       （或从同一个检查点加载）⇒ 否则各副本从第 0 步就不一样。
       ★★ 本函数**不是**「把同一个 seed 传给 `N` 次」—— 那样写的话
         「摘要相同」会是 **RNG 的恒等式**（`P12`），而不是一条判据。
+    ★★★ **订正（2026-09-23）：每个副本的数组必须【真的复制】** —— `list(origin)` 只复制了
+      **外层列表**，各副本的元素**仍指向同一批数组对象** ⇒ 实测 `reps[0][i] is reps[1][i]`
+      为 `True`、`np.shares_memory(reps[0][i], reps[3][i])` 为 `True`：
+      **原地改 `rank 0` 的一个数，`rank 3` 跟着变，而「摘要全同」照样成立**。
+      ⇒ 那样的话 `A.1` 的「`N` 份逐位相同」量的是**对象别名**（比 RNG 恒等式**更强**的
+      同一性：连值都不用比，它们本来就是**同一个对象**），**不是数据的独立测量**。
+      ⇒ 现在每个副本的每个数组走一次 `a.copy()`（**独立内存**）——
+      「逐位相同」这才变成一条**数据判据**。
     """
     origin = make_state(seed)
-    return [list(origin) for _ in range(n_replicas)]
+    return [[a.copy() for a in origin] for _ in range(n_replicas)]
+
+
+def broadcast_full_replicas(seed, psi, n_replicas):
+    """**被测**：把一份**完整训练状态**（`16Ψ` 的四项）广播给 `N` 张卡。
+
+    ★★ 与 `broadcast_replicas` 同一条纪律：**每份的每个数组都走一次 `.copy()`**
+      （独立内存）⇒ 各副本不是**同一个对象**，而是**同一份数据的独立拷贝**。
+      ★★ 为什么 `B.2` 需要它：原实现写的是
+        `totals = [state_bytes(make_full_state(SEED, psi)) * n for n in REPLICA_COUNTS]`
+        —— **同一个表达式重算 5 次再乘 `n`** ⇒ 「每卡逐位不变」与「总量恰好成比例」
+        两项**都是恒真**（`totals = c·n` 一望而知），而 `:16` 自己就写着
+        「`assert per_card == 16*Psi` 是**算术恒真**」⇒ **原实现恰恰那么写了**（本库 `P12`）。
+      ⇒ 现在**真的建 `N` 份**（每份独立分配）再 `Σ nbytes`；判据的两端变成**实际数组的字节数**。
+    """
+    _CALLS["broadcast_full_replicas"] += 1
+    origin = make_full_state(seed, psi)
+    return [{k: v.copy() for k, v in origin.items()} for _ in range(n_replicas)]
 
 
 def ref_params_bytes(psi):
@@ -358,32 +410,50 @@ def part_B():
           "`N=16` 时 **`%.6f`** ⇒ **加卡把「有用的显存」压得越来越小**"
           % (list(REPLICA_COUNTS), [round(r, 6) for r in red], red[-1]))
 
-    # ── B.2 ★ 每卡常量、总量线性涨（★ 只作陈述 + 回链，不另给判据）────────
+    # ── B.2 ★★ 每卡常量、总量线性涨（★ 真的建 `N` 份再求和）──────────────
     print()
-    print("  ── B.2 ★ **每卡**状态的字节数不随 `N` 变化；**总量** `∝ N` ──")
+    print("  ── B.2 ★★ **每卡**状态的字节数不随 `N` 变化；**总量** `∝ N` ──")
     st = make_full_state(SEED, psi)
-    per_card = [state_bytes(make_full_state(SEED, psi)) for _ in REPLICA_COUNTS]
-    totals = [state_bytes(make_full_state(SEED, psi)) * n for n in REPLICA_COUNTS]
-    print("     每卡状态（**从真的建出来的数组量**）= **%d B** = `%.4fΨ`（`Ψ = %d`）；"
-          "`N` 取 `%s` 时它**逐位不变** = **%s**"
-          % (per_card[0], per_card[0] / psi, psi, list(REPLICA_COUNTS),
+    built = {n: broadcast_full_replicas(SEED, psi, n) for n in REPLICA_COUNTS}
+    per_card = [state_bytes(r) for reps in built.values() for r in reps]   # ★ 全部卡，逐份量
+    totals = [sum(state_bytes(r) for r in reps) for reps in built.values()]
+    print("     ★★ **真的建出 `N` 份**（`broadcast_full_replicas`：每份的每个数组都是"
+          "`.copy()` ⇒ **独立内存**）再逐份量 `nbytes`：")
+    print("     每卡状态 = **%d B** = `%.4fΨ`（`Ψ = %d`）；`N` 取 `%s` ⇒ 一共量了 **%d** 份，"
+          "它们的 `nbytes` **全部相同** = **%s**"
+          % (per_card[0], per_card[0] / psi, psi, list(REPLICA_COUNTS), len(per_card),
              len(set(per_card)) == 1))
-    print("     总量 = `N × 每卡`：%s" % "、".join("`N=%d` → %d B" % (n, t)
-                                                 for n, t in zip(REPLICA_COUNTS, totals)))
-    print("     ★★ **口径提醒（`P12`）**：这一条守的是「**程序真的各建了一份**」，"
-          "**不是**公式的同义反复 —— 判据的两端是**实际数组的 `nbytes`**（`A.2` 已把它与")
-    print("       [C] 常量对拍）。★★ 而「**加卡不能解决显存问题**」这句话本身"
-          "**在本程序只作陈述、不另给判据**")
-    print("       （计划 §1.3.3 第 3 条的裁定）⇒ 它的定量正文在 `zero-fsdp/01`（`P_os` 在 "
-          "`N=512` 仍要 `4.0234Ψ`），此处**回链**。")
+    print("     总量 = `Σ 各份 nbytes`：%s" % "、".join("`N=%d` → %d B" % (n, t)
+                                                      for n, t in zip(REPLICA_COUNTS, totals)))
+    # ★★★ 反面教材（与 `02` 的 `A.1`、本文 `A.1` 的「与不再分桶逐位相同」同一形态）：
+    id_a = totals[0] * REPLICA_COUNTS[-1] == totals[-1] * REPLICA_COUNTS[0]
+    id_b = totals == [per_card[0] * n for n in REPLICA_COUNTS]
+    print("     ★★★ **反面教材（`D22` 形态：只打印，不当判据）**：下面两条**都是恒真**的，"
+          "**一条信息都没有**：")
+    print("       · `totals[0] × N_last == totals[-1] × N_0` = **%s**（两边都是 `c·N_0·N_last`）；"
+          % id_a)
+    print("       · `totals == [每卡 × N]` = **%s**（`Σ` 的每一项都同大小 ⇒ 它就是"
+          "「每卡 × 份数」的重写）。" % id_b)
+    print("       ★★ **原实现就是拿这两条当 `B.2` 的判据的**"
+          "（`totals = [state_bytes(make_full_state(...)) * n for n in ...]` —— 同一个表达式"
+          "重算 5 次再乘 `n`），而 `:16` 自己写着「`assert per_card == 16*Psi` 是**算术恒真**」"
+          "⇒ **说明「不能这么写」，而它恰恰那么写了**（`P12`）⇒ 本轮已改。")
+    print("     ★★ 现在 `B.2` 的判据只钉**两条有内容的**：① **所有卡**（`N` 取 `%s` 时一共"
+          "**%d** 份、每份**独立分配**）的 `nbytes` **全相同**；"
+          % (list(REPLICA_COUNTS), len(per_card)))
+    print("       ② 那个字节数 == `specs.ZERO_TOTAL_MULTIPLE × Ψ`（**来源不同**的两条路径："
+          "NumPy 的 `nbytes` vs [C] 常量的整数倍）—— 「总量 ∝ `N`」是它们的**推论**，"
+          "不另立判据。")
+    print("     ★★ 而「**加卡不能解决显存问题**」这句话本身**在本程序只作陈述、不另给判据**"
+          "（计划 §1.3.3 第 3 条的裁定）⇒ 它的定量正文在 `zero-fsdp/01`（**未建成，Chunk 6**）"
+          "（`P_os` 在 `N=512` 仍要 `4.0234Ψ`），此处**回链**。")
     check("B.2", len(set(per_card)) == 1
-          and totals[0] * REPLICA_COUNTS[-1] == totals[-1] * REPLICA_COUNTS[0]
-          and per_card[0] == 16 * psi,
-          "★★ **每卡常量、总量线性**：`N` 从 `%d` 涨到 `%d`（**%d 倍**），每卡**逐位不变**"
-          "（`%d B`），总量**恰好成比例**（`%d × %d == %d × %d` 整数恒等）"
-          % (REPLICA_COUNTS[0], REPLICA_COUNTS[-1],
-             REPLICA_COUNTS[-1] // REPLICA_COUNTS[0], per_card[0],
-             totals[-1], REPLICA_COUNTS[0], totals[0], REPLICA_COUNTS[-1]))
+          and per_card[0] == int(specs.ZERO_TOTAL_MULTIPLE * psi),
+          "★★ **每卡状态 == `16Ψ`，且与 `N` 无关**：`N` 取 `%s` 时一共量了 **%d** 份"
+          "**独立分配**的状态，`nbytes` **全部相同**（`%d B` = `specs.ZERO_TOTAL_MULTIPLE × Ψ`，"
+          "两条来源不同的路径）；★ 总量 = `Σ 各份`（`N=%d` → `%d B`，`N=%d` → `%d B`）"
+          % (list(REPLICA_COUNTS), len(per_card), per_card[0],
+             REPLICA_COUNTS[0], totals[0], REPLICA_COUNTS[-1], totals[-1]))
 
 
 # ===========================================================================
@@ -437,14 +507,17 @@ def part_C():
           % (psi, b1, b1 / psi, psi2, b2))
     print("     ⇒ ★★ 每卡字节 = **`16Ψ` 个字节**（`16` 这个倍数**已经含了**各 dtype 的字节数）"
           "⇒ 它**只由 `Ψ` 决定**、**与 `N` 无关**（`B.2` 已量）")
-    print("        ⇒ **加卡不会让单卡装下更大的模型**：要装下 `2Ψ`，**每张卡**都得有 "
+    print("        ⇒ **加卡不会让单卡装下更大的模型**：要装下一个**参数翻倍**的模型"
+          "（`Ψ → 2Ψ` **个参数**），**每张卡**都得有 "
           "**%d B**（= `2 × %d B`）。" % (b2, b1))
+    print("           ★ **消歧**：这里的 `2Ψ` 指**两倍参数个数**；`A.2` 表里那个 `2Ψ` 指"
+          "**参数那一项的字节账**（fp16 ⇒ 2 字节/参数）—— **同名不同指、相差 8 倍**。")
     print("     ★★ **分片之后**怎么变（`P_os` 的 `4Ψ` 下界、「分片不是除法」）**不在本主题**"
-          " ⇒ 回链 `zero-fsdp/01`。")
+          " ⇒ 回链 `zero-fsdp/01`（**未建成，Chunk 6**）。")
     check("C.3", b2 == int(TOL_SCALE_UP * b1) and psi2 == 2 * psi and b1 == 16 * psi,
           "★★ **每卡字节只由 `Ψ` 决定**（`%d → %d B`，**恰好 %g 倍**）⇒ "
           "「加卡能装下更大的模型」是**错的**：每份副本都要放**完整**的状态"
-          "（分片后的账回链 `zero-fsdp/01`）" % (b1, b2, TOL_SCALE_UP))
+          "（分片后的账回链 `zero-fsdp/01`（**未建成，Chunk 6**））" % (b1, b2, TOL_SCALE_UP))
 
 
 # ===========================================================================
@@ -462,7 +535,7 @@ def preflight():
     print("  ★★ 强制限定语：**不是 NCCL，也不是真机** —— 验证的是**切分的代数**。")
     print("  ★★ **禁区回链**（本程序一行都不重写）：`16Ψ` 的**组成与分解**在 "
           "`90-training/checkpointing/01-state-and-bytes.md`；**按 `N` 分片后怎么变**在 "
-          "`zero-fsdp/01`；**梯度规约的算法**（ring allreduce / `V(N)`）在 `110-communication`。")
+          "`zero-fsdp/01`（**未建成，Chunk 6**）；**梯度规约的算法**（ring allreduce / `V(N)`）在 `110-communication`。")
     before = len(FAILS)
 
     hits = _mark_assignments_in(os.path.abspath(__file__))
@@ -549,11 +622,13 @@ def part_D():
           "★★ `A.1` 的**外部锚点**逐位：[B] PyTorch 2.14 用的是 **`bitwise`（逐位）**，"
           "不是「近似相同」⇒ 本程序的判据因此用 **sha256 摘要相等**，不用容差比较")
     check("D.6", specs.UNSOURCED == ("nccl_allreduce_default_op",
-                                     "data_parallel_redundancy_ratio_definition",
-                                     "data_parallel_ring_allreduce_volume"),
-          "★★ `specs.UNSOURCED` 的 **3** 项逐位钉住 —— ★ 第 2 项 "
+                                     "data_parallel_redundancy_ratio_definition"),
+          "★★ `specs.UNSOURCED` 的 **2** 项逐位钉住 —— ★ 第 2 项 "
           "(`data_parallel_redundancy_ratio_definition`) 正是本程序 `B.1` 用的那个量："
-          "**全库没有既有定义** ⇒ 它是本主题自立的定义")
+          "**全库没有既有定义** ⇒ 它是本主题自立的定义（★ 它**在配套文档 §1.4 有正文**："
+          "「进 `UNSOURCED`」说的是**没有外部来源**，不是「文档里没写它」）。"
+          "★★ 订正（2026-09-23）：原来的第 3 项 `data_parallel_ring_allreduce_volume`"
+          "（`V(N)`）**已移出** —— 它「不在本主题」而**有**来源")
 
     # ── ★★★ 判据的**正文侧**：配套文档里必须逐字有那句限定语 ────────────────
     has_doc, hit = doc_contains("03-redundancy-and-limits.md", specs.ZERO_K_CALIBER_NOTE)

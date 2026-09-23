@@ -83,7 +83,9 @@ DP：  4 张卡各 8 行 → 4 份 g_i → ??? 合并 → 更新
    每张卡各自除以 `N` 是**等价的**。
 
 ★★ **一处必须写明的读法**：`NCCL` 的三份文档里**没有**说 `AllReduce` 的 `op` 有默认值
-（我们逐页数过 `default` 的出现位置，都在模板 CSS 与**别的参数**上）
+（我们数过 `default` 的出现位置：`usage/collectives` 上它**计 1 次**，是**搜索表单的
+hidden 输入** `<input type="hidden" name="area" value="default" />`，
+`api/colls` 与 `api/types` 上也不描述 `op` 的默认值）
 ⇒ **「默认 SUM」这一条只能引 PyTorch 的签名**，写成「NCCL 的 AllReduce 默认 SUM」是
 **把两条来源混成一条**（已登记 `UNSOURCED`：`nccl_allreduce_default_op`）。
 
@@ -103,12 +105,14 @@ DP：  4 张卡各 8 行 → 4 份 g_i → ??? 合并 → 更新
 **本机实测**（`code/01_grad_averaging.py` 的 `A.1`，`N=4、B=8、Ψ=64`）：
 `max|N 卡平均 − 单卡大 batch| = 1.665e-16`（`g` 的量级 `0.494`）。
 
-⚠ **前提必须写出来：没有按片统计的归一化层**。BatchNorm 这类层用的是**当前这一片**的
-均值/方差，于是每片算出的损失与「大 batch 下的那一片」**不是同一个函数** ⇒
-两边**根本不是同一条轨迹**（本机相对差 `4.173e-01`）。
-★★ **那一条等价性及其失效条件已经由 `90-training/autograd-and-backward/03-gradient-lifecycle.md` 写过**
-（`:71` 与判据表 `:223-224`）⇒ **本文只有「无归一化层」这一支**，有 BN 时必须改用同步 BN
-或放弃累积 —— **正文在彼，本文只回链**。
+⚠ **前提必须写出来：没有按片统计的归一化层。**
+★★ **那一条等价性及其失效条件已经由 `90-training/autograd-and-backward/03-gradient-lifecycle.md`
+写过**（`:71` 与判据表 `:223-224`）⇒ **本文只有「无归一化层」这一支** ——
+**正文在彼，本文只回链**。
+★ **订正（2026-09-23）**：本节原先在这里**复述了机制从句**（「BatchNorm 用的是当前这一片的
+均值/方差…不是同一个函数」以及「有 BN 时必须改用同步 BN 或放弃累积」）与上游的实测值
+`4.173e-01` —— 那**是 `90` 的正文**，违反 `CONTRIBUTING` §7.2 的「**只放链接，不复制内容**」，
+也与本文 `§0` 范围表自称的「只写「无归一化层」这一支并回链」不一致。**已删**。
 
 ### 1.3 ★★★ 判据 ③：`loss` 的 reduction 口径与卡间除数**必须配对**
 
@@ -218,11 +222,12 @@ DP 里有两个独立的口径，它们**乘起来**才是全局的除数：
 
 **② ★★ 有按片统计的归一化层时，拿「N 卡平均 == 单卡大 batch」当判据。**
 - **现象**：判据在小模型上通过，一换到带 BatchNorm 的模型就**悄悄不成立**。
-- **成因**：BN 用的是**当前这一片**的统计量 ⇒ 每片的损失与大 batch 下的那一片
-  **不是同一个函数**（本机相对差 `4.173e-01`）。
-- **规避**：判据必须**写明前提**「无按片统计的归一化层」；有 BN 时改用同步 BN。
+- **规避**：判据必须**写明前提**「无按片统计的归一化层」。
   ★★ **该等价性与它的失效条件的正文在 `90-training/autograd-and-backward/03-gradient-lifecycle.md`**
   （`:71` / 判据表 `:223-224`），本文只回链。
+  ★ **订正（2026-09-23）**：原「成因」那一条是**照抄 `90` 的机制从句**（外加它的实测值
+  `4.173e-01`）—— 按 `CONTRIBUTING` §7.2 本文**只放链接、不复制内容**，故**已删**；
+  想知道「为什么」，去看那篇的 `:69-72`。
 
 **③ ★★★ 在 `N = 1`（或 `N` 是 2 的幂）上做口径测试。**
 - **现象**：测试「通过」，但什么也没检查。
@@ -256,7 +261,7 @@ DP 里有两个独立的口径，它们**乘起来**才是全局的除数：
 
 | 可机械判定的条件 | 结论 |
 |---|---|
-| `N` 卡各自平均、再在卡间平均，与单卡在 `N·B` 行上算一次 | **相同**（本机 `max|diff| = 1.665e-16`，`g` 量级 `0.494`）；★★ **前提：无按片统计的归一化层**（有 BN 时相对差 `4.173e-01`，正文在 `90-training/autograd-and-backward/03:71`） |
+| `N` 卡各自平均、再在卡间平均，与单卡在 `N·B` 行上算一次 | **相同**（本机 `max|diff| = 1.665e-16`，`g` 量级 `0.494`）；★★ **前提：无按片统计的归一化层**（该前提的失效条件与正文在 `90-training/autograd-and-backward/03-gradient-lifecycle.md:71`，本文只回链） |
 | 把参照实现的输入少喂一张卡的行 | 差 `2.103e-01` ⇒ ★★ **上面的等价性判据【能失败】**（`CONTRIBUTING:235` 的守卫） |
 | `loss` 用 `mean`、卡间再除以 `N` | **正确**（比值 `1.000000`） |
 | `loss` 用 `mean`、卡间不除 | 比值 **`4.000000`**（= `N`） |
@@ -337,7 +342,10 @@ python3 01_grad_averaging.py   # 只跑本程序
 - **[B]** **NVIDIA NCCL 2.31.2 用户指南**（产品官方文档，**不是规范**），
   `https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/collectives.html`，
   抓取日 **2026-09-23**（`curl -sSL`，HTTP 200），**原始字节 86584**，
-  `sha256[:16] = d7d2b6cff49d9f79`。版本号的载体：页面 `<title>` 逐字 `NCCL 2.31.2 documentation`（★ 同页侧边栏另有少了补丁号的 `NCCL 2.31` —— 本文取更精确的那一个）。
+  `sha256[:16] = d7d2b6cff49d9f79`（★ **本页连抓 3 次，字节数与摘要完全一致** ⇒ 可复核）。
+  版本号的载体：页面 `<title>` 逐字 `NCCL 2.31.2 documentation`（**原始字节 1 次**，
+  且页面上**只有一个版本串**：更短的 `NCCL 2.31` 也计 1 次，它只是前者在 title 里的
+  **前缀子串** —— ★ 订正 2026-09-23：本文曾写「同页侧边栏另有 `NCCL 2.31`」，**实测为假**）。
   逐字：`The AllReduce operation performs reductions on data (for example, sum, min, max)
   across devices and stores the result in the receive buffer of every rank.`
   （原始字节 1 次）与 `each rank will provide an array in of N values, and receive
@@ -371,7 +379,8 @@ python3 01_grad_averaging.py   # 只跑本程序
   （§1.3 + 判据表 + `code/01_state_bytes.py:310` 的 `A.3`）；本文只消费 `2Ψ` 这一项。
 - **禁区**：梯度规约的算法（ring allreduce / `V(N)`）→ `110-communication/collectives`
   与 `10-foundations/performance-models/02-amdahl-and-scaling.md:209`；
-  扩展效率模型 → 同上（**全篇 430 行**）；通信-计算重叠 → `110-communication` 的 `overlap`。
+  扩展效率模型 → 同上（**全篇 429 行**，`raw.count('\n')` 口径）；通信-计算重叠 →
+  `110-communication` 的 `overlap`（**未建成**）。
   本文**一行都不重推**。
 - ★★ **术语**：本文的 `all_reduce` 一律指**求和型集合通信**（`ReduceOp.SUM`），
   与 `00-meta/glossary.md` 已有的 `all-reduce` 条**同指**（★ 是「同一件事」而不是「同名不同指」，
