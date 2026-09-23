@@ -21,8 +21,13 @@ PYSCRIPTS := 09_roofline_model 10_amdahl_scaling
 CUTARGET  := 11_roofline_probe
 T         ?= 11_roofline_probe
 
-.PHONY: all py regs clean
-all: py
+.PHONY: all run py regs clean
+all: run
+
+# ★ `run` 是**本库的约定**（CONTRIBUTING:36「进入 code/ 执行 make run 就能跑」）。
+#   本 Makefile 历史上只有 `py`，于是 `make run` 会走下面的模式规则去找 run.py、
+#   报 `can't open file '.../run.py'`。保留 `py` 作为别名，指向同一个 recipe。
+run: py
 
 py:
 	@for s in $(PYSCRIPTS); do \
