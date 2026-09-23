@@ -56,20 +56,20 @@ run: check-env
 		echo "    ★ 此刻 make run **不构成任何证据** —— 它一条断言也没跑，"; \
 		echo "      不要把它当成「绿」写进任何文档。"; \
 		exit 0; \
-	fi
-	@rm -f .last_out
-	@for s in $(SCRIPTS); do \
+	fi; \
+	rm -f .last_out; \
+	for s in $(SCRIPTS); do \
 		echo "=== $$s ==="; \
 		$(PYTHON) $$s.py > .last_out 2>&1 || { cat .last_out; echo; \
 			echo "!! $$s.py 非零退出 —— 断言失败（详情见上）"; \
 			rm -f .last_out; exit 1; }; \
 		cat .last_out; \
 		echo; \
-	done
-	@rm -f .last_out
-	@echo "=== 全部 $(words $(SCRIPTS)) 个编号程序退出码 0 ==="
-	@echo "    （失败标记的纪律在**每个程序内部**：它只打印本主题自己的 ASSERT_FAIL_MARK，"
-	@echo "      并有一条「标记自检」断言守着；跨主题照抄标记由 mutate.py 的 AST 读取挡住。）"
+	done; \
+	rm -f .last_out; \
+	echo "=== 全部 $(words $(SCRIPTS)) 个编号程序退出码 0 ==="; \
+	echo "    （失败标记的纪律在**每个程序内部**：它只打印本主题自己的 ASSERT_FAIL_MARK，"; \
+	echo "      并有一条「标记自检」断言守着；跨主题照抄标记由 mutate.py 的 AST 读取挡住。）"
 
 # ★ 这个目标的第一个动作是**空值检查**，不是靠 `PYTHON ?=` 的默认值兜底。
 #   `?=` 的语义是「**未被赋值时**才赋值」，而命令行传 `PYTHON=`（**空值**）也算
