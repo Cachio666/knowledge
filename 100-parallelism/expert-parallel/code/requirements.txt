@@ -3,26 +3,63 @@
 # ★ 只有 numpy。本域**任何第三方框架都不 import**（`CONTRIBUTING` §2「永不 import 目标框架」，
 #   原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
 #
-# ★★ **本主题的定位**：EP 的 **all-to-all 通信模式**、专家负载分布、容量因子下的**丢弃**
+# ★★ **本主题的三个程序【都要】numpy**（★ 与同域 `sequence-context-parallel` **不同**，
+#   那边 `01` 是纯标量算术、可以单跑；这里没有那一档）：
+#   · `01_expert_sharding.py` —— `x @ Wg`（路由打分）与 `x @ We[e]`（专家前向）；
+#   · `02_load_imbalance.py` —— `scores ~ N(0,1)` 的 `(T, E)` 矩阵与 `argsort` 取 `top_k`
+#     （★ 后续全是**整数计数**，但**路由本身**要 numpy）；
+#   · `03_ep_and_other_axes.py` —— `x @ W1[e]` 的**行切**与 `h @ W2[e]`。
+#   ⇒ ★★ **「单跑某个程序不需要 numpy」这句话在本主题【不成立】** ——
+#     `requirements.txt` 与 `Makefile` 的 `check-env` 按**三个程序的并集**要求它，
+#     而那个并集**恰好就是三个都要**。
+#     ★★★ **因此本文件不写「直接 `python3 0X_xxx.py` 不需要 numpy」这类措辞** ——
+#       同域 `sequence-context-parallel` 写过类似的话，但那里的 `01` 确实是纯标量算术；
+#       本主题若照抄那句话，就成了一条**照抄即失败的命令**（工程纪律）。
+#
+# ★★ **本主题的定位**（与 `Makefile` **抬头那段**同一句，两处同步）：
+#   · **专家怎么分到设备**（每设备 `E/EP` 个）+ ★★ **两次 all-to-all** 的位置与语义；
+#   · ★★★ **EP 的负载账**：**发出量均衡（恒等式）、接收量不均（统计量）**；
+#   · **EP 与 TP / DP 的组合**、**EP 组的划分**、**`EP` 的约束**（只写取到过的那一条）。
 #
 # ★★ **本主题的禁区**：
-#     **容量因子的定义与语义**（定义式、取整口径、dropping vs No-Token-Left-Behind，`80-model-architectures/moe/02-capacity-factor.md`）与
-#     **aux loss 的式子 / 路由 gating 的机制**（`80-model-architectures/moe/01`、`moe/03`）
-#     —— 本主题只写**切分与搬运**这一侧（「均衡发送、不均接收」）
+#     **容量因子的定义与语义**（定义式 / 取整口径 / dropping vs No-Token-Left-Behind /
+#     丢弃率口径）⇒ 正文在 `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）；
+#     **aux loss 的式子 / 路由 gating 的机制** ⇒ `80-model-architectures/moe/01-gating-and-routing.md`、
+#     `03-balance-and-granularity.md`。★★ 本主题的路由只是 `argsort` 取 `top_k`、**等权** `1/top_k`。
+#     **all-to-all 的通信量分析** ⇒ `110-communication/collectives`（未建成）+
+#     `20-gpu-architecture/interconnect/03`（★ `40-kernels/moe-kernels/01:243` 已逐字让渡）；
+#     **kernel 侧的 permute / unpermute / grouped GEMM** ⇒ `40-kernels/moe-kernels/02,03`、
+#     `00-meta/glossary.md:262`；
+#     **TP 本身的切法与配对约束** ⇒ `tensor-parallel/01,02,03` 与
+#     `10-foundations/performance-models/02:417`（★ **不是 `:223`**）。
 #
 # ★★ **四类数字纪律**（`CONTRIBUTING` §2；域 README 的「代码约定」表）：
 #    · **规格值** → `specs.py`（每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`）
 #    · **推导值** → 由编号程序算出（**可手算复核**，并标为「推导值」）
+#      ⇒ ★★ 本主题的「搬运条目数」「`ceil(EP/E)` 因子」「`E/EP`」**都是推导值**
+#        ⇒ 按纪律它们**不进 `specs.py`**，而是写在断言里当**期望值**。
 #    · **引用值** → 外部来源的实测（**须注明「本仓库不复核其测量口径」**）
+#      ⇒ ★ 本主题**没有**引用值：两条论文依据（`All-to-All` / `AllToAll` 的计数）
+#        是**在原始字节上 `count()` 出来的**，见 `specs.py` 的 `# 来源：`。
 #    · **本机实测值** → 本机真跑的数（**须写 python3 与 numpy 版本**）
 #    ★ **不得把推导写成实测**。
 #    ★★ 本域另加两条落法：**所有数值常量取到 `< 2^53`**（`mutate.py` 的浮点变异是 `v + 1.0`，
-#       大浮点数会吞掉它）；**幂次一律写成十进制字面量**（`_walk()` 不下钻 `BinOp`）。
+#       大浮点数会吞掉它）；**不做幂次字面量**（`_walk()` 不下钻 `BinOp`）。
+#    ★★ **随机数的种子**取 **`100`**（**不是 2 的幂**），且写在编号程序的**函数体里**
+#       （不是模块级常量 —— 改它没有可观察后果，进变异分母只会成为漏网）。
+#       ★★★ **唯一例外**：`02` 的 **B 类判据是统计量**，它报的是「**八个种子**的均值与范围」
+#       ⇒ ★★ **那个种子集（`EP_IMB_SEEDS`）本身是判据口径的一部分，必须在 `specs.py` 里
+#       并被逐元素钉住** —— 否则「把 8 个种子换成别的」将没有任何断言能察觉
+#       （★ 这与同域 `sequence-context-parallel`【不把种子放进 `specs.py`】的处置**不同**，
+#        理由写在 `specs.EP_IMB_SEEDS` 的 `# 来源：` 里）。
 #
 # ★★ **「本机无 GPU」的限定语**：本机**没有多卡 / 没有 NCCL / 没有真实网络** ⇒
 #    一切数值都是 `python3` + `numpy` 的**玩具规模**真跑，验证的是**切分的代数**
-#    （等价性、通信次数、字节账、气泡率、负载分布），
+#    （专家→设备的划分算术、搬运条目数、负载分布、组划分、`ceil(EP/E)`），
 #    **不是**任何关于真实集群性能的结论。★ 强制限定语：**「不是 NCCL，也不是真机」**。
+#    ★★ **判据依赖 BLAS**（路由与专家前向的 `@`）⇒ ★ **换机器可能需要重新标定**：
+#      `03` 的 `A.1` 把「`tp > 1` 必须 `< 1e-9`」写成显式条件 ——
+#      本机实测是 `4.441e-16`（**差三个数量级**）⇒ 换 BLAS 后仍安全，但**具体数值会变**。
 #
 # 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
 numpy>=2.0
