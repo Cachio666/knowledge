@@ -20,7 +20,7 @@ r"""03_fsdp_correctness.py —— **FSDP 的策略与分片后的正确性**。
 
 ★★★ **`（P19）`边界**：本程序**只引 `sharding_strategy` 的【取值列表】**（标
   **B 级 + 版本 2.14 + URL + 抓取日**），**不解释框架 API 的通用语义** ——
-  ★★ **全库当前在这上面没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1057 行里
+  ★★ **全库当前在这上面没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1053 行里
   `torch.distributed` / `DDP` / `FSDP` / `ProcessGroup` 命中 **0** 次）⇒ 把禁区指向 70 域是**假让渡**。
   ★★ `FULL_SHARD` 那句「什么时候 all-gather / 什么时候丢弃」**可以写**（它有载体），
   但**不扩写成「FSDP 怎么用」的教程**。
@@ -128,7 +128,8 @@ def check(name, cond, detail="", detail_fail=None):
 # 1. 被测：分片 / 拼回 / 每设备字节账
 #    ★★ 种子写在**函数体内**（不是模块级常量）：改它对**字节账**与**边界配对**都没有
 #      可观察后果（配对只看**下标**、字节账只看**形状与 dtype**）——
-#      ★ 但 C 类的 `max|diff|` **依赖它** ⇒ 那几条把种子固定为 `C_FIXTURE_SEED`（写在本节里）。
+#      ★ 但 C 类的 `max|diff|` **依赖它** ⇒ 那几处把种子固定为**字面量 `100`**
+#        （`np.random.default_rng(100)`，在三处函数体内各写一次：`part_A` / `part_C` / `part_D`）。
 # ===========================================================================
 def contiguous_shard(params, N):
     """**连续分片**（本主题的口径）：第 `k` 片 = `params[k*L : (k+1)*L]`，`L = len/N`。"""
@@ -262,6 +263,9 @@ def part_B():
           % (specs.FSDP_DOC_VERSION, list(specs.FSDP_STRATEGY_VALUES)))
     print("  ★ **默认值是 `%s`**；`SHARD_GRAD_OP` ≈ ZeRO-2（参数在计算外分片、前向后不 reshard）；"
           "`NO_SHARD` 等价 DDP。" % specs.FSDP_DEFAULT_STRATEGY)
+    print("  ★★★ **显式声明**：这三条映射是本文 **B 类字节账的必要输入**（要按「切了哪几项」算每设备"
+          "字节）—— ★★ **不是**在解释框架语义；其余框架用法（`torch.distributed` / `DDP` / "
+          "`ProcessGroup`）**一个字不写**（`P19`）。")
     print("  ★★ **与 ZeRO-3 的关系的逐字依据**：`%s`" % specs.FSDP_INSPIRED_QUOTE)
 
     # ── B.1 ★★★ 三种策略的字节账（真的建、量 nbytes）──────────────────────

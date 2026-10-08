@@ -8,12 +8,14 @@ r"""02_communication.py —— **ZeRO 三个阶段的通信量**。
 （**与 baseline DP 完全相同**）；**只有** `P_os+g+p` 是 **`3Ψ`（`1.5x`）**。
 
 ★★★ **出处纪律（三条，逐条落实在断言与打印里）**：
-  ① **`P_os` 的「不增通信」只能引 §7 开头的总结句**（`specs.ZERO_NO_EXTRA_COMM_QUOTE`，
-     逐字 `incurs no additional communication using`）—— ★★★ **原文【没有】 `P_os` 单独的
-     通信量等式** ⇒ **不得自己造一个 `P_os = 2Ψ` 并标成「论文式(N)」**（那是**编来源 / 编机制从句**）。
+  ① **`P_os` 的「不增通信」以 §7 开头的总结句为准**（`specs.ZERO_NO_EXTRA_COMM_QUOTE`，
+     逐字 `incurs no additional communication using`）；★ **§1 列表的 `same communication
+     volume as DP` 可作同向互证**（`specs.ZERO_S1_SAME_COMM_QUOTE`，`P_os` 与 `P_os+g` 各一次）
+     —— ★★★ **原文【没有】 `P_os` 单独的通信量等式** ⇒ **不得自己造一个 `P_os = 2Ψ`
+     并标成「论文式(N)」**（那是**编来源 / 编机制从句**）。
      ★ 本程序的 `comm_units()` **不给 `P_os` 编等式**：它走的是「**reduce-scatter(1) +
      参数 all-gather(1) = 2**」这条 **baseline 就有的**结构（`ZERO_RS_AG_QUOTE` 是它的依据）。
-  ② **baseline 逐字是** `the standard DP incurs 2Ψ data movement during each training step`
+  ② **baseline 逐字是** `the standard DP incurs 2Ψ data movement during each training step.`
      （§7.1，`specs.ZERO_BASELINE_QUOTE`）⇒ 本程序把它拆成**两条不跨标记的载体片段**
      （`ZERO_BASELINE_HEAD` / `ZERO_BASELINE_TAIL`）存证。
   ③ **`K` 不是通信量** —— 它是**优化器状态的内存乘子**（`= 12`，`specs.ZERO_K_MEMORY_MULTIPLE`）。
@@ -30,8 +32,8 @@ r"""02_communication.py —— **ZeRO 三个阶段的通信量**。
   > **问：如果我把「被测的那段逻辑」删掉，这条断言还会通过吗？**
   > 答「**会**」⇒ 它是自证的，**不是判据**。
   ★ 本程序的答案落点：把 `param_all_gathers()` 里的「`P_os+g+p` 要 gather **两次**」删掉
-    （即所有 stage 都 gather 一次）⇒ `A.2` 的 `3Ψ` **必然失败** ⇒ ★ `A.2` **不是自证**
-    （`A.1g`/`C.1g` 把「记错 stage」的反例真的跑了一遍）。
+    （即所有 ZeRO 阶段都 gather 一次）⇒ `A.1`（`P_os+g+p` 那档给出 `2Ψ ≠ 3Ψ`）与 `A.2` 的 `3Ψ`
+    **必然失败** ⇒ ★ **不是自证**（`A.1g`/`C.1g` 把「记错 ZeRO 阶段」的反例真的跑了一遍）。
 
 ★★★ **本主题的禁区（回链，一行都不重写）**：
   · **集合通信原语的算法与复杂度**（ring all-reduce 的 `V(N) = 2(N−1)/N × S`、阶段划分）→
@@ -46,19 +48,19 @@ r"""02_communication.py —— **ZeRO 三个阶段的通信量**。
     （**本域只写「分片后」的账**）。
 
 ★★ 可证伪断言（把下面任一条改错，本程序必须非零退出）：
-  · `A.1`  ★★★ `P_os+g` 的通信量 = `1 + 1 = 2Ψ`（reduce-scatter + 参数 all-gather），
-         且 **== `ZERO_BASELINE_MULTIPLE`（§7.1 逐字给的 `2`）** —— **两条来源不同的路径**；
-  · `A.1g` ★★★ **一条守卫**：把 `P_os+g` 记成「参数 gather 两次」（= 记错 stage）⇒ `3Ψ ≠ 2Ψ`
+  · `A.1`  ★★★ **三个 ZeRO 阶段逐档**：`P_os`/`P_os+g` = `1 + 1 = 2Ψ`、`P_os+g+p` = `1 + 2 = 3Ψ`
+         —— 分别对上 §7 开头 / §1 列表 / §7.2 / §7.3 的逐字（★ **覆盖三档**，不只是 `P_os+g`）；
+  · `A.1g` ★★★ **一条守卫**：把 `P_os+g` 记成「参数 gather 两次」（= 记错 ZeRO 阶段）⇒ `3Ψ ≠ 2Ψ`
          ⇒ `A.1` 的判据**必须失败**；
   · `A.2`  ★★★ `P_os+g+p` 的通信量 = `1 + 2 = 3Ψ`，且 **== `2 × 1.5`（`2` 来自 §7.1、
          `1.5` 来自 §7.3，两处**各自独立**的逐字出处）**；
   · `B.1`  ★★ 五档（含 `P_g`）的通信量对照表：**`P_os`/`P_g`/`P_os+g` 都不增**（`= 2Ψ`），
          只有 `P_os+g+p` 是 `3Ψ`；
   · `B.2`  ★★ `3Ψ ÷ 2Ψ = 1.5` == `ZERO_1_5X_VERBATIM`（§7.3 逐字）；
-  · `C.1`  ★★★ **把 `3Ψ` 套到 `P_os` 上会与 baseline `2Ψ` 直接矛盾** ——
-         程序**显式断言三者的关系**（`P_os == baseline == 2Ψ` 且 `P_os+g+p == 3Ψ ≠ 2Ψ`）；
-  · `C.1g` ★★★ **一条守卫**：把 `P_os` 错记成 `P_os+g+p`（`reschedule_param=True`）⇒
-         它算出 `3Ψ ≠ 2Ψ` ⇒ `C.1` 的判据**必须失败**；
+  · `C.1`  ★★★ **反例「把 `3Ψ` 套到 `P_os` 上」**（`reschedule_param=True`）⇒ 与 baseline
+         `2Ψ` **直接矛盾**，矛盾量 `|3Ψ − 2Ψ| = 1 > 0` ⇒ ★★ **「记错 ZeRO 阶段」必然失败**；
+  · `C.1g` ★★★ **一条守卫**：把 `C.1` 里的**错法**换回**对法**（`P_os` 正确记成 `2Ψ`）⇒
+         矛盾量归零 ⇒ `C.1` 的不等式**必然失败**；
   · `D.*`  引文逐条钉住 + `K` 不进通信 + 记号桥 + **失败标记自检**。
 """
 import ast
@@ -127,7 +129,7 @@ def check(name, cond, detail="", detail_fail=None):
 #      从 1 次改成 2 次 —— 即「把 `P_os`/`P_os+g` 错记成 `P_os+g+p`」。
 # ===========================================================================
 def param_all_gathers(stage, reschedule_param=False):
-    """该 stage 每步【参数 all-gather】的次数。
+    """该 ZeRO 阶段每步【参数 all-gather】的次数。
 
     · **baseline**（以及 `P_os`/`P_g`/`P_os+g`）：**1 次** —— 更新完各自的参数分片后，
       把参数**收回来**（§7.2 逐字：`an all-gather is performed to collect all the updated parameters`）。
@@ -156,31 +158,48 @@ def part_A():
     print("A · 算术复现：`Ψ+Ψ=2Ψ`（基线）与 `3Ψ`（`P_os+g+p`）")
     print("=" * 78)
     print("  ★★★ **被测走的是结构、参照走的是论文逐字** —— 两条来源不同的路径：")
-    print("      · 被测：`reduce-scatter(1) + 参数 all-gather(g)`（`g` 由 stage 定）；")
+    print("      · 被测：`reduce-scatter(1) + 参数 all-gather(g)`（`g` 由 ZeRO 阶段定）；")
     print("      · 参照：§7.1 的 `2`（`ZERO_BASELINE_MULTIPLE`）与 §7.3 的 `1.5`（`ZERO_1_5X_VERBATIM`）。")
 
-    # ── A.1 ★★★ `P_os+g` 的 `Ψ+Ψ=2Ψ` ───────────────────────────────────────
+    # ── A.1 ★★★ 三个 ZeRO 阶段各自的通信量（**覆盖三档**，不只是 `P_os+g`）──────
+    #   ★★★ **为什么必须覆盖全三档**：若 `A.1` 只断言 `P_os+g`，那么「把
+    #     `param_all_gathers()` 里的 ZeRO 阶段判别**整体删掉**（永远返回 `1`）」**仍然通过** ——
+    #     因为 `P_os+g` 那档 `1 + 1 = 2` **恰好等于**论文 §7.1 的常量 `2`。
+    #     ⇒ ★ 加进 `P_os+g+p` 那档（`3Ψ ≠ 2Ψ`）后，删掉判别**必然在某档失败**
+    #       （结构层审查者实测过这个漏洞）。
     print()
-    print("  ── A.1 ★★★ `P_os+g`：`reduce-scatter(Ψ) + all-gather(Ψ) = 2Ψ`（§7.2 逐字）──")
-    print("     `specs.ZERO_POG_SUM_HEAD`：`%s`" % specs.ZERO_POG_SUM_HEAD)
-    print("     `specs.ZERO_POG_SAME_QUOTE`：`%s`" % specs.ZERO_POG_SAME_QUOTE)
-    a1 = comm_units("P_os+g")
-    print("     被测：1 + %d = **%dΨ**" % (param_all_gathers("P_os+g"), a1))
-    print("     参照：§7.1 逐字 `%s` … ⇒ `ZERO_BASELINE_MULTIPLE = %d`"
+    print("  ── A.1 ★★★ 三个 ZeRO 阶段：`P_os`/`P_os+g` = `2Ψ`、`P_os+g+p` = `3Ψ` ──")
+    print("     §7 开头（`specs.ZERO_NO_EXTRA_COMM_QUOTE`）：`%s`" % specs.ZERO_NO_EXTRA_COMM_QUOTE)
+    print("     §1 列表（`specs.ZERO_S1_SAME_COMM_QUOTE`）：`%s`" % specs.ZERO_S1_SAME_COMM_QUOTE)
+    print("     §7.2（`specs.ZERO_POG_SAME_QUOTE`）：`%s`" % specs.ZERO_POG_SAME_QUOTE)
+    print("     §7.3（`specs.ZERO_POGP_1_5X_QUOTE`）：`%s`" % specs.ZERO_POGP_1_5X_QUOTE)
+    a1_pos = comm_units("P_os")
+    a1_posg = comm_units("P_os+g")
+    a1_posgp = comm_units("P_os+g+p")
+    print("     被测：`P_os`     = 1 + %d = **%dΨ**（§7 开头「不增通信」/ §1 列表同值）"
+          % (param_all_gathers("P_os"), a1_pos))
+    print("     被测：`P_os+g`   = 1 + %d = **%dΨ**（§7.2 逐字 `%s`）"
+          % (param_all_gathers("P_os+g"), a1_posg, specs.ZERO_POG_SAME_QUOTE))
+    print("     被测：`P_os+g+p` = 1 + %d = **%dΨ**（§7.3 逐字 `%s`）"
+          % (param_all_gathers("P_os+g+p"), a1_posgp, specs.ZERO_POGP_1_5X_QUOTE))
+    print("     参照：§7.1 逐字 `%s` … ⇒ 基线 `ZERO_BASELINE_MULTIPLE = %d`"
           % (specs.ZERO_BASELINE_HEAD, specs.ZERO_BASELINE_MULTIPLE))
-    check("A.1", a1 == specs.ZERO_BASELINE_MULTIPLE == 2,
-          "★★★ **判据成立**：`P_os+g` 通信量 = **%dΨ**（结构）== **%d**（§7.1 逐字给的基线）"
-          " ⇒ **与 baseline DP 完全相同**（§7.2 逐字 `%s`）"
-          % (a1, specs.ZERO_BASELINE_MULTIPLE, specs.ZERO_POG_SAME_QUOTE),
-          "**`P_os+g` 的账被动过** —— ★ 先查它的参数 all-gather 是不是仍为 1 次")
+    check("A.1", a1_pos == specs.ZERO_BASELINE_MULTIPLE == 2
+          and a1_posg == specs.ZERO_BASELINE_MULTIPLE == 2 and a1_posgp == 3,
+          "★★★ **判据成立**：`P_os` = **%dΨ**（§7 开头「不增通信」）、`P_os+g` = **%dΨ**"
+          "（§7.2 逐字 `%s`）、`P_os+g+p` = **%dΨ**（§7.3 逐字 `%s`）"
+          " ⇒ ★★ **三个 ZeRO 阶段逐档与论文逐字对上**（不只是 `P_os+g` 那一格）"
+          % (a1_pos, a1_posg, specs.ZERO_POG_SAME_QUOTE, a1_posgp, specs.ZERO_POGP_1_5X_QUOTE),
+          "**三个 ZeRO 阶段的通信量被动过** —— ★ 先查每档的参数 all-gather 次数"
+          "（`P_os`/`P_os+g` = 1 次、`P_os+g+p` = 2 次）")
 
-    # ── A.1g ★★★ 守卫（记错 stage）───────────────────────────────────────────
+    # ── A.1g ★★★ 守卫（记错 ZeRO 阶段）───────────────────────────────────────────
     a1_bad = comm_units("P_os+g", reschedule_param=True)
     check("A.1g", a1_bad != specs.ZERO_BASELINE_MULTIPLE,
           "★★ **守卫成立**：把 `P_os+g` **错记成** `P_os+g+p`（参数 gather 两次）⇒ 算得 **%dΨ ≠ %d**"
-          " ⇒ ★★ 换掉「记哪个 stage」**真的改变了被判量**，`A.1` **能失败** ✓"
+          " ⇒ ★★ 换掉「记哪个 ZeRO 阶段」**真的改变了被判量**，`A.1` **能失败** ✓"
           % (a1_bad, specs.ZERO_BASELINE_MULTIPLE),
-          "**守卫失效** —— 记错 stage 后通信量居然没变（`A.1` 对 stage 不敏感）")
+          "**守卫失效** —— 记错 ZeRO 阶段后通信量居然没变（`A.1` 对 ZeRO 阶段不敏感）")
 
     # ── A.2 ★★★ `P_os+g+p` 的 `3Ψ` ──────────────────────────────────────────
     print()
@@ -199,12 +218,12 @@ def part_A():
 
 
 # ===========================================================================
-# 3. B 类：五档 stage 的通信量对照表（**不增 / 2Ψ / 3Ψ**）
+# 3. B 类：五档 ZeRO 阶段的通信量对照表（**不增 / 2Ψ / 3Ψ**）
 # ===========================================================================
 def part_B():
     print()
     print("=" * 78)
-    print("B · 五档 stage 的通信量对照表（**不增 / 2Ψ / 3Ψ**）")
+    print("B · 五档 ZeRO 阶段的通信量对照表（**不增 / 2Ψ / 3Ψ**）")
     print("=" * 78)
     baseline = comm_units("DP-baseline")
     rows = []
@@ -237,42 +256,54 @@ def part_B():
 
 
 # ===========================================================================
-# 4. C 类：把 `3Ψ` 套到 `P_os` 上会与 baseline `2Ψ` **直接矛盾**
+# 4. C 类：**反例「把 `3Ψ` 套到 `P_os` 上」** —— 与 baseline `2Ψ` 直接矛盾
+#    ★★★ `CONTRIBUTING:238`：**C 类断言成立时程序应当失败** ⇒ 本节**只装「错法」**，
+#      断言「**按错法算会得到一个与真值显著不同的数**」（这里是「矛盾量 > 0」）。
 # ===========================================================================
 def part_C():
     print()
     print("=" * 78)
-    print("C · 边界与反例：**记错 stage** ⇒ 与 baseline 直接矛盾")
+    print("C · 边界与反例：**记错 ZeRO 阶段** ⇒ 与 baseline 直接矛盾")
     print("=" * 78)
     print("  ★★★ 这是 `performance-models/02:221` 那个错的【现场】—— 把 **`P_os+g+p` 的账"
           "算到【三阶段整体】头上**（计划 §5 v3 的 `P24` 现场：那一句其实**基本是对的**，"
           "唯一的问题是措辞「接近…以上」略有夸张）。")
-    print("  ★★ 本程序把它钉成**可机械判定**的关系：")
-    print("     `P_os == P_os+g == baseline == 2Ψ`，且 `P_os+g+p == 3Ψ` —— **`≠ 2Ψ`**。")
-
-    p_os = comm_units("P_os")
-    p_osg = comm_units("P_os+g")
-    p_osgp = comm_units("P_os+g+p")
     base = comm_units("DP-baseline")
+    right_p_os = comm_units("P_os")
+    wrong_p_os = comm_units("P_os", reschedule_param=True)        # 错法：把 `P_os` 记成 `P_os+g+p`
+    contradiction = abs(wrong_p_os - base)
+    print("  ★★★ **本节的错法**：把 `P_os+g+p` 的 `3Ψ` **套到 `P_os` 上**（= 记错 ZeRO 阶段）——")
+    print("      `P_os` 正确是 **%dΨ**（§7 开头「不增通信」），错记成 `P_os+g+p` 后变 **%dΨ**"
+          % (right_p_os, wrong_p_os))
+    print("      ⇒ ★★ 它与 baseline `%dΨ`（§7.1 逐字 `%s`）**直接矛盾**。"
+          % (base, specs.ZERO_BASELINE_HEAD))
     print()
-    print("     `P_os` = %dΨ · `P_os+g` = %dΨ · baseline = %dΨ · `P_os+g+p` = %dΨ"
-          % (p_os, p_osg, base, p_osgp))
-    check("C.1", p_os == base == p_osg == specs.ZERO_BASELINE_MULTIPLE and p_osgp != p_os,
-          "★★★ **判据成立**：`P_os`/`P_os+g` **不增通信**（都 `= %dΨ` = baseline），"
-          "而 `P_os+g+p` = **%dΨ ≠ %dΨ** ⇒ ★★ **把 `3Ψ` 套到 `P_os` 上会与 baseline 直接矛盾**"
-          " ⇒ **「记错 stage」必然失败** ✓" % (base, p_osgp, p_os),
-          "**三个 stage 的关系被动过** —— ★ 先查 `P_os`/`P_os+g` 是否仍等于 baseline")
+    print("     错法：`P_os`（错记成 `P_os+g+p`）= **%dΨ** · baseline = **%dΨ** ⇒ 矛盾量 = **%d**"
+          % (wrong_p_os, base, contradiction))
+    print("     ★★ 若把这一档当成 `P_os` 报出去，**读者会以为「不增通信」是错的**。")
+    print("     ★ 引文（§7.1 已含一次 all-gather —— 这正是 `3Ψ` 增量的归属依据）：`%s`"
+          % specs.ZERO_RS_AG_QUOTE)
+    check("C.1", contradiction > TOL_MACHINE and wrong_p_os != base
+          and base == specs.ZERO_BASELINE_MULTIPLE == 2,
+          "★★★ **判据成立**：把 `3Ψ` 套到 `P_os` 上 ⇒ 算得 **%dΨ**，与 baseline `%dΨ` 的矛盾量 "
+          "= **%d > 0** ⇒ ★★ **「记错 ZeRO 阶段」必然失败**；★ 且 `3Ψ` 相对 baseline 的增量"
+          "**恰好是「多一次 all-gather（参数）」**（§7.3 定 `3Ψ` = `2Ψ × %s` = `%s`）"
+          % (wrong_p_os, base, contradiction,
+             specs.ZERO_1_5X_VERBATIM, specs.ZERO_POGP_1_5X_QUOTE),
+          "**「把 `3Ψ` 套到 `P_os`」居然不与 baseline 矛盾** —— ★ 先查 `reschedule_param` 开关")
 
-    # ── C.1g ★★★ 守卫（真的把 `P_os` 错记成 `P_os+g+p`）────────────────────
-    wrong = comm_units("P_os", reschedule_param=True)
-    print("     ★★ 反例：把 `P_os` **错记成** `P_os+g+p` ⇒ 算得 **%dΨ** —— "
-          "它**与 baseline `%dΨ` 直接矛盾**；★ 若把这一档当成 `P_os` 报出去，"
-          "**读者会以为「不增通信」是错的**。" % (wrong, base))
-    check("C.1g", wrong != specs.ZERO_BASELINE_MULTIPLE,
-          "★★ **守卫成立**：`P_os` 错记成 `P_os+g+p` ⇒ **%dΨ ≠ %dΨ**（baseline）"
-          " ⇒ ★★ 换掉「记哪个 stage」**真的改变了被判量**，`C.1` **能失败** ✓"
-          % (wrong, specs.ZERO_BASELINE_MULTIPLE),
-          "**守卫失效** —— 记错 stage 后与 baseline 居然仍相等（`C.1` 对 stage 不敏感）")
+    # ── C.1g ★★★ 守卫：把「错法」换回「对法」⇒ 矛盾量归零 ⇒ C.1 的不等式**必然失败** ──
+    #   ★★★ 这就是「这条 C 类真的会失败」那个验证的**常驻形式**。
+    right_contradiction = abs(right_p_os - base)
+    print()
+    print("     ★★ 对法：`P_os` 正确记成 **%dΨ** ⇒ 与 baseline 的矛盾量 = **%d**"
+          % (right_p_os, right_contradiction))
+    check("C.1g", right_contradiction <= TOL_MACHINE,
+          "★★ **守卫成立**：把 `C.1` 里的**错法**换回**对法**（`P_os` 正确记成 `%dΨ`）"
+          " ⇒ 矛盾量归零（**%d**）⇒ ★★ C.1 的那个不等式**不再成立**"
+          " ⇒ **C.1 对「记哪个 ZeRO 阶段」敏感**（它不是恒真的）"
+          % (right_p_os, right_contradiction),
+          "**守卫失效** —— 用对法后与 baseline 竟然仍「矛盾」（那说明 C.1 判的不是这个方法）")
 
 
 # ===========================================================================
@@ -352,7 +383,7 @@ def part_D():
           and specs.ZERO_UP_TO_8X_QUOTE == "while enabling up to 8x memory reduction"
           and specs.ZERO_FOOTPRINT_BY_ND_QUOTE == "while further reducing the memory footprint by"
           and specs.ZERO_BASELINE_QUOTE == ("the standard DP incurs 2Ψ data movement "
-                                            "during each training step")
+                                            "during each training step.")
           and specs.ZERO_RS_AG_QUOTE == ("Both reduce-scatter and all-gather are implemented "
                                          "using a pipelined approach")
           and specs.ZERO_POG_SAME_QUOTE == "exactly the same as the baseline DP."
@@ -411,7 +442,8 @@ def part_D():
 
     # ── D.9 ★★ `[C]` 论文的级与同行评审 + `UNSOURCED` 留空 ──────────────────
     check("D.9", specs.UNSOURCED == (),
-          "★ ZeRO 论文 = **[C] 论文**、**同行评审：否**（arXiv 预印本）；★ `specs.UNSOURCED` **留空**。\n"
+          "★ ZeRO 论文 = **[C] 论文**、**同行评审：未确认**（★ arXiv abs 页无 `Comments` / "
+          "`journal-ref` 字段 ⇒ 本库不推断）；★ `specs.UNSOURCED` **留空**。\n"
           "        ★★★ `P_os` **单独的通信量等式原文【本来就没有】** —— 那是**禁写**，"
           "**不是「未取到」**（依据只有 §7 开头的**总结句**）。")
 

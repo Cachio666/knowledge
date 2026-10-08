@@ -57,9 +57,14 @@ updated: 2026-10-08
 | `HYBRID_SHARD` | **节点内分片、跨节点复制** |
 | `_HYBRID_SHARD_ZERO2` | 同上，但按 ZeRO-2 的口径（★ **带下划线前缀，照抄**） |
 
+★★★ **显式声明**：上表那**三条映射**（`FULL_SHARD` / `SHARD_GRAD_OP` / `NO_SHARD` ↔ 「三项切了哪几项」）
+**是本文 B 类字节账的必要输入** —— ★★ **这不是在解释框架语义**：B 类要按「切了哪几项」算每设备字节，
+就**必须**知道每个取值切哪几项（落点见 `§3.1`）。★ 除此之外的框架用法（`torch.distributed` / `DDP` /
+`ProcessGroup` 的类与参数）**本文一个字不写**（`P19`）。
+
 ★★★ **边界（`P19`）**：**本文只引这个取值列表**（B 级 + 版本 + URL + 抓取日），
 **不解释框架 API 的通用语义**、**不写 `torch.distributed` / `DDP` / `ProcessGroup` 的用法**。
-⇒ ★★ **全库当前在这上面没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1057 行里
+⇒ ★★ **全库当前在这上面没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1053 行里
 `torch.distributed` / `DDP` / `FSDP` / `ProcessGroup` **命中 0 次**）
 ⇒ **把禁区指向 70 域是【假让渡】**（把读者引到一个不存在的地方）。
 ★★ **可核性（如实登记）**：本机 `curl` 取回的是**客户端渲染空壳**（**1275 字节**）
@@ -277,7 +282,8 @@ updated: 2026-10-08
   ⇒ **本文按计划取回的转写登记，不声称在原始字节上复核过**。
   ★ 引到的逐字：与 ZeRO-3 的关系、`FULL_SHARD` 的参数时序（`unshards … reshards …`）、
   五个 `sharding_strategy` 取值、默认值 `FULL_SHARD`。
-- Rajbhandari et al., *ZeRO: …*, arXiv:1910.02054 —— **[C] 论文**，**同行评审：否**。
+- Rajbhandari et al., *ZeRO: …*, arXiv:1910.02054 —— **[C] 论文**，**同行评审：未确认**
+  （★ arXiv abs 页无 `Comments` / `journal-ref` 字段 ⇒ 本库不推断）。
   ★ 只用于对拍 `P_os+g+p` 的账（`16Ψ/N`）。
 - 本仓库 [01-three-stages](01-three-stages.md)、[02-communication](02-communication.md)、
   `90-training/checkpointing/01-state-and-bytes.md`（`16Ψ` 的单卡口径）、

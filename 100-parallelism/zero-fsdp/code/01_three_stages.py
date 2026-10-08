@@ -56,9 +56,15 @@ r"""01_three_stages.py —— **三个 ZeRO 阶段各切什么、省多少**。
   · `A.2`  ★★ 四种状态真的**建出来了**（`nbytes` 之和 > 0，且四种两两不同）；
   · `B.1`  ★★ `P_os` 在 `ZERO_N_GRID` 六档下的「每卡字节 ÷ Ψ」逐档与闭式对拍（本机实测）；
   · `B.2`  ★★ `P_os+g` 在六档下同样逐档对拍；两档都**严格单调下降**；
-  · `C.1`  ★★★ **收益饱和（`P_os` 的下界是 `4Ψ`，不是 `0`）** —— `P_os(N) ≥ 4.0` 恒成立，
-         且 `N = 4096` 时 `< 4.003`；`C.1g` 守卫：若参数也切，下界掉到 `2Ψ` ⇒ 判据失败；
-  · `C.2`  ★★★ **`P_os+g` 的下界是 `2Ψ`**（只有参数没切）—— 同样恒成立且已验证；
+  · `B.3`  ★★★ **`P_os` 的下界是 `4Ψ`**（= `16 − K` = `2 × 每参数字节`）—— 实测下界与两条
+         独立算式都相等 ⇒ **不是 `0`**（★ 这一条**归 B 类**：它断言的是**代价模型成立**）；
+  · `B.3g` ★★★ **一条守卫**：把 `P_os` 改成**参数也切**（配置改错）⇒ 下界从 `4Ψ` 掉到 `2Ψ`
+         ⇒ `B.3` **能失败**；
+  · `B.4`  ★★★ **`P_os+g` 的下界是 `2Ψ`**（只有参数没切）—— 同样已验证；
+  · `B.5`  ★★ **收益饱和**：`N` 从 `4096` 翻倍到 `8192`，`P_os` 只省 `< 0.05%`；
+  · `C.1`  ★★★ **反例「分片就是除法」**（`naive_division_bytes()` = `16Ψ/N`）—— 断言它与
+         真值（`sharded_state_bytes()` 真的建状态）之差 `> 1.0`（`N = 4096`）；`C.1g` 守卫：
+         换回**对法** ⇒ 差归零 ⇒ `C.1` 的不等式**必然失败**；
   · `D.*`  口径常量逐个钉住 + **逐元素**元组钉住 + **失败标记自检**。
 """
 import ast
@@ -139,6 +145,18 @@ def closed_form_bytes(Psi, N, shard_param, shard_grad, shard_opt):
     per_grad_bytes = (bpp / N) if shard_grad else bpp
     per_opt_bytes = (k / N) if shard_opt else k
     return (per_param_bytes + per_grad_bytes + per_opt_bytes) * Psi
+
+
+def naive_division_bytes(Psi, N):
+    """**错法**（本程序 `C.1` 的反例）：把「分片」当成**除法** —— 每卡 `16Ψ/N`。
+
+    ★★★ 这是本主题的**头号误算**（文档 `§1.4` / `§4.1`）：它**忽略了「每个 ZeRO 阶段
+      只切它自己声明的那几项」** —— `P_os` 只切优化器状态，参数与梯度**留在每张卡上**。
+      用它在 `N = 4096` 估 `P_os` 会得到 `0.0039Ψ`，而真值是 `4.0029Ψ` —— **差近三个数量级**。
+    ★ 本函数**不是**被测实现（`sharded_state_bytes()` 才是）；它**只用来当反例**
+      （`C.1` 断言「错法与真值之差」显著）。
+    """
+    return specs.ZERO_TOTAL_MULTIPLE * Psi / N
 
 
 def check(name, cond, detail="", detail_fail=None):
@@ -249,7 +267,7 @@ def part_B():
               % (n, measured, ratio, closed, "**一致** ✓" if measured == closed else "**不一致** ✗"))
     check("B.1", ok1 and len(specs.ZERO_N_GRID) == 6,
           "★★ **判据成立**：`P_os` 六档「每卡字节 ÷ Ψ」= %s ⇒ 逐档与闭式 `2+2+12/N` **精确一致**，"
-          "且**严格单调下降**、且**始终 `> 4`**（★ 下界在 `C.1`）"
+          "且**严格单调下降**、且**始终 `> 4`**（★ 下界在 `B.3`）"
           % " / ".join("%.4f" % r for r in ratios1),
           "**`P_os` 的账被动过** —— ★ 先查每档是不是仍与闭式一致、是否仍单调")
 
@@ -269,40 +287,32 @@ def part_B():
         print("     N=%-5d ⇒ 每卡 **%7d B** · ÷Ψ = **%.4f** · 闭式 %.4f ⇒ %s"
               % (n, measured, ratio, closed, "**一致** ✓" if measured == closed else "**不一致** ✗"))
     print("  ★★ **`P_os+g` 比 `P_os` 少的那一块正是梯度**（`2Ψ` 那一份不切时不省）"
-          "—— 见 `C.2` 的下界 `2Ψ`。")
+          "—— 见 `B.4` 的下界 `2Ψ`。")
     check("B.2", ok2,
           "★★ **判据成立**：`P_os+g` 六档「每卡字节 ÷ Ψ」= %s ⇒ 逐档与闭式 `2+2/N+12/N` **精确一致**，"
-          "且**严格单调下降**、且**始终 `> 2`**（★ 下界在 `C.2`）"
+          "且**严格单调下降**、且**始终 `> 2`**（★ 下界在 `B.4`）"
           % " / ".join("%.4f" % r for r in ratios2),
           "**`P_os+g` 的账被动过** —— ★ 先查每档是不是仍与闭式一致、是否仍单调")
 
-
-# ===========================================================================
-# 4. C 类：收益【饱和】—— 下界是 4Ψ / 2Ψ，**不是 0**
-# ===========================================================================
-def part_C():
-    print()
-    print("=" * 78)
-    print("C · 边界与反例：**N 大到某值后收益消失** —— 写出那个下界")
-    print("=" * 78)
-    Psi, Nmax = specs.ZERO_B_PSI, specs.ZERO_N_GRID[-1]
-    # ★★ 经验下界 = 每卡字节 − （被切那一项摊到的字节）/ Ψ
+    # ── B.3 ★★★ `P_os` 的下界是 4Ψ（参数 2 + 梯度 2）────────────────────────
+    # ★★ 这两条（B.3 / B.4）**原先写成 C 类** —— ★ 但它们断言的是「**代价模型成立**」
+    #    （一个好判据），**不是「错法会错」** ⇒ 按 `CONTRIBUTING:238`（C 类只装「错法」）
+    #    **迁到 B 类**（它们的正确归属）。★ 与之配对的守卫 `B.3g` 一并搬来。
+    Nmax = specs.ZERO_N_GRID[-1]
     pos_now = sharded_state_bytes(Psi, Nmax, False, False, True)
     pos_floor = (pos_now - specs.ZERO_K_MEMORY_MULTIPLE * Psi / Nmax) / Psi
     pog_now = sharded_state_bytes(Psi, Nmax, False, True, True)
     pog_floor = (pog_now - specs.ZERO_K_MEMORY_MULTIPLE * Psi / Nmax
                  - specs.ZERO_BYTES_PER_PARAM * Psi / Nmax) / Psi
-    print("  `P_os` 在 N=%d 时：每卡 %d B ⇒ ÷Ψ = %.4f；减去被切的优化器状态那一摊 ⇒ **下界 %.4fΨ**"
+    print()
+    print("  ── B.3 ★★★ `P_os` 的下界：从每卡字节里减掉被切的优化器状态那一摊 ──")
+    print("     `P_os` 在 N=%d 时：每卡 %d B ⇒ ÷Ψ = %.4f；减去优化器状态那一摊 ⇒ **下界 %.4fΨ**"
           % (Nmax, pos_now, pos_now / Psi, pos_floor))
-    print("  `P_os+g` 在 N=%d 时：每卡 %d B ⇒ ÷Ψ = %.4f；再减去被切的梯度那一摊 ⇒ **下界 %.4fΨ**"
-          % (Nmax, pog_now, pog_now / Psi, pog_floor))
-
-    # ── C.1 ★★★ P_os 的下界是 4Ψ（参数 2 + 梯度 2）──────────────────────────
     # ★★ 参照：`16 − K = 2 × 每参数字节` —— **两条来源不同的路径**：左边是「总量减优化器状态」，
     #    右边是「参数 + 梯度两项」。它们相等**不是恒真**（一个是 specs 的两个常量相减，
     #    一个是 bpp 乘 2）；★ 而经验下界 `pos_floor` 又独立地量了一次。
     pos_floor_expected = specs.ZERO_TOTAL_MULTIPLE - specs.ZERO_K_MEMORY_MULTIPLE
-    check("C.1", abs(pos_floor - pos_floor_expected) < TOL_MACHINE
+    check("B.3", abs(pos_floor - pos_floor_expected) < TOL_MACHINE
           and abs(pos_floor_expected - 2 * specs.ZERO_BYTES_PER_PARAM) < TOL_MACHINE
           and pos_floor > 0.0,
           "★★★ **判据成立**：`P_os` 的下界**实测** %.4fΨ == `16 − K` = %d == `2 × 每参数字节` = %d "
@@ -310,36 +320,89 @@ def part_C():
           % (pos_floor, pos_floor_expected, 2 * specs.ZERO_BYTES_PER_PARAM),
           "**`P_os` 的下界被动过** —— ★ 先查「参数与梯度在 `P_os` 里是否仍留完整一份」")
 
-    # ── C.1g ★★★ 守卫：参数也切 ⇒ 下界掉到 2Ψ ─────────────────────────────
+    # ── B.3g ★★★ 守卫：参数也切 ⇒ 下界掉到 2Ψ ─────────────────────────────
     # ★★ 守卫的错法：把 `P_os` 也当成「参数全切」—— ★★★ 这条改动**真的改变了被判量**：
     #    下界从 4Ψ 掉到 2Ψ（参数那一份被切走了）。
     wrong_now = sharded_state_bytes(Psi, Nmax, True, False, True)
     wrong_floor = (wrong_now - specs.ZERO_K_MEMORY_MULTIPLE * Psi / Nmax
                    - specs.ZERO_BYTES_PER_PARAM * Psi / Nmax) / Psi
-    check("C.1g", abs(wrong_floor - pos_floor) > TOL_MACHINE,
+    check("B.3g", abs(wrong_floor - pos_floor) > TOL_MACHINE,
           "★★ **守卫成立**：若把 `P_os` 改成**参数也切**（配置改错）⇒ 下界从 **%.4fΨ** 掉到 "
-          "**%.4fΨ** ⇒ ★★ 换掉「参数切不切」真的改变了被判量，`C.1` **能失败** ✓"
+          "**%.4fΨ** ⇒ ★★ 换掉「参数切不切」真的改变了被判量，`B.3` **能失败** ✓"
           % (pos_floor, wrong_floor),
-          "**守卫失效** —— 参数也切后下界没变（`C.1` 对「参数是否分片」不敏感）")
+          "**守卫失效** —— 参数也切后下界没变（`B.3` 对「参数是否分片」不敏感）")
 
-    # ── C.2 ★★★ P_os+g 的下界是 2Ψ（只有参数没切）──────────────────────────
+    # ── B.4 ★★★ `P_os+g` 的下界是 2Ψ（只有参数没切）──────────────────────────
+    print()
+    print("  ── B.4 ★★★ `P_os+g` 的下界：再减掉被切的梯度那一摊（只剩参数没切）──")
+    print("     `P_os+g` 在 N=%d 时：每卡 %d B ⇒ ÷Ψ = %.4f ⇒ **下界 %.4fΨ**"
+          % (Nmax, pog_now, pog_now / Psi, pog_floor))
     pog_floor_expected = specs.ZERO_BYTES_PER_PARAM
-    check("C.2", abs(pog_floor - pog_floor_expected) < TOL_MACHINE and pog_floor > 0.0,
+    check("B.4", abs(pog_floor - pog_floor_expected) < TOL_MACHINE and pog_floor > 0.0,
           "★★★ **判据成立**：`P_os+g` 的下界**实测** %.4fΨ == 每参数字节 = %d "
           "⇒ ★★★ **只有参数没切** ⇒ 它也不是 0" % (pog_floor, pog_floor_expected),
           "**`P_os+g` 的下界被动过** —— ★ 先查「参数在 `P_os+g` 里是否仍留完整一份」")
 
-    # ── C.3 ★★ 「收益消失」的量化：4096 → 8192 的边际收益 ───────────────────
+    # ── B.5 ★★ 「收益消失」的量化：4096 → 8192 的边际收益 ───────────────────
     # ★★ 这里**不用 `ZERO_N_GRID` 之外的档**做「真的建」——只做闭式外推（标注为推导值），
     #    因为 8192 > `ZERO_B_PSI` 会破坏整除（那条纪律是 A 类的）。
     pos_4096 = sharded_state_bytes(Psi, Nmax, False, False, True) / Psi
     pos_8192 = closed_form_bytes(Psi, 2 * Nmax, False, False, True) / Psi   # 推导值（闭式外推）
     gain = (pos_4096 - pos_8192) / pos_4096 * 100.0
-    check("C.3", gain < 0.05 and pos_8192 < pos_4096,
+    print()
+    print("  ── B.5 ★★ 收益饱和：`N` 从 %d 翻倍到 %d 的边际收益 ──" % (Nmax, 2 * Nmax))
+    print("     `P_os` 从 %.4fΨ 降到 %.4fΨ ⇒ **再翻一倍 N 也只省 %.4f%%**（★ 后者是闭式外推的推导值）"
+          % (pos_4096, pos_8192, gain))
+    check("B.5", gain < 0.05 and pos_8192 < pos_4096,
           "★★ **判据成立**：`N` 从 %d 翻倍到 %d，`P_os` 只从 %.4fΨ 降到 %.4fΨ ⇒ "
           "**再翻一倍 N 也只省 %.4f%%** ⇒ ★★ **收益已经饱和**（" % (Nmax, 2 * Nmax, pos_4096, pos_8192, gain) +
           "★ 后者是**闭式外推的推导值**，不是本机建出来的)",
           "**收益没有饱和** —— ★ 先查下界是不是还是 4Ψ")
+
+
+# ===========================================================================
+# 4. C 类：**反例「分片就是除法」** —— 错法与真值差近三个数量级
+#    ★★★ `CONTRIBUTING:238`：**C 类断言成立时程序应当失败** ⇒ 本节**只装「错法」**，
+#      断言「**按错法算会得到一个与真值显著不同的数**」。
+#    ★★ 原先写成 C 类的三条「下界值」（`P_os` 下界 `4Ψ` / `P_os+g` 下界 `2Ψ` / 收益饱和）
+#      是**代价模型成立**（好判据），按那一条纪律**迁到 B 类**（`B.3`/`B.3g`/`B.4`/`B.5`）。
+# ===========================================================================
+def part_C():
+    print()
+    print("=" * 78)
+    print("C · 边界与反例：**把「分片」当成「除法」** ⇒ 与真值差近三个数量级")
+    print("=" * 78)
+    print("  ★★★ **C 类只装「错法」**（`CONTRIBUTING:238`）—— 本节断言的是")
+    print("      「**按错法算会得到一个与真值显著不同的数**」，**不是**「代价模型成立」。")
+    Psi, Nmax = specs.ZERO_B_PSI, specs.ZERO_N_GRID[-1]
+    true_pos = closed_form_bytes(Psi, Nmax, False, False, True) / Psi    # 真值（闭式：2 + 2 + 12/N）
+    naive_pos = naive_division_bytes(Psi, Nmax) / Psi                   # 错法：16Ψ/N
+    gap = abs(true_pos - naive_pos)
+
+    # ── C.1 ★★★ 错法「分片就是除法」⇒ 与真值差近三个数量级 ─────────────────
+    print()
+    print("  ── C.1 ★★★ **错法「分片就是除法」**：`naive_division_bytes()` = `16Ψ/N` ──")
+    print("     ★ 真值（`P_os` 在 N=%d，闭式 `2 + 2 + 12/N`） = **%.4fΨ**" % (Nmax, true_pos))
+    print("     ★ 错法 `16Ψ/%d = %.8fΨ` ⇒ 与真值之差 = **%.4f** ⇒ ★★★ **差近三个数量级**"
+          % (Nmax, naive_pos, gap))
+    print("     ★★★ **这个错法【不报错】**：它只是把「分片」当成了「除法」——")
+    print("        一个**算术上完全合法**、**语义上错**的估计。")
+    check("C.1", gap > 1.0,
+          "★★★ **判据成立**：错法（`16Ψ/N` = **%.8fΨ**）与真值（**%.4fΨ**）之差 = **%.4f > 1.0**"
+          " ⇒ ★★ 「**分片就是除法**」会得到一个**与真值显著不同的数**"
+          % (naive_pos, true_pos, gap),
+          "**错法与真值居然差不多** —— ★ 先查 `naive_division_bytes()` 是不是真的按 `16Ψ/N` 算的")
+
+    # ── C.1g ★★★ 守卫：把「错法」换回「对法」⇒ 差归零 ⇒ C.1 的不等式**必然失败** ──
+    #   ★★★ 这就是「这条 C 类真的会失败」那个验证的**常驻形式**：
+    #      C.1 断言的是 **两个不同方法之差**；换回对法后两者相等 ⇒ C.1 必然不成立。
+    good_pos = sharded_state_bytes(Psi, Nmax, False, False, True) / Psi  # 对法（真的建状态、量 nbytes）
+    good_gap = abs(good_pos - true_pos)
+    check("C.1g", good_gap <= 1.0,
+          "★★ **守卫成立**：把 `C.1` 里的**错法**换回**对法**（`sharded_state_bytes()` 真实建状态）"
+          " ⇒ 「错法与真值之差」变成 **%.4f ≤ 1.0** ⇒ ★★ C.1 的那个不等式**不再成立**"
+          " ⇒ **C.1 对「用哪个方法」敏感**（它不是恒真的）" % good_gap,
+          "**守卫失效** —— 换回对法后「差」仍 `> 1.0`（那说明 C.1 判的不是这个方法之差）")
 
 
 # ===========================================================================
@@ -456,7 +519,7 @@ def part_D():
           "（也不调用 `np.zeros` / `np.array_split`）——")
     print("        **参照不调用被测**（域 README 的硬要求）在此**在源码层面成立**。")
     print("     ★★★ **降级措辞**：这只是「两段代码不互相调用」的**源码级线索**，"
-          "**不证明**「A/C 类判据有物理信息量」—— 后者由 `A.1g`/`C.1g`/`C.2` 的**行为**兜底。")
+          "**不证明**「A/C 类判据有物理信息量」—— 后者由 `A.1g`/`B.3g`/`C.1g` 的**行为**兜底。")
     check("D.8", "sharded_state_bytes" not in calls_ref and "np" not in calls_ref
           and "sharded_state_bytes" not in calls_test,
           "★★ **源码级线索成立**：`closed_form_bytes()` 的调用表里**没有** `sharded_state_bytes` "

@@ -13,15 +13,18 @@
   ★★ **来源必须分级并写明是哪一级** —— 本域的头号错误模式是
     **把「某实现的文档」当成「规范的文档」**（B 级当 A 级）。
     本主题的**两条来源分属两级**，写清它们是本文档最容易出错的地方之一：
-      · `1910.02054`（ZeRO）= **[C] 论文**（★ **同行评审：否** —— arXiv 预印本，
-        计划 §C.1 逐字记「同行评审：否，arXiv 预印本」）；
+      · `1910.02054`（ZeRO）= **[C] 论文**（★ **同行评审：未确认** —— 计划 §C.1 写「否」、
+        §C.8 的**同行评审状态汇总**那一列写「未确认」（★ 计划自身冲突）；本库照 §C.8 那一列
+        （计划明令「**引用时逐条照抄这一列，不得推断**」）。★ arXiv abs 页**无**
+        `Comments` / `journal-ref` 字段 ⇒ 本库**不推断**，**不写「否」**）；
       · `torch.distributed.fsdp` 文档 = **[B] 某实现的官方文档**（★ **不是规范**；
         载体见 §3 抬头，**版本 2.14**）。
 
 ★★ **本模块的【载体】与【跨标记】纪律**（★ 这是本主题最容易栽的一条，逐条写给复核者）：
     · **ZeRO 的引文载体 = `https://ar5iv.labs.arxiv.org/html/1910.02054` 的正文**
-      （抓取日 **2026-09-23**，计划 §C.1 由独立研究者取回；★★ 本主题**由控制者转交逐字文本**，
-      实施者**不自己抓页面** —— 计划 §5 v6.3 实测过一次「抓 ar5iv 大页面卡死 600 秒」）。
+      （★ **引文经计划 §C.1 转交、2026-09-23 取**；**本机 2026-10-08 复核字节**（ar5iv 全文）
+      —— ★★ 本主题**由控制者转交逐字文本**，实施者**不自己抓页面**
+      —— 计划 §5 v6.3 实测过一次「抓 ar5iv 大页面卡死 600 秒」）。
     · ★★★ **ar5iv 把变量与公式包在 `<math …>…</math>` 里**（例如 §7 开头的 `P_os` / `P_g` /
       `1.5x` / `N_d`）⇒ **凡是跨了 `<math>` 的整句，在原始 HTML 字节上 `count()` 会得到 0**。
       ⇒ ★★ 本模块因此对**跨标记**的整句**另登记它的【不跨标记】载体片段**（后缀 `_HEAD` /
@@ -77,7 +80,7 @@
     **迭代精化 / 主权重为什么必须 fp32 的【数值】理由**
       ⇒ `10-foundations/numerical-linear-algebra/04-iterative-methods.md:229-266`；
     ★★★ **框架的分布式 API 语义**（`torch.distributed` / `DDP` / `FSDP` 的类与参数）
-      ⇒ **全库当前没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1057 行里
+      ⇒ **全库当前没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1053 行里
       `torch.distributed` / `DDP` / `FSDP` / `ProcessGroup` 命中 **0** 次）——
       ★★ 本域**只在 `03` 引 `sharding_strategy` 的【取值列表】**（标 **B 级 + 版本 2.14 + URL + 抓取日**），
       **不解释其语义**（**P19**：把某实现的文档当规范）。
@@ -85,16 +88,18 @@
 
 
 # ===========================================================================
-# 1. ZeRO 论文（arXiv:1910.02054）—— [C] 论文（★ 同行评审：否）
+# 1. ZeRO 论文（arXiv:1910.02054）—— [C] 论文（★ 同行评审：未确认）
 #    载体 = `https://ar5iv.labs.arxiv.org/html/1910.02054` 的正文；
-#    抓取日 **2026-09-23**（计划 §C.1，由独立研究者 `curl -sSL` 取回）。
+#    ★ **引文经计划 §C.1 转交、2026-09-23 取**（由独立研究者 `curl -sSL` 取回）；
+#      **本机 2026-10-08 复核字节**（ar5iv 全文）。
 #    ★★★ 本主题**不自己抓页面**（计划 §5 v6.3 实测过一次「抓 ar5iv 大页面卡死 600 秒」），
 #      实施者忠实转写控制者转交的逐字文本；★★★ 下面是控制者复核过的**双计数**（见模块抬头）。
 # ===========================================================================
 
 ZERO_S7_OPEN_QUOTE = "The answer is in two parts: i) ZeRO-DP incurs no additional communication using P_os and P_g, while enabling up to 8x memory reduction, ii) ZeRO-DP incurs a maximum of 1.5x communication when using P_p in addition to P_os and P_g, while further reducing the memory footprint by N_d times."
-# 来源：[C] ZeRO 论文 §7 的**开头**（arXiv:1910.02054；**同行评审：否**）。
-#       载体 = ar5iv 正文，抓取日 2026-09-23。
+# 来源：[C] ZeRO 论文 §7 的**开头**（arXiv:1910.02054；**同行评审：未确认** ——
+#       ★ arXiv abs 页无 Comments / journal-ref 字段 ⇒ 本库不推断）。
+#       载体 = ar5iv 正文（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ **本主题 02 的题眼之一，且它必须是【两句完整的】** ——
 #       计划 §5 v3 记录：v1/v2 曾把 `ii)` 的从句（`while further reducing the memory footprint by N_d times`）
 #       切下来贴到 `i)` 上，**删掉了 `i)` 真正的结尾**（`while enabling up to 8x memory reduction`），
@@ -102,65 +107,73 @@ ZERO_S7_OPEN_QUOTE = "The answer is in two parts: i) ZeRO-DP incurs no additiona
 #       ★★ **原始 HTML 字节上整句计到 `0`**（`P_os`/`P_g`/`1.5x`/`N_d` 都在 `<math>` 里）
 #       ⇒ 它的**不跨标记载体片段**另立三条：`ZERO_S7_OPEN_HEAD` / `ZERO_NO_EXTRA_COMM_QUOTE` /
 #         `ZERO_UP_TO_8X_QUOTE` / `ZERO_FOOTPRINT_BY_ND_QUOTE`（★ 各计 1 次，实测）。
-# 消费者：`02_communication.py` 的 `D.5`、`A.2` 的说明文案。
+# 消费者：`02_communication.py` 的 `D.5`。
 # 同值位置：无。
 
 ZERO_S7_OPEN_HEAD = "The answer is in two parts: i)"
-# 来源：[C] ZeRO §7 开头的载体片段。载体 = ar5iv 正文，**原始字节 1 次**（2026-09-23 实测）。
+# 来源：[C] ZeRO §7 开头的载体片段。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1
+#       转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★ 上一条**不跨标记**的一段（★ 它停在 `i)`，不含任何 `<math>`）。
-# 消费者：`02_communication.py` 的 `D.6`。
+# 消费者：`02_communication.py` 的 `D.4`。
 # 同值位置：无。
 
 ZERO_NO_EXTRA_COMM_QUOTE = "incurs no additional communication using"
-# 来源：[C] ZeRO §7 开头。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7 开头。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ **本主题 02 的出处纪律①的载体** ——
-#       **`P_os` 与 `P_g` 的「不增通信」只能引这一句**（原文用 `<math>` 包住 `P_os`/`P_g`，
+#       **以 §7 开头的这个总结句为准**（原文用 `<math>` 包住 `P_os`/`P_g`，
 #       故本片段**停在 `using` 之前**）。
+#       ★★ **§1 列表的 `same communication volume as DP` 可作【同向互证】**
+#         （见 `ZERO_S1_SAME_COMM_QUOTE` —— `P_os` 与 `P_os+g` 在 §1 里各写了一次）
+#         ⇒ ★★ **不得写成「只【能】引 §7 开头这一句」**（那会把它自己认定的另两处出处排除掉）。
 #       ★★★ **原文【没有】`P_os` 单独的通信量等式** ⇒ **不得自己造一个 `P_os = 2Ψ`
 #       并标成「论文式(N)」**（那是编机制从句 / 编来源）。
-# 消费者：`02_communication.py` 的 `D.6`、`A.2` 的说明文案（`part_A()` 的打印）。
+# 消费者：`02_communication.py` 的 `D.4`（说明文案也在 `D.4` 里）。
 # 同值位置：无。
 
 ZERO_UP_TO_8X_QUOTE = "while enabling up to 8x memory reduction"
-# 来源：[C] ZeRO §7 开头。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7 开头。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ 这是 **`i)` 真正的结尾** —— v1/v2 的伪引文**删掉的正是它**。
 #       它同时是 90 域那条「`4x`/`8x`」让渡链在论文侧的落点（★ 本主题只引用、不重推分解）。
 # 消费者：`02_communication.py` 的 `D.5`。
 # 同值位置：`90-training/checkpointing/02-sharded-save-and-load.md` 讲的是**它的归属**（本域不写）。
 
 ZERO_FOOTPRINT_BY_ND_QUOTE = "while further reducing the memory footprint by"
-# 来源：[C] ZeRO §7 开头（**`ii)` 的从句**）。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7 开头（**`ii)` 的从句**）。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ 这一句**属于 `ii)`**（`P_os+g+p` 那条），**不属于 `i)`** ——
 #       v1/v2 的伪引文就是把它**挪到了 `i)` 上**。★ 本片段停在 `by` 之前（`N_d` 在 `<math>` 里）。
 # 消费者：`02_communication.py` 的 `D.5`。
 # 同值位置：无。
 
-ZERO_BASELINE_QUOTE = "the standard DP incurs 2Ψ data movement during each training step"
-# 来源：[C] ZeRO §7.1（**标准 DP 的基线**）。载体 = ar5iv 正文，抓取日 2026-09-23。
+ZERO_BASELINE_QUOTE = "the standard DP incurs 2Ψ data movement during each training step."
+# 来源：[C] ZeRO §7.1（**标准 DP 的基线**）。载体 = ar5iv 正文（★ 引文经计划 §C.1 转交、
+#       **2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ **本主题 02 的出处纪律②的载体**，也是 C 类判据的**基线**。
+#       ★ 本常量**止于句末的 `.`**（与 `ZERO_BASELINE_TAIL` 的句号一致 —— 整句逐字照抄）。
 #       ★★ **原始 HTML 字节上整句计到 `0`**（`Ψ` 在 `<math>` 里）⇒ **不跨标记**的载体片段
 #         另立两条：`ZERO_BASELINE_HEAD`（`the standard DP incurs 2`）与 `ZERO_BASELINE_TAIL`
 #         （`data movement during each training step.`）—— ★ 各计 **1** 次。
-# 消费者：`02_communication.py` 的 `D.5`、`A.2`。
-# 同值位置：`10-foundations/performance-models/02-amdahl-and-scaling.md:209` 讲的是**同一个量**
-#           （`2S`，那里的 `S` = 梯度**字节** = `2Ψ`）—— ★★ 见 `ZERO_S_IS_GRAD_BYTES_MULT`。
+# 消费者：`02_communication.py` 的 `D.5`。
+# 同值位置：`10-foundations/performance-models/02-amdahl-and-scaling.md:219`（`2S`，那里的 `S`
+#           = 梯度**字节** = `2Ψ`）与 `:221`（`2S → 3S` 那句 —— ★★ 02 正文引的就是它）
+#           —— ★★ 见 `ZERO_S_IS_GRAD_BYTES_MULT`。（★ `:209` 是 **ring all-reduce 的算法描述**，
+#           没有字面 `2S` —— 它**不是**这个同值位置。）
 
 ZERO_BASELINE_HEAD = "the standard DP incurs 2"
-# 来源：[C] ZeRO §7.1 的载体片段。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7.1 的载体片段。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ **「`2`」这个字面在这个片段里**（它**不跨** `<math>`，`Ψ` 紧随其后才进标签）。
 #       ⇒ 它是 `ZERO_BASELINE_MULTIPLE = 2` 的**逐字依据**。
 # 消费者：`02_communication.py` 的 `D.6`。
 # 同值位置：无。
 
 ZERO_BASELINE_TAIL = "data movement during each training step."
-# 来源：[C] ZeRO §7.1。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7.1。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★ 基线的**后半截**（`Ψ` 与它前半截之间隔着一个 `<math>`）——
 #       两条合起来**在语义上等于** `ZERO_BASELINE_QUOTE` 的整句。
 # 消费者：`02_communication.py` 的 `D.6`。
 # 同值位置：无。
 
 ZERO_RS_AG_QUOTE = "Both reduce-scatter and all-gather are implemented using a pipelined approach"
-# 来源：[C] ZeRO §7.1。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7.1。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ **「`2Ψ` 里已经包含一次 all-gather」的证据** ——
 #       基线 = reduce-scatter(`Ψ`) + all-gather(`Ψ`)。⇒ `P_os+g+p` 的 `3Ψ` 相对基线的增量
 #       **恰好是「多一次 all-gather（参数）」**（前进一次、反向再前进一次）。
@@ -170,35 +183,38 @@ ZERO_RS_AG_QUOTE = "Both reduce-scatter and all-gather are implemented using a p
 # 同值位置：无。
 
 ZERO_POG_SUM_HEAD = "So the total communication volume per training step is"
-# 来源：[C] ZeRO §7.2（`P_os+g` 的推导）。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7.2（`P_os+g` 的推导）。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★ `P_os+g` 的推导句头（后面 `Ψ+Ψ=2Ψ` 在 `<math>` 里）——
 #       ★★ 与 `ZERO_POG_SAME_QUOTE` 合起来 = **`2Ψ`**。
 # 消费者：`02_communication.py` 的 `D.6`。
 # 同值位置：无。
 
 ZERO_POG_SAME_QUOTE = "exactly the same as the baseline DP."
-# 来源：[C] ZeRO §7.2。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7.2。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★★ **`P_os+g` 的通信量 = 与 baseline 完全相同**（逐字）——
 #       本主题 02 的 B 类对照表的**那一格**就是它。
 # 消费者：`02_communication.py` 的 `D.5`、`A.2`。
 # 同值位置：无。
 
 ZERO_POGP_HEAD = "The total volume is therefore"
-# 来源：[C] ZeRO §7.3（`P_os+g+p` 的推导）。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §7.3（`P_os+g+p` 的推导）。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★ `P_os+g+p` 的推导句头（后面 `3Ψ` 在 `<math>` 里）——
 #       ★★ 与 `ZERO_POGP_1_5X_QUOTE` 合起来 = **`3Ψ` = `1.5x`**。
 # 消费者：`02_communication.py` 的 `D.6`。
 # 同值位置：无。
 
 ZERO_POGP_1_5X_QUOTE = "which is 1.5x compared to the baseline."
-# 来源：[C] ZeRO §7.3。载体 = ar5iv 正文，**原始字节 1 次**。
-# 口径：★★★ **论文【唯一】的 `1.5x` 总结句的载体片段**（★ 注意它**不是** §7 开头那句：
-#       那里 `1.5x` 被 `<math>` 包住 ⇒ 整句原始字节计 0）——⇒ **本主题的 `1.5x` 逐字依据就在这里**。
+# 来源：[C] ZeRO §7.3。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
+# 口径：★★★ **原始字节上唯一可直接数到的 `1.5x`（在 §7.3）** —— ★★ **这不是「论文只出现过一次」**：
+#       论文**三处**出现 `1.5x`（§5.3 `only increases the total communication volume of a baseline DP
+#       system to 1.5x`、§7 开头、§7.3）；**另两处在 ar5iv 原始字节上被 `<math>` 切开**
+#       （`1.5</math>x`）⇒ `count("1.5x")` **只数到本节这一处**。★ 不要读成「`1.5x` 只出现一次」。
+#       ⇒ **本主题的 `1.5x` 逐字依据就在这里**（§7 开头那句的 `1.5x` 在 `<math>` 里、整句计 0）。
 # 消费者：`02_communication.py` 的 `D.5`、`A.2`、`C.1`。
 # 同值位置：无。
 
 ZERO_S1_50PCT_QUOTE = "modest 50% increase in communication volume"
-# 来源：[C] ZeRO §1 的列表项（`P_os+g+p` 那条的结论）。载体 = ar5iv 正文，**原始字节 1 次**。
+# 来源：[C] ZeRO §1 的列表项（`P_os+g+p` 那条的结论）。载体 = ar5iv 正文，**原始字节 1 次**（★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**）。
 # 口径：★★ ★ **`50%` 与 `1.5x` 是同一件事的两种写法**（前者是**增量占比**、后者是**倍数**）
 #       ⇒ ★★ **报「增了多少」时必须写明是「多了 50%」还是「是原本的 1.5 倍」**
 #         （本库的「同一件事的两种口径」，计划 `P28` 家族）。
@@ -207,12 +223,13 @@ ZERO_S1_50PCT_QUOTE = "modest 50% increase in communication volume"
 
 ZERO_S1_SAME_COMM_QUOTE = "same communication volume as DP"
 # 来源：[C] ZeRO §1 的列表项。载体 = ar5iv 正文，**原始字节 2 次**
-#       （★ `P_os` 与 `P_os+g` 两条各一次 ⇒ **两处出处**）。
+#       （★ `P_os` 与 `P_os+g` 两条各一次 ⇒ **两处出处**）；
+#       ★ 引文经计划 §C.1 转交、**2026-09-23** 取；**本机 2026-10-08 复核字节**。
 # 口径：★★★ **`P_os` 与 `P_os+g` 的「不增通信」在 §1 的列表里也各写了一次** ——
 #       ★ 这两处**互相印证**（与 §7 开头那句一起构成三条同向证据）。
 #       ★★ **「2 次」是【两处出处】，不是同一个串的两份拷贝**（与 90 域的教训**相反**：
 #         那边有一处「2 次」来自同一个 `<math>` 的两份注释，**不是两处出处**）。
-# 消费者：`02_communication.py` 的 `D.6`、`D.6b`（**计数 2 与「两处出处」一并钉**）。
+# 消费者：`02_communication.py` 的 `D.6b`（**计数 2 与「两处出处」一并钉**）。
 # 同值位置：无。
 
 ZERO_BASELINE_MULTIPLE = 2
@@ -221,13 +238,14 @@ ZERO_BASELINE_MULTIPLE = 2
 # 口径：★★★ **基线 = `2Ψ`**。★ 它**【不是】从 `1.5x` 推来的** ——
 #       它是**独立的一处出处**（基线自己那一句）。⇒ 02 的 A 类**用它当参照**。
 #       ★★★ **它是 C 类判据的支点**：把 `3Ψ` 套到 `P_os` 上会与它**直接矛盾**。
-# 消费者：`02_communication.py` 的 `D.3`、`A.2`、`C.1`。
+# 消费者：`02_communication.py` 的 `D.3`、`A.1`/`A.2`、`C.1`。
 # 同值位置：`10-foundations/performance-models/02-amdahl-and-scaling.md` 的 `2S`（`S = 2Ψ` 字节）。
 
 ZERO_1_5X_VERBATIM = 1.5
 # 来源：[C] ZeRO §7.3 —— 逐字句 `which is 1.5x compared to the baseline.`
 #       （载体 = ar5iv 正文，**原始字节 1 次**）。
-# 口径：★★★ **唯一被逐字取到的 `1.5x`**（★ §7 开头那句的 `1.5x` 在 `<math>` 里、整句计 0）。
+# 口径：★★★ **在 ar5iv 原始字节上唯一可直接数到的 `1.5x`**（★ §7 开头那句的 `1.5x` 在 `<math>`
+#       里、整句计 0；★ 论文另有两处 `1.5x` —— §5.3 与 §7 开头 —— 都数不到，见上一条的口径）。
 #       ⇒ 02 的 A 类**用它算 `3Ψ`**：`2Ψ × 1.5 = 3Ψ`（**两端各有独立出处**：`2` 来自 §7.1、
 #         `1.5` 来自 §7.3 ⇒ **不是自乘**）。
 # 消费者：`02_communication.py` 的 `D.3`、`A.2`、`C.1`。
@@ -251,9 +269,11 @@ ZERO_K_MEMORY_MULTIPLE = 12
 #       转写锚点 = `90-training/checkpointing/01-state-and-bytes.md:80-89`（`K = 12`，fp32 主权重 4
 #       + `m` 4 + `v` 4）。
 # 口径：★★★ **出处纪律③**：**`K` 不是通信量** —— 它是**优化器状态的内存乘子**（`= 12`）。
-#       ⇒ ★★ 把它写进任何通信量等式都是**口径混淆**（本主题 02 的 C 类把它钉成反例）。
+#       ⇒ ★★ 把它写进任何通信量等式都是**口径混淆**（本主题 `02` 的 `D.8` 用**源码级线索**
+#       钉住「通信模型里一个 `K` 都没有」）。
 #       ★ `KΨ` 是**显存**那一侧的账（本主题 01 用），**不参与**通信量那一侧（02）。
-# 消费者：`01_three_stages.py` 的 `D.3`、`02_communication.py` 的 `D.3`/`C.1`。
+# 消费者：`01_three_stages.py` 的 `D.3`（+`B.3`/`B.4` 的输入）、`02_communication.py` 的 `D.3`、
+#         `03_fsdp_correctness.py` 的 `D.3`。
 # 同值位置：`90-training/checkpointing/01-state-and-bytes.md`:89（`K = 12`）。
 
 
@@ -267,7 +287,7 @@ ZERO_BYTES_PER_PARAM = 2
 # 口径：★★ 它只用于**分片后**的字节账（本主题 01）：参数的**字节数** = `2Ψ`。
 #       ★★★ **本域不重推 `2Ψ+2Ψ+KΨ=16Ψ` 的分解**（那是 90 域的正文）——
 #         本常量只让「分片后每一项还剩几个字节」可算。
-# 消费者：`01_three_stages.py` 的 `D.3`、`B.1`/`C.1` 的输入。
+# 消费者：`01_three_stages.py` 的 `D.3`、`B.1`/`B.3` 的输入。
 # 同值位置：`90-training/checkpointing/01-state-and-bytes.md`:101（参数 fp16 = `2Ψ`）。
 
 ZERO_TOTAL_MULTIPLE = 16
@@ -277,7 +297,7 @@ ZERO_TOTAL_MULTIPLE = 16
 #       ★★★ **本域只写「分片后」的账**：`16Ψ/N` 只有在**三项全切**时才等于每卡字节；
 #         `P_os` 在 `N` 很大时仍趋近 **`4Ψ`**（参数 + 梯度不切）——**「分片不是除法」**。
 #       ★★ **不得**在本主题重推 `2Ψ+2Ψ+KΨ` 的分解（那是 90 域的正文）。
-# 消费者：`01_three_stages.py` 的 `D.3`、`B.2`/`C.1` 的输入；
+# 消费者：`01_three_stages.py` 的 `D.3`、`B.2`/`B.3` 的输入；
 #         `03_fsdp_correctness.py` 的 `D.3`、`B.1` 的输入。
 # 同值位置：`90-training/checkpointing/01-state-and-bytes.md`:101。
 
@@ -287,23 +307,26 @@ ZERO_A_PSI = 1024
 #       分片边界整齐（★ 不整除的处置**不是** 01 的题目，那是 `sequence-context-parallel/03`
 #       与 TP 的「头切分」的正文）。
 #       ★★ **必须逐元素钉住**（`01` 的 `D.7`）—— 只钉「整体」会让元素级变异漏网。
-# 消费者：`01_three_stages.py` 的 `D.3b`、`D.7`；★ 另作 `A.1`/`A.2` 的输入。
+# 消费者：`01_three_stages.py` 的 `D.3b`、`D.4`；★ 另作 `A.1`/`A.2` 的输入。
 # 同值位置：无。
 
 ZERO_A_N = 8
 # 来源：[E] 本库设计。`01` 的 **A 类**用的 DP 度 `N`。
-# 口径：★★ 取 `8` 的理由：整除 `ZERO_A_PSI = 1024`，且**与 90 域的同值位置一致**
-#       （`90-training/checkpointing/01` 的 `ZeRO-1` 在 `N = 8` 时是 `5.5Ψ` —— ★ 本主题 01 的
-#       `P_os` 那格**独立复现**了它：`2 + 2 + 12/8 = 5.5Ψ`）。
-# 消费者：`01_three_stages.py` 的 `D.3b`、`D.7`；★ 另作 `A.1`/`A.2` 的输入。
-# 同值位置：`90-training/checkpointing/01-state-and-bytes.md`（`ZeRO-1` 在 `N=8` 的 `5.5Ψ`）。
+# 口径：★★ 取 `8` 的理由：整除 `ZERO_A_PSI = 1024`。
+#       ★★ 本主题 `01` 的 `P_os` 那格在 `N = 8` 下是 `5.5Ψ`（`2 + 2 + 12/8`）。
+#       ★★★ **本库【没有】「90 域记了这个数」这回事** —— `90-training/checkpointing/01-state-and-bytes.md`
+#         **既没有 `ZeRO-1` 这个词、也没有 `5.5` 这个数**（它把「ZeRO 三阶段」**让渡**给了
+#         `100-parallelism`）⇒ **不得写「独立复现了 90 域」**（那是造一个不存在的出处）。
+# 消费者：`01_three_stages.py` 的 `D.3b`、`D.4`；★ 另作 `A.1`/`A.2` 的输入。
+# 同值位置：**计划 §D3 那一行**（`ZeRO-1`（`2+2+12/N`）在 `N=8` 记 `5.500000Ψ`）——
+#           ★★ 这是**本库**的同值位置；**90 域没有同值位置**。
 
 ZERO_B_PSI = 4096
 # 来源：[E] 本库设计。`01` 的 **B 类**（`P_os` 收益饱和）用的参数量 `Ψ`。
 # 口径：★★★ 取 `4096` 的**唯一理由**：它要被 `ZERO_N_GRID` 的**最大档 `4096` 整除**
 #       ⇒ B 类能**真的建出分片**（而不是只代公式）⇒ 报出的数**是本机实测值**、可复核。
 #       ★★ **必须逐元素钉住**（`01` 的 `D.7`）。
-# 消费者：`01_three_stages.py` 的 `D.3b`、`D.7`；★ 另作 `B.1`/`C.1` 的输入。
+# 消费者：`01_three_stages.py` 的 `D.3b`、`D.4`；★ 另作 `B.1`/`B.3` 的输入。
 # 同值位置：无。
 
 ZERO_N_GRID = (1, 2, 8, 64, 512, 4096)
@@ -312,7 +335,7 @@ ZERO_N_GRID = (1, 2, 8, 64, 512, 4096)
 #       随 `N` 增大 `P_os` **单调下降但收敛到 `4Ψ`、不是 `0`** —— **这正是「收益饱和」**。
 #       ★★ **必须逐元素钉住**（`01` 的 `D.7`）—— `for n in specs.ZERO_N_GRID:` 只读整体，
 #         **抓不住元素级变异**（本库 v6.4 一轮 58 条漏网里 38 条出自这一条）。
-# 消费者：`01_three_stages.py` 的 `D.3b`、`D.7`；★ 另作 `B.1`/`B.2`/`C.1` 的输入。
+# 消费者：`01_three_stages.py` 的 `D.3b`、`D.7`；★ 另作 `B.1`/`B.2`/`B.3`/`B.5` 的输入。
 # 同值位置：无。
 
 ZERO_STAGE_NAMES = ("ZeRO-0", "P_os", "P_os+g", "P_os+g+p")
@@ -321,7 +344,7 @@ ZERO_STAGE_NAMES = ("ZeRO-0", "P_os", "P_os+g", "P_os+g+p")
 #       `P_os+g` 再切梯度 / `P_os+g+p` 再切参数）——
 #       ★★ `00-meta/glossary.md` 已有 `ZeRO` 词条 ⇒ 本域**不得另立同名词条**（Chunk 7 并入）。
 #       ★★ **必须逐元素钉住**（`01` 的 `D.7`）。
-# 消费者：`01_three_stages.py` 的 `D.7`；★ 另作 `A.1`/`A.2`/`B.1` 的**循环输入**（打印与逐格核对）。
+# 消费者：`01_three_stages.py` 的 `D.7`；★ 另作 `A.1`/`A.2` 的**循环输入**（打印与逐格核对）。
 # 同值位置：无。
 
 ZERO_C_PSI = 65536
@@ -363,7 +386,7 @@ TOL_MACHINE = 1.0e-12
 #      （★ 本库反复记的「转写是独立的出错环节」；★ 与 ZeRO 那批**不同**：那批有原始字节计数）。
 #    ★★★ **（P19）本模块【只引取值列表】**：**不解释**框架 API 的通用语义、
 #      **不写** `torch.distributed` / `DDP` / `ProcessGroup` 的用法 ——
-#      ★★ **全库当前在这上面没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1057 行里
+#      ★★ **全库当前在这上面没有正文**（实测 `70-frameworks/pytorch/` 4 篇 1053 行里
 #      `torch.distributed` / `DDP` / `FSDP` / `ProcessGroup` 命中 **0** 次）
 #      ⇒ **把禁区指向 70 域是【假让渡】**。
 # ===========================================================================
