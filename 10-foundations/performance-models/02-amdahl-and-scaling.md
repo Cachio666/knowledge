@@ -414,7 +414,7 @@ N₅₀（IB，无重叠）= 305
 3. 三项模型真正的新内容是**存在性条件**：`t_p ≤ 2S/BW` 时 `N*` 不存在，加卡永远不划算。IB 上对应 `B ≤ 13193` token。
 4. 效率取决于**每卡算多少 token**，不取决于卡数。`N₅₀` 正比于全局 batch——想扩到更多卡，先想办法把 batch 放大。
 
-本文只建模了数据并行的梯度 all-reduce。张量并行与流水线并行的通信模式完全不同（TP 每层两次 all-reduce，PP 是点对点），本文的结论**不能**直接套用；数据并行的完整工程形态（ZeRO / FSDP / 3D 并行）的正文在 [100-parallelism/data-parallel](../../100-parallelism/data-parallel.md)（正文在该域，此处回链）。另外，`10` 明确列出未建模项：优化器状态通信（ZeRO 会把通信量抬到 3 倍以上）、通信与计算的实际重叠效率、网络拓扑的收敛比（跨交换机时多跳链路能同时承载的带宽比例）、straggler（最慢的那个 rank 决定整批的完成时刻），以及 ring 之外的其他算法。
+本文只建模了数据并行的梯度 all-reduce。张量并行与流水线并行的通信模式完全不同（TP 每层两次 all-reduce，PP 是点对点），本文的结论**不能**直接套用；数据并行的完整工程形态（ZeRO / FSDP / 3D 并行）的正文在 [100-parallelism/zero-fsdp](../../100-parallelism/zero-fsdp/) 与 [100-parallelism/data-parallel](../../100-parallelism/data-parallel/)（正文在该域，此处回链）。另外，`10` 明确列出未建模项：优化器状态通信（ZeRO 会把通信量抬到 3 倍以上）、通信与计算的实际重叠效率、网络拓扑的收敛比（跨交换机时多跳链路能同时承载的带宽比例）、straggler（最慢的那个 rank 决定整批的完成时刻），以及 ring 之外的其他算法。
 
 回看 [01-roofline-model](01-roofline-model.md)：那篇给出单机内的瓶颈判据，本文给出多机扩展的判据，两者的形式是同一个——**一个与规模无关的常数项决定了上限**。单机里那个常数是 `P_peak` 与 `B_peak` 的比，多机里那个常数是 `2S/BW`。
 
