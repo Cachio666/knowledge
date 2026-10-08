@@ -240,9 +240,13 @@ def part_A():
     print("     ★★ **每条 rail 上恰好有一张来自每个节点的卡** ⇒ 这正是 NVIDIA 那句")
     print("        `put each GPU \"rail\" ... onto a different first level (LEAF) switch` 的可数形式。")
     check("A.1", ok1 and specs.RAIL_NODES == 64 and specs.RAIL_GPUS_PER_NODE == 8
-          and specs.RAIL_COUNT == 8 and len(sizes) == 8,
+          and specs.RAIL_COUNT == 8 and len(sizes) == 8
+          and rail_model_ok(sizes, per_node, rails,
+                            cf_rail_size(nodes, gpus, rails), cf_per_node_per_rail(gpus, rails)),
           "★★ **判据成立**（`R == G = 8`）：枚举出的 **总卡数 == `N = 节点数 × G`**、"
-          "**每轨卡数 == `N/R`**、**每节点每轨恰好 1 张**、**leaf 数 == `R`**",
+          "**每轨卡数 == `N/R`**、**每节点每轨恰好 1 张**、**leaf 数 == `R`**；"
+          "★★ 且**三条不变量校验器对【正确模型】放行**（★ 那是**成功行为** —— 依 `CONTRIBUTING:238`"
+          "归 A 类，**不塞进 `C.1`**）",
           "**rail 的划分与 `N/R` 不符** —— ★ 先查 `_leaf_of` 的位置规则")
 
     # ── A.2 ★★ `R < G` 档：每节点每轨 `G/R` 张 ──────────────────────────
@@ -263,9 +267,14 @@ def part_A():
                  sorted(set(sizes2)), sorted({x for v in per2 for x in v})))
     print("     ★★ **`R < G` 时，同一个节点会有 `G/R` 张卡落在同一条 rail 上** ——")
     print("        ★ 这与 `R == G` 档的「每节点每轨 1 张」**是两个不同的结构**（`C.2` 判这个混淆）。")
-    check("A.2", ok2,
+    check("A.2", ok2
+          and all(len(RailFabric(n2, g2, r2, specs.RAIL_SPINES).rail_members(0)) == cf_rail_size(n2, g2, r2)
+                  and len(RailFabric(n2, g2, r2, specs.RAIL_SPINES).per_node_counts(0)) == n2
+                  for n2, g2, r2 in ((64, 8, 8), (8, 4, 4))),
           "★★ **判据成立**（三档）：`R < G` 时枚举出的 **每轨卡数 == `N/R`**、"
-          "**每节点每轨 == `G/R`**（`(64,8,4)` / `(64,8,2)` / `(32,8,4)` 逐一核过）",
+          "**每节点每轨 == `G/R`**（`(64,8,4)` / `(64,8,2)` / `(32,8,4)` 逐一核过）；"
+          "★★ 且**两个口径被【分开】核过**：每轨共 `N/R` 张（按轨看）vs 每节点每轨 `G/R` 张（按节点看）"
+          "（★ 这是**成功行为** —— 依 `CONTRIBUTING:238` 归 A 类，**不塞进 `C.2`**）",
           "**`R < G` 档的划分与闭式不符** —— ★ 先查 `_leaf_of` 是否只用了 `g mod R`")
 
 
@@ -366,10 +375,20 @@ def rail_model_ok(sizes, per_node, rails, exp_rail_size, exp_per_node):
     """★★★ **rail 模型的校验器**：三条不变量全中才放行。
 
     ① **轨数** == `R`；② **每轨卡数** == `N/R`；③ **每节点每轨卡数** == `G/R`。
-    ★★ 它**不是 A 类**：它是**判定逻辑**，用来判「错模型会不会被拒」（`C.1` 两侧都验）。
+    ★★ 它**不是 A 类**：它是**判定逻辑**，用来判「错模型会不会被拒」（`C.1` **只验拒绝侧**；
+       ★ 正确模型放行是**成功行为**，归 `A.1`）。
     """
     return (len(sizes) == rails and set(sizes) == {exp_rail_size}
             and all(v == [exp_per_node] for v in per_node))
+
+
+def rail_total_claim_ok(fabric, r, claimed_total):
+    """★★★ **「编号 `r` 的轨【共】有几张卡」这条声明的校验器** —— 与**图上数出来的**比对。
+
+    ★★ 它判的正是 `C.2` 的错法：把**每节点每轨 `G/R`**（**按节点看**）误当
+      **每轨共 `N/R` 张**（**按轨看**）⇒ 两个口径都是「每轨的卡数」，极易混。
+    """
+    return len(fabric.rail_members(r)) == claimed_total
 
 
 def part_C():
@@ -390,52 +409,59 @@ def part_C():
         ("错②**每个节点一条轨**（轨数 = 节点数）", "by_node_id", False),
         ("错③**全部塞进第 0 条轨**", "one_rail", False),
     )
-    all_ok = True
+    wrong_all_rejected = True
     for label, corrupt, expect in cases:
         f = RailFabric(nodes, gpus, rails, specs.RAIL_SPINES, corrupt=corrupt)
         nr = f.n_leaves()
         sizes = [len(f.rail_members(r)) for r in range(nr)]
         per_node = [sorted(set(f.per_node_counts(r).values())) for r in range(nr)]
         got = rail_model_ok(sizes, per_node, rails, exp_size, exp_pn)
-        all_ok = all_ok and (got == expect)
-        print("     %-40s 轨数 %-4d 每轨卡数 %-14s ⇒ 校验器 %s（期望 %s）"
+        if expect:      # ★ 正确模型是**成功行为** ⇒ 不并入 C 类判据（`CONTRIBUTING:238`）
+            print("     %-40s 轨数 %-4d 每轨卡数 %-14s ⇒ 校验器 %s（★ 成功行为，已在 `A.1` 断言）"
+                  % (label, nr, sorted(set(sizes)) if sizes else "—", "放行" if got else "**拒绝**"))
+            continue
+        wrong_all_rejected = wrong_all_rejected and (not got)
+        print("     %-40s 轨数 %-4d 每轨卡数 %-14s ⇒ 校验器 %s（期望 **拒绝**）"
               % (label, nr, sorted(set(sizes)) if sizes else "—",
-                 "放行" if got else "**拒绝**", "放行" if expect else "**拒绝**"))
+                 "放行" if got else "**拒绝**"))
     print("     ★★★ 三条的**失败原因【各不相同】**（★ 这正是「rail ≠ 节点」的三张脸）：")
     print("        · 错① `rail = n mod R`：轨数**对了（8）**、每轨卡数**也对了（64）**，")
     print("          但**每节点每轨 = 8 ≠ 1** ⇒ 只靠**不变量③**才拒得掉；")
     print("        · 错② `rail = n`：轨数 **64 ≠ 8** ⇒ 不变量① 拒（每轨只有 8 张）；")
     print("        · 错③ 全塞 0 号轨：轨数看起来**仍是 8**（★ 那 8 条 leaf 是先建好的），")
     print("          但每轨卡数成了 `[0…0, 512]` ⇒ 不变量② 拒（★ **不是**靠轨数）。")
-    check("C.1", all_ok
-          and rail_model_ok([exp_size] * rails, [[exp_pn]] * rails, rails, exp_size, exp_pn)
-          and not rail_model_ok([exp_size] * rails, [[gpus]] * rails, rails, exp_size, exp_pn)
-          and not rail_model_ok([exp_size] * (nodes), [[exp_pn]] * nodes, rails, exp_size, exp_pn),
-          "★★★ **判据成立**：**正确模型放行**，而三种错模型**全部被拒**"
+    check("C.1", wrong_all_rejected
+          and (not rail_model_ok([exp_size] * rails, [[gpus]] * rails, rails, exp_size, exp_pn))
+          and (not rail_model_ok([exp_size] * (nodes), [[exp_pn]] * nodes, rails, exp_size, exp_pn)),
+          "★★★ **判据成立**：三种错模型**全部被拒**"
           "（★ 错① 只被**不变量③**抓住：它的轨数与每轨卡数**都对**）"
-          "⇒ ★★ **「把 rail 当成节点」真的会失败**",
-          "**错模型没被拒绝**（或正确模型被误拒）—— ★ 先查 `rail_model_ok` 的三条不变量")
+          "⇒ ★★ **「把 rail 当成节点」真的会失败**（★ 正确模型放行是成功行为，归 `A.1`）",
+          "**错模型没被拒绝** —— ★ 先查 `rail_model_ok` 的三条不变量")
 
     # ── C.2 ★★★ 把「每节点每轨 1 张」当成「每轨共 1 张」─────────────────
     print()
     print("  ── C.2 ★★★ **把「每节点每轨 1 张」当成「每轨共 1 张」** ──")
-    all_ok2 = True
+    wrong_rejected2 = True
     for nodes2, gpus2, rails2 in ((64, 8, 8), (8, 4, 4)):
         f = RailFabric(nodes2, gpus2, rails2, specs.RAIL_SPINES)
-        print("     节点 %-3d × %d 卡 · R=%d：**每轨共 `N/R` = %-3d 张**，"
-              "而**每节点每轨 1 张** ⇒ 两者差 `%d` 倍"
-              % (nodes2, gpus2, rails2, cf_rail_size(nodes2, gpus2, rails2), nodes2))
+        wrong = cf_per_node_per_rail(gpus2, rails2)   # ★ 错法：拿「每节点每轨」当「每轨共」
+        got = rail_total_claim_ok(f, 0, wrong)
+        wrong_rejected2 = wrong_rejected2 and (not got)
+        print("     节点 %-3d × %d 卡 · R=%d：**每轨共 `N/R` = %-3d 张**；"
+              "★ **错法**「每轨共 %d 张」（= 每节点每轨 `G/R`）⇒ 校验器 %s"
+              % (nodes2, gpus2, rails2, cf_rail_size(nodes2, gpus2, rails2), wrong,
+                 "放行" if got else "**拒绝**"))
         print("        枚举核对：每轨 %d 张、每轨里含 %d 个不同节点"
               % (len(f.rail_members(0)), len(f.per_node_counts(0))))
-        all_ok2 = all_ok2 and len(f.rail_members(0)) == cf_rail_size(nodes2, gpus2, rails2) \
-            and len(f.per_node_counts(0)) == nodes2
     print("     ★★★ **这个错法特别可信**：`1`（每节点每轨）与 `N/R`（每轨总数）**都是「每轨的卡数」**，")
     print("        只是**口径不同**（一个按节点看、一个按轨看）—— ★★ 正是「**量法口径**」那一类错。")
-    check("C.2", all_ok2 and cf_per_node_per_rail(8, 8) == 1 and cf_rail_size(64, 8, 8) == 64
-          and cf_rail_size(64, 8, 8) != cf_per_node_per_rail(8, 8),
-          "★★★ **判据成立**：`(64,8,8)` 档上 **`N/R = 64`（每轨总数）** 与 **`G/R = 1`"
-          "（每节点每轨）** 被**分开**核过；★ 把两者混成一个数**会被枚举值当场否掉**",
-          "**两种口径没被分开** —— ★ 先查 `cf_rail_size` 与 `cf_per_node_per_rail`")
+    check("C.2", wrong_rejected2
+          and (not rail_total_claim_ok(RailFabric(64, 8, 8, specs.RAIL_SPINES), 0, 1))
+          and (not rail_total_claim_ok(RailFabric(8, 4, 4, specs.RAIL_SPINES), 0, 1)),
+          "★★★ **判据成立**：把「每节点每轨 `1` 张」误当「**每轨共 1 张**」⇒ 校验器 **被拒**"
+          "（★ 图上数出的每轨是 `N/R = 64` / `8` 张）⇒ ★★ **口径混用真的会失败**"
+          "（★ 两个口径被**分开**核过是成功行为，归 `A.1`/`A.2`）",
+          "**两种口径没被分开** —— ★ 先查 `rail_total_claim_ok`（它比对的是**图上数出的每轨张数**）")
 
 
 # ===========================================================================
@@ -511,8 +537,29 @@ def preflight():
 def part_D():
     print()
     print("=" * 78)
-    print("D · 引文逐字钉住 · **逐元素**钉住 · 独立性线索")
+    print("D · **边界档** · 引文逐字钉住 · **逐元素**钉住 · 独立性线索")
     print("=" * 78)
+
+    # ── D.4 ★★ **边界档**：`R = 1` 与 `R = G`（枚举 vs 闭式）────────────────
+    #   ★★ 补上本程序此前**缺号**的 `D.4`（★ `01`/`03` 都有 `D.4`，但三者的**指代本就不同**
+    #     —— `01/D.4` = 守卫实验、`03/D.4` = 逐元素钉住、`02/D.4` = 这里的边界档）。
+    print()
+    print("  ── D.4 ★★ **边界档**（`R = 1` 与 `R = G`）：枚举 vs 闭式 ──")
+    f_r1 = RailFabric(64, 8, 1, specs.RAIL_SPINES)
+    f_rg = RailFabric(64, 8, 8, specs.RAIL_SPINES)
+    print("     `R = 1`：leaf 数 %d（= `R`）· 每轨卡数 %d（`N/R` = %d）· 每节点每轨 %s（`G/R` = %d）"
+          % (f_r1.n_leaves(), len(f_r1.rail_members(0)), cf_rail_size(64, 8, 1),
+             sorted(set(f_r1.per_node_counts(0).values())), cf_per_node_per_rail(8, 1)))
+    print("     `R = G = 8`：leaf 数 %d · 每轨 %d 张 · 每节点每轨 %s"
+          % (f_rg.n_leaves(), len(f_rg.rail_members(0)),
+             sorted(set(f_rg.per_node_counts(0).values()))))
+    check("D.4", cf_per_node_per_rail(8, 1) == 8 and cf_rail_size(64, 8, 1) == 512
+          and len(f_r1.rail_members(0)) == 512 and f_r1.n_leaves() == 1
+          and sorted(set(f_r1.per_node_counts(0).values())) == [8]
+          and f_rg.n_leaves() == 8 and sorted(set(f_rg.per_node_counts(0).values())) == [1],
+          "★★ **边界成立**：`R = 1` 时**全部卡落在同一条 leaf**（`N/R = 512`、每节点每轨 `G/R = 8`）；"
+          "`R = G` 时**每节点每轨恰好 1 张** —— ★ 两个极端都由**枚举**复现了闭式",
+          "**边界档（`R = 1` / `R = G`）与闭式不符** —— ★ 先查 `_leaf_of` 的 `g mod R`")
 
     # ── D.5 ★★★ 三条 NVIDIA 引文（★ 含计划【截断】的那一句的后半）────────
     check("D.5", specs.NVIDIA_RAIL_QUOTE

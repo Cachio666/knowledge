@@ -59,23 +59,30 @@ FETCH_DATE = "2026-10-08"
 #    ★★★ 本节的每条引文都必须与 `# 来源：` 里的**提取形态**对照（上标压平 / 双栏交错）。
 # ===========================================================================
 
-SIGCOMM08_CARRIER = 'Al-Fares, Loukissas, Vahdat, A Scalable, Commodity Data Center Network Architecture, SIGCOMM 2008'
+SIGCOMM08_CARRIER = 'Al-Fares, Loukissas, Vahdat, A Scalable, Commodity Data Center Network Architecture, SIGCOMM 2008, pp. 63–74'
 # 来源：[C] 论文，**同行评审：是**（计划 §C.3 给 `10.1145/1402958.1402967`）；
 #       ★★★ **标题与作者本轮从一手 PDF 的首页逐字读到**（`Mohammad Al-Fares` / `Alexander
 #       Loukissas` / `Amin Vahdat`）。
-#       ★★ 页码 `63–74`（计划 §C.3 给的）**本轮未能独立核实** —— PDF 的提取文本里没有页眉页码
-#         ⇒ 本常量**不含页码**（记不下就不记，`no-fabricated-numbers`）。
-# 口径：★★ 本常量是**书目字段**（作者 + 标题 + 会议 + 年），**不是一句引文**；
+#       ★★ **页码 `63–74` 本轮已独立复核**：`api.crossref.org` 对该 DOI 返回 **`200`**，
+#         `message.page = "63-74"`（★ 分隔符本轮写 en-dash `–`，与 `SIGCOMM08_LEISERSON_CARRIER` 一致）
+#         ⇒ 本常量**含页码**。
+# 口径：★★ 本常量是**书目字段**（作者 + 标题 + 会议 + 年 + 页码），**不是一句引文**；
 #       它只用来支撑「本主题的组合结构事实来自这篇论文」这件事本身。
 # 消费者：`01` 的 `D.3`（与 `D.5` 的引文成对打印）。
-# 同值位置：无。
+# 同值位置：`SIGCOMM08_DOI`（同一篇的可定位字段）。
 
 SIGCOMM08_DOI = "10.1145/1402958.1402967"
-# 来源：[C] 论文的 DOI —— ★★ **照计划 §C.3 转录**；本轮 `api.crossref.org` **未通**
-#       （取到的 JSON 缺 `message`）⇒ **本轮未能独立复核**，如实记在这里。
-# 口径：★ 它只用于「可定位到那一篇」，**不构成任何数值主张**。
+# 来源：[C] 论文的 DOI —— ★★ **照计划 §C.3 转录**；★★★ **本轮已独立复核**：
+#       `curl --max-time 25 https://api.crossref.org/works/10.1145/1402958.1402967` 返回
+#       **`200`**（`10489` 字节），`message.page = "63-74"`、
+#       `message.container-title = ["Proceedings of the ACM SIGCOMM 2008 conference on Data communication"]`。
+#       ★★ **订正记录（环境产物 ≠ 事实）**：原注释写「本轮 `api.crossref.org` **未通**（取到的
+#         JSON 缺 `message`）」—— ★ 那是**一次失败的网络请求**（**环境产物**），**不是**
+#         「Crossref 里没有这条记录」（**事实**）。本轮实测可达 ⇒ 已如实改写
+#         （★ 与 v1.7 的硬伤「**读不到**」当成「**不存在**」**同族**）。
+# 口径：★ 它用于「可定位到那一篇」**并**支撑页码 `63–74`。
 # 消费者：`01` 的 `D.3`。
-# 同值位置：无。
+# 同值位置：`SIGCOMM08_CARRIER` 的页码 `63–74`。
 
 SIGCOMM08_PDF_URL = "https://cseweb.ucsd.edu/~vahdat/papers/sigcomm08.pdf"
 # 来源：★★★ **一手 PDF**（本轮 `curl --max-time 25` 实测 `991601` 字节，12 页）。
@@ -215,8 +222,13 @@ SIGCOMM08_SUBNETS_AT_K48 = 1152
 # 消费者：`01` 的 `B.1`。
 # 同值位置：无。
 SIGCOMM08_HOSTS_PER_EDGE_AT_K48 = 24
-# 来源：[C] 论文（`SIGCOMM08_SUBNETS_QUOTE` 的 `24 hosts each` + `SIGCOMM08_INSTANCE_QUOTE`
-#       的 `assigned 24 hosts each`）★ 本轮已复核。
+# 来源：[C] 论文（`SIGCOMM08_SUBNETS_QUOTE` 的 `24 hosts each`）★ 本轮已复核。
+#       ★★ **订正记录（归错常量）**：原注释还引了 `SIGCOMM08_INSTANCE_QUOTE`
+#         的 `assigned 24 hosts each` —— ★ 那是**指错了地方**：`SIGCOMM08_INSTANCE_QUOTE`
+#         逐字是 `... with 24 switches each.`（**不含 `assigned`、也不含 `hosts`**）；
+#         「assigned 24 hosts each」确在论文里（`The edge switches in every pod are assigned
+#         24 hosts each.`），但那是**另一句**、且**未登记成任何常量**
+#         ⇒ ★ 已删去那半截，只保留 `SUBNETS_QUOTE` 的 `24 hosts each`（它逐字在册）。
 # 口径：★ 每台边缘交换机下挂 `k/2 = 24` 台主机。
 # 消费者：`01` 的 `B.1`。
 # 同值位置：`SIGCOMM08_SWITCHES_PER_LAYER_PER_POD_AT_K48`（`k/2` 的两个角色，数值相同）。
@@ -522,11 +534,20 @@ SHARP_PAPER_CARRIER = "SHARP, COMHPC 2016"
 # 消费者：`03` 的 `D.6`。
 # 同值位置：无。
 
-DCQCN_CARRIER = "DCQCN, SIGCOMM 2015"
-# 来源：★ **[C] 级**，**同行评审：是**（计划 §C.3 给）—— ★★★ **正文本轮未取到**（`F6`）。
-#       ★★ **且本轮未核实它的标题与作者**（`api.crossref.org` 未通）⇒ **只登记载体**。
-# 口径：★★ 它**只**支撑「DCQCN 是一篇 SIGCOMM 2015 的工作」这件事；
-#       ★★★ **本库不写它的机制**（三组件描述来自二手检索摘要 ⇒ 见 `NOT_QUOTED`）。
+DCQCN_CARRIER = 'Zhu, Eran, Firestone, Guo, Lipshteyn, Liron, Padhye, Raindel, Yahia, Zhang, Congestion Control for Large-Scale RDMA Deployments, SIGCOMM 2015, pp. 523–536'
+# 来源：★ **[C] 级**，**同行评审：是**（计划 §C.3 给载体；★★ 本常量按 `F6` 的「**只引标题 + 载体**」）。
+#       ★★★ **正文本轮未取到**（`F6`：机制 / 公式**不得**逐字引）。
+#       ★★ **订正记录（环境产物 ≠ 事实）**：原注释写「本轮未核实它的标题与作者
+#         （`api.crossref.org` 未通）⇒ 只登记载体」—— ★ 与 `SIGCOMM08_DOI` **同一族**：
+#         把**一次失败的网络请求**当成了「Crossref 里查不到」。★★ 本轮实测可达：
+#         `curl --max-time 25 https://api.crossref.org/works/10.1145/2785956.2787484` 返回 **`200`**，
+#         `title = ["Congestion Control for Large-Scale RDMA Deployments"]`、
+#         `family`（10 位，按 `sequence`）= `Zhu / Eran / Firestone / Guo / Lipshteyn / Liron /
+#         Padhye / Raindel / Yahia / Zhang`、`container-title = ["Proceedings of the 2015 ACM Conference
+#         on Special Interest Group on Data Communication"]`、`page = "523-536"`、`published 2015-08-17`
+#         ⇒ ★ **标题 / 作者 / 页码本轮已核实并登记**（分隔符写 en-dash，与另外两条载体一致）。
+# 口径：★★ 它支撑「DCQCN 是 SIGCOMM 2015 的一篇工作」**及其题名 / 作者 / 页码**；
+#       ★★★ **但仍不写它的机制**（三组件描述来自二手检索摘要 ⇒ 见 `NOT_QUOTED`）。
 # 消费者：`03` 的 `D.6`。
 # 同值位置：无。
 

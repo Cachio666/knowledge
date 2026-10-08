@@ -302,9 +302,12 @@ def part_A():
     print("     ★★ 三层的**度全是 `k`** —— ★ 这是**端口预算**的红利：")
     print("        边缘 `k/2` 主机 + `k/2` 聚合；聚合 `k/2` 边缘 + `k/2` 核心；核心**每 pod 一个端口**。")
     check("A.1", ok1 and len(specs.FATTREE_K_GRID) == 4
-          and specs.FATTREE_K_GRID == (4, 6, 8, 16),
+          and specs.FATTREE_K_GRID == (4, 6, 8, 16)
+          and scale_claim_ok(8, cf_hosts(8), cf_cores(8)),
           "★★ **判据成立**（`FATTREE_K_GRID` 四档）：枚举出的**主机数 == `k³/4`**、"
-          "**每层交换机数 == `k×(k/2)`**、**核心数 == `(k/2)²`**，且三层的**度全 == `k`**",
+          "**每层交换机数 == `k×(k/2)`**、**核心数 == `(k/2)²`**，且三层的**度全 == `k`**；"
+          "★★ 且**规模校验器对真值 `(128, 16)` 放行**（★ 那是**成功行为** —— 依 `CONTRIBUTING:238`"
+          "归 A 类，**不塞进 `C.1`**）",
           "**枚举与闭式对不上** —— ★ 先查建图（端口预算 / 按需新建核心），再看闭式")
 
     # ── A.2 ★★★ 等价路径数：BFS vs 闭式 vs **论文值** ────────────────────
@@ -356,9 +359,10 @@ def part_A():
         and hops48 == 6 and per_edge == specs.SIGCOMM08_HOSTS_PER_EDGE_AT_K48
     print("     ★★★ **五条全部一致** ⇒ 本程序的建图**复现了论文的拓扑性质**"
           "（★ 论文值是**外部锚点**，不是本程序算出来的）。")
-    check("A.2", ok2,
+    check("A.2", ok2 and path_claim_ok(8, cf_paths(8)),
           "★★★ **判据成立**：`FATTREE_K_GRID` 四档上 **BFS 数出的等价路径数 == `(k/2)²`**"
           "（且**不同主机对条数相同**、跳数恒为 **6 条链路**）；"
+          "★★ 且**路径数校验器对真值 `(k/2)²` 放行**（★ 成功行为归 A 类，**不塞进 `C.2`**）；"
           "★★ **`k = %d` 那一档与论文的实例值逐条一致**：`27,648` 主机 · `1,152` 子网 · "
           "`576` 核心 · **`576` 条等价路径** · `24` 主机/边缘"
           % specs.SIGCOMM08_K48,
@@ -525,36 +529,45 @@ def part_C():
         ("把核心数写成 `k²`（多乘 4）", truth["host"], k ** 2, False),
     )
     print("     k=%d 的枚举真值：主机 %d · 核心 %d" % (k, truth["host"], truth["core"]))
-    all_ok = True
+    wrong_all_rejected = True
     for label, h, c, expect in cases:
         got = scale_claim_ok(k, h, c)
-        all_ok = all_ok and (got == expect)
-        print("     %-34s (主机 %-6d, 核心 %-5d) ⇒ 校验器 %s（期望 %s）"
-              % (label, h, c, "放行" if got else "**拒绝**", "放行" if expect else "**拒绝**"))
-    print("     ★★★ 关键：**真值被放行、四种错公式全部被拒** —— 校验器**两侧都验了**。")
-    check("C.1", all_ok and scale_claim_ok(k, truth["host"], truth["core"])
-          and not scale_claim_ok(k, k ** 3 // 8, truth["core"])
-          and not scale_claim_ok(k, truth["host"], k // 2),
-          "★★ **判据成立**：`k = 8` 下 **真值 `(128, 16)` 放行**，而 **`k³/8` / `k²/4`（主机）**"
-          "与 **`k/2` / `k²`（核心）** 四种错法**全部被拒** ⇒ ★★ **写错规模公式真的会失败**",
-          "**错公式没被拒绝**（或真值被误拒）—— ★ 先查 `scale_claim_ok`（它比对的是**枚举值**）")
+        if expect:          # ★ 真值那一行是**成功行为** ⇒ 不并入 C 类判据（`CONTRIBUTING:238`）
+            print("     %-34s (主机 %-6d, 核心 %-5d) ⇒ 校验器 %s（★ 成功行为，已在 `A.1` 断言）"
+                  % (label, h, c, "放行" if got else "**拒绝**"))
+            continue
+        wrong_all_rejected = wrong_all_rejected and (not got)
+        print("     %-34s (主机 %-6d, 核心 %-5d) ⇒ 校验器 %s（期望 **拒绝**）"
+              % (label, h, c, "放行" if got else "**拒绝**"))
+    print("     ★★★ 关键：**四种错公式全部被拒** —— ★ 真值放行是**成功行为**，归 `A.1`"
+          "（依 `CONTRIBUTING:238`，成功行为**不塞进 C 类**）。")
+    check("C.1", wrong_all_rejected
+          and (not scale_claim_ok(k, k ** 3 // 8, truth["core"]))
+          and (not scale_claim_ok(k, k ** 2 // 4, truth["core"]))
+          and (not scale_claim_ok(k, truth["host"], k // 2))
+          and (not scale_claim_ok(k, truth["host"], k ** 2)),
+          "★★ **判据成立**：`k = 8` 下 **`k³/8` / `k²/4`（主机）** 与 **`k/2` / `k²`（核心）** "
+          "四种错法**全部被拒** ⇒ ★★ **写错规模公式真的会失败**（★ 真值放行在 `A.1`）",
+          "**错公式没被拒绝** —— ★ 先查 `scale_claim_ok`（它比对的是**枚举值**）")
 
     # ── C.2 ★★★ 把等价路径数写成 `k/2`（漏一个因子）────────────────────
     print()
     print("  ── C.2 ★★★ **把等价路径数写成 `k/2`**（漏掉一个 `k/2` 因子）──")
-    all_ok2 = True
+    wrong_rejected2 = True
     for k in (4, 8, 16):
         ft = FatTree(k)
         truth_paths = ft.shortest_path_count(*ft.cross_pod_pairs(1)[0])[0]
         wrong = k // 2                                # ★ 少一个 k/2 因子
-        all_ok2 = all_ok2 and path_claim_ok(k, truth_paths) and not path_claim_ok(k, wrong)
-        print("     k=%-3d 真值 %-4d ⇒ 放行；写成 `k/2` = %-3d ⇒ **拒绝**" % (k, truth_paths, wrong))
+        wrong_rejected2 = wrong_rejected2 and (not path_claim_ok(k, wrong))
+        print("     k=%-3d 写成 `k/2` = %-3d ⇒ **拒绝**（★ 真值 %-4d 放行见 `A.2`）"
+              % (k, wrong, truth_paths))
     print("     ★★★ **为什么这个错法可信**：`k/2` 与 `(k/2)²` 只差一个因子，")
     print("        而 `k/2` 在**同一个拓扑**里到处都是（每层交换机数、每交换机的主机数、端口的一半）")
     print("        ⇒ ★★ 这正是「**同一个数在不同指上的传染**」（本库 `no-fabricated-numbers` 的孪生形态）。")
-    check("C.2", all_ok2,
-          "★★★ **判据成立**：`k = 4/8/16` 三档上 **`(k/2)²` 被放行**，"
-          "**`k/2` 被拒** ⇒ ★★ 「把等价路径数写成 `k/2`」**真的会失败**",
+    check("C.2", wrong_rejected2
+          and (not path_claim_ok(4, 2)) and (not path_claim_ok(8, 4)) and (not path_claim_ok(16, 8)),
+          "★★★ **判据成立**：`k = 4/8/16` 三档上 **`k/2` 被拒**"
+          " ⇒ ★★ 「把等价路径数写成 `k/2`」**真的会失败**（★ `(k/2)²` 放行是成功行为，归 `A.2`）",
           "**漏因子的写法没被拒绝** —— ★ 先查 `path_claim_ok`（它比对的是 **BFS 的数**）")
 
 
@@ -599,13 +612,14 @@ def preflight():
     # ── D.3 ★ 载体元数据 ──────────────────────────────────────────────────
     check("D.3", specs.SIGCOMM08_CARRIER
           == ("Al-Fares, Loukissas, Vahdat, A Scalable, Commodity Data Center Network "
-              "Architecture, SIGCOMM 2008")
+              "Architecture, SIGCOMM 2008, pp. 63–74")
           and specs.SIGCOMM08_DOI == "10.1145/1402958.1402967"
           and specs.SIGCOMM08_PDF_URL == "https://cseweb.ucsd.edu/~vahdat/papers/sigcomm08.pdf"
           and specs.FETCH_DATE == "2026-10-08"
           and specs.UNSOURCED == (),
-          "★ **载体元数据逐字钉住**：作者 + 标题 + 会议 · DOI `%s` · 一手 PDF URL ·"
-          "抓取日 `%s`；★ `UNSOURCED == ()` 一并钉住（★ 本程序**没有**「用了但没出处」的常量）"
+          "★ **载体元数据逐字钉住**：作者 + 标题 + 会议 + **页码 `63–74`** · DOI `%s` · 一手 PDF URL ·"
+          "抓取日 `%s`；★ `UNSOURCED == ()` 一并钉住（★ 本程序**没有**「用了但没出处」的常量）；"
+          "★★ 页码本轮由 `api.crossref.org`（`200`, `page = 63-74`）独立复核"
           % (specs.SIGCOMM08_DOI, specs.FETCH_DATE))
 
     # ── D.3b ★★★ 口径守卫（★ 跑在任何计算之前）────────────────────────────

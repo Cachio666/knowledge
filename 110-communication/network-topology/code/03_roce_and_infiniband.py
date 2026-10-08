@@ -29,7 +29,7 @@ r"""03_roce_and_infiniband.py —— **RoCE v2 的机制**（PFC / ECN / DCQCN�
     ★★ 本程序把它做成**机械断言**（`C.2` + `specs.HAVE_IBTA_ANNEX_A17`）。
   · **`F6`** —— **DCQCN / SHARP 2016 的正文未取到** ⇒ **只引【载体】**；
     ★★★ **DCQCN 的三组件描述**与 **SHARP 的 `2.1×` / `3.24×`** 来自**二手检索摘要**
-      ⇒ **不得当逐字引文**（★ 本程序 `D.8` 会**扫源码**确认那两个数字**一次都没出现**）。
+      ⇒ **不得当逐字引文**（★ 本程序 `D.8` 会**扫 `specs` 的 `*_QUOTE` 引文常量**确认那两个数字**一次都没出现**）。
   ★ **`F7`** —— DBLP 页取不到 ⇒ **不得声称「查过 DBLP」**。
 
 ★★ **覆盖边界**：本程序守的是「**规格值抄对了没有**」与「**两条错法真的会被拒**」，
@@ -183,9 +183,13 @@ def part_B():
           and specs.ROCEV2_UDP_PORT == 4791
           and 0 < specs.ROCEV2_UDP_PORT <= specs.ROCEV2_PORT_RANGE_MAX == 65535
           and dict((f, lv) for f, lv, _s in specs.ROCE_FACT_ROWS)[
-              "RoCEv2 的封装（IB 传输包套以太网）"] == "B",
+              "RoCEv2 的封装（IB 传输包套以太网）"] == "B"
+          and roce_level_ok("RoCEv2 的封装（IB 传输包套以太网）", "B")
+          and roce_level_ok("ECN 字段（IPv4 TOS 的 bit 6–7）", "A"),
           "★★ **判据成立**：规格值表 **7 条**（`[A]` **3** · `[B]` **4**；**已复核 6** · **未取到 1**）；"
-          "ECN 占 **bit 6–7**（两个位）；RoCEv2 的 UDP 端口 **4791** 落在 `(0, 65535]` 内",
+          "ECN 占 **bit 6–7**（两个位）；RoCEv2 的 UDP 端口 **4791** 落在 `(0, 65535]` 内；"
+          "★★ 且**级别校验器对【放行侧】成立**（标 `[B]` 的封装 / 已复核的 `[A]` ECN 都放行）"
+          "（★ 那是**成功行为** —— 依 `CONTRIBUTING:238` 归 B 类，**不塞进 `C.2`**）",
           "**规格值表或两个规格值被动过** —— ★ 先查 `ROCE_FACT_ROWS` / `ECN_BITS` / `ROCEV2_UDP_PORT`")
 
     # ── B.2 ★★★ PFC 的官方作用域（三条逐字）──────────────────────────────
@@ -224,10 +228,12 @@ def part_B():
           and specs.RFC3168_CE_QUOTE
           == ("The CE codepoint '11' is set by a router to indicate congestion to the end "
               "nodes.  Routers that have a packet arriving at a full queue drop the packet, "
-              "just as they do in the absence of ECN."),
+              "just as they do in the absence of ECN.")
+          and pfc_claim_ok(("congestion",), (3,), (3,)),
           "★★★ **判据成立**：PFC 的**四个限定词**逐字钉住（`per traffic class` · `full-duplex links` ·"
           " `intended to` · `is limited to a domain`）；★ 「为什么需要」那句的**主语**（`higher layer "
-          "protocols`）与它的 `approaches lossless behavior` 一并钉住；★★ 官方点名的丢包原因 = **1 个**",
+          "protocols`）与它的 `approaches lossless behavior` 一并钉住；★★ 官方点名的丢包原因 = **1 个**；"
+          "★★ 且**范围校验器对【范围内】的声明放行**（★ 成功行为归 B 类，**不塞进 `C.1`**）",
           "**PFC 的作用域引文被动过** —— ★ 先查那四个限定词（★ 少一个就会把 PFC 升格成万能解）")
 
     # ── B.3 ★★ SHARP 的在网计算定位（两版逐字相同）──────────────────────
@@ -237,7 +243,7 @@ def part_B():
     print("     ★★ 载体 %s（另一版 %s **逐字相同**）—— ★ 本库**两版都取到**，故这条对版本不敏感。"
           % (specs.SHARP_DOC_TAG, specs.SHARP_DOC_TAG_ALT))
     print("     ★★★ **本库【不引】SHARP 的任何性能数字**（`F6`）：`2.1×` / `3.24×` 来自"
-          "**二手检索摘要** ⇒ ★ `D.8` 会**扫源码**确认它们一次都没出现。")
+          "**二手检索摘要** ⇒ ★ `D.8` 会**扫 `specs` 的 `*_QUOTE` 引文常量**确认它们一次都没出现。")
     print("     ★★ **InfiniBand 的代际（EDR/HDR/NDR/XDR）与它们的带宽** → "
           "`20-gpu-architecture/interconnect/01` —— **本域只回链，不重写**。")
     check("B.3", specs.SHARP_QUOTE.startswith("NVIDIA® Scalable Hierarchical Aggregation")
@@ -272,27 +278,31 @@ def part_C():
         ("**全链路**：保护**全部 8 个类别**", ("congestion",), all_classes, False),
         ("双重越界：任何原因 + 全部类别", causes_universal, all_classes, False),
     )
-    all_ok = True
+    wrong_all_rejected = True
     print("     实际配置里开了 PFC 的类别：%s（共 %d 个）；官方点名的丢包原因：%s"
           % (enabled, len(enabled), specs.PFC_OFFICIAL_LOSS_CAUSES))
     for label, causes, prios, expect in cases:
         got = pfc_claim_ok(causes, prios, enabled)
-        all_ok = all_ok and (got == expect)
-        print("     %-40s 原因 %-2d 个 · 类别 %-2d 个 ⇒ %s（期望 %s）"
-              % (label, len(causes), len(prios),
-                 "放行" if got else "**拒绝**", "放行" if expect else "**拒绝**"))
+        if expect:      # ★ 官方范围内的声明是**成功行为** ⇒ 不并入 C 类判据（`CONTRIBUTING:238`）
+            print("     %-40s 原因 %-2d 个 · 类别 %-2d 个 ⇒ %s（★ 成功行为，已在 `B.2` 断言）"
+                  % (label, len(causes), len(prios), "放行" if got else "**拒绝**"))
+            continue
+        wrong_all_rejected = wrong_all_rejected and (not got)
+        print("     %-40s 原因 %-2d 个 · 类别 %-2d 个 ⇒ %s（期望 **拒绝**）"
+              % (label, len(causes), len(prios), "放行" if got else "**拒绝**"))
     print("     ★★★ **两个越界方向【独立】**：")
     print("        · **跨[原因]**：官方只点名 `frame loss due to congestion`；")
     print("        · **跨[类别]**：PFC 是 `per traffic class` 的，**只保护开了它那些类别**。")
     print("     ★★ 第三句是**最有说服力的一条**：即使原因没越界，「保护全部 8 个类别」")
     print("        **也是错的** —— ★★ 因为 PFC 从来不是全链路流控（逐字 `per traffic class`）。")
-    check("C.1", all_ok and pfc_claim_ok(("congestion",), enabled, enabled)
-          and not pfc_claim_ok(causes_universal, enabled, enabled)
-          and not pfc_claim_ok(("congestion",), all_classes, enabled)
-          and not pfc_claim_ok(causes_universal, all_classes, enabled)
+    check("C.1", wrong_all_rejected
+          and (not pfc_claim_ok(causes_universal, enabled, enabled))
+          and (not pfc_claim_ok(("congestion",), all_classes, enabled))
+          and (not pfc_claim_ok(causes_universal, all_classes, enabled))
           and len(all_classes) == 8 and len(specs.PFC_OFFICIAL_LOSS_CAUSES) == 1,
-          "★★★ **判据成立**：**官方范围内的声明放行**，而**三个方向**的「万能解」**全部被拒**"
-          "—— ① 跨**原因** ② 跨**类别** ③ 两者都跨 ⇒ ★★ **「把 PFC 当成流控的万能解」真的会失败**",
+          "★★★ **判据成立**：**三个方向**的「万能解」**全部被拒**"
+          "—— ① 跨**原因** ② 跨**类别** ③ 两者都跨 ⇒ ★★ **「把 PFC 当成流控的万能解」真的会失败**"
+          "（★ 官方范围内的声明放行是成功行为，归 `B.2`）",
           "**「万能解」没被拒绝** —— ★ 先查 `pfc_claim_ok` 的两条集合包含关系")
 
     # ── C.2 ★★★ 把 RoCEv2 的 UDP 封装标成 `[A]`（`F4`）───────────────────
@@ -311,16 +321,15 @@ def part_C():
     print("     ★★ 载体（`[B]`，逐字）：`%s`" % specs.CISCO_ROCEV2_ENCAP_QUOTE)
     print("     ★★★ 依据：RoCEv2 的**帧结构 / UDP 封装**的 `[A]` 出处是 IBTA 的 **Annex A17**，")
     print("        而它**本轮未取到**（见 `NOT_QUOTED` 第 3 条）⇒ ★★ **只能标 `[B]`**（Cisco 产品文档）。")
-    check("C.2", roce_level_ok(encap, "A") is False and roce_level_ok(encap, "B") is True
-          and roce_level_ok("ECN 字段（IPv4 TOS 的 bit 6–7）", "A") is True
+    check("C.2", roce_level_ok(encap, "A") is False
           and rows_level[encap] == "B" and specs.HAVE_IBTA_ANNEX_A17 is False
           and specs.SPEC_REQUIRED_FOR == ("RoCEv2 的封装（IB 传输包套以太网）",)
           and specs.NOT_QUOTED[-1].startswith("RoCEv2 的帧结构")
           and specs.CISCO_ROCEV2_PORT_QUOTE
           == "The UDP destination port number 4791 has been reserved for RoCEv2.",
-          "★★★ **判据成立**：把 RoCEv2 的**封装**标成 `[A]` **被拒**（因为 Annex A17 未取到）、"
-          "标成 `[B]` **放行**；★ 而**已复核**的 `[A]` 事实（ECN 那两个 bit）**照常放行**"
-          " ⇒ ★★ **`F4` 的错法真的会失败**，且**不是**把一切都拒掉",
+          "★★★ **判据成立**：把 RoCEv2 的**封装**标成 `[A]` **被拒**（因为 Annex A17 未取到）"
+          " ⇒ ★★ **`F4` 的错法真的会失败**"
+          "（★ 「标 `[B]` 放行 / 已复核 `[A]` 照常放行」是**成功行为**，归 `B.1`，**不塞进 C 类**）",
           "**`F4` 的守卫失效** —— ★ 先查 `SPEC_REQUIRED_FOR` / `HAVE_IBTA_ANNEX_A17` / `ROCE_FACT_ROWS`")
 
 
@@ -493,14 +502,18 @@ def part_D():
               "(RDMA) to operate on ordinary Ethernet layer 2 and 3 networks.")
           and specs.SHARP_QUOTE == ("NVIDIA® Scalable Hierarchical Aggregation and Reduction Protocol (SHARP)™ technology improves the performance of MPI and Machine Learning collective operation, by offloading collective operations from CPUs and GPUs to the network and eliminating the need to send data multiple times between endpoints.")
           and specs.SHARP_PAPER_CARRIER == "SHARP, COMHPC 2016"
-          and specs.DCQCN_CARRIER == "DCQCN, SIGCOMM 2015"
+          and specs.DCQCN_CARRIER
+          == ("Zhu, Eran, Firestone, Guo, Lipshteyn, Liron, Padhye, Raindel, Yahia, Zhang, "
+              "Congestion Control for Large-Scale RDMA Deployments, SIGCOMM 2015, pp. 523–536")
           and specs.NOT_QUOTED == (
               "SHARP 的 2.1× / 3.24× 性能数字（二手检索摘要）",
               "DCQCN 的三组件机制描述（二手检索摘要）",
               "RoCEv2 的帧结构（IBTA Annex A17 一手规范未取到）",
           ),
           "★★ **`[B]` 侧的引文逐字**（Cisco 四条 —— ★ 含 `Infiniband` 的**小写 i**，照抄）+"
-          " ★★ **只引载体**的两条（`SHARP, COMHPC 2016` / `DCQCN, SIGCOMM 2015`：★★ **正文都未取到**）\n"
+          " ★★ **两条 `[C]`**：`SHARP, COMHPC 2016`（**只引载体**）与 **DCQCN 的题名 / 作者 / 页码**"
+          "（★★ 标题与作者本轮已由 `api.crossref.org` 复核并登记 —— `# 来源：` 里有订正记录）"
+          "：★★ 两者**正文都未取到**\n"
           "        ★★★ + **三条「不引什么」**（`NOT_QUOTED`，逐元素）—— 它们是 `F4`/`F6` 的书面承诺；\n"
           "        ★★★ 注：IBTA 那句 `RoCE is an industry standard transport ...` **照计划 §C.3 转录**，"
           "**本轮未取到该页**（`specs.py` 的 `# 复核状态：` 已如实登记）⇒ ★ 所以它的 `[A]` **挂在规划上**，"
