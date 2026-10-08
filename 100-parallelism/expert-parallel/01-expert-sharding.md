@@ -185,7 +185,7 @@ updated: 2026-10-08
 | **负载不均**（发出量 vs 接收量） | [02-load-imbalance](02-load-imbalance.md) |
 | **`EP` 的约束**、EP 与 TP/DP 的组合 | [03-ep-and-other-axes](03-ep-and-other-axes.md) |
 | **all-to-all 的通信量分析** | `110-communication/collectives`（未建成）、`20-gpu-architecture/interconnect/03` |
-| **kernel 侧的 permute / unpermute / grouped GEMM** | `40-kernels/moe-kernels/02,03`；`00-meta/glossary.md:262` |
+| **kernel 侧的 permute / unpermute / grouped GEMM** | `40-kernels/moe-kernels/02,03`；`00-meta/glossary.md` 的 `grouped GEMM` 条 |
 | **容量因子的定义与语义** | `80-model-architectures/moe/02-capacity-factor.md` |
 | **TP 每层 `2+2` 次 all-reduce** | `tensor-parallel/03` 与 `10-foundations/performance-models/02:417`（★ **不是 `:223`**） |
 
@@ -272,7 +272,7 @@ updated: 2026-10-08
   · **all-to-all 的通信量分析** → `110-communication/collectives`（**未建成**）与
     `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已**逐字让渡**；
   · **kernel 侧的 permute / unpermute / grouped GEMM** → `40-kernels/moe-kernels/02,03`、
-    `00-meta/glossary.md:262`；
+    `00-meta/glossary.md` 的 `grouped GEMM` 条；
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:417`（★ **不是 `:223`**）。
 

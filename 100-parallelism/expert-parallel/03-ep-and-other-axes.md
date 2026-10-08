@@ -279,7 +279,7 @@ updated: 2026-10-08
   · **all-to-all 的通信量分析** → `110-communication/collectives`（**未建成**）与
     `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已**逐字让渡**；
   · **kernel 侧的 permute / unpermute / grouped GEMM** → `40-kernels/moe-kernels/02,03`、
-    `00-meta/glossary.md:262`。
+    `00-meta/glossary.md` 的 `grouped GEMM` 条。
 
 ## 参考
 

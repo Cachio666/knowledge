@@ -190,7 +190,7 @@ exp(-inf − (−inf)) = exp(nan) = nan
     `40-kernels/softmax-normalization/02-online-softmax.md` 与 `40-kernels/attention/`
     ⇒ ★★★ **本文不使用这个词**；
   · **`S×S` 矩阵的访存账** → `40-kernels/attention/03-flash-attention-backward.md` 与
-    `00-meta/glossary.md:261`；
+    `00-meta/glossary.md` 的 `flash attention` 条；
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`
     ⇒ ★ 本文只谈「**用哪一段的绝对位置**」，**不谈位置编码本身怎么造**；

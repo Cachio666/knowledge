@@ -58,7 +58,7 @@ r"""03_ep_and_other_axes.py —— EP 与 **TP / DP** 的组合、**EP 组的划
     ★★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡**了它给 `110`。
     ⇒ ★ 本程序的 `B` 类量的是**条目数**（一个**计数**），**不是字节数、也不是带宽**。
   · **kernel 侧的 permute / unpermute / grouped GEMM** → `40-kernels/moe-kernels/02,03`；
-    `00-meta/glossary.md:262`。
+    `00-meta/glossary.md` 的 `grouped GEMM` 条。
 
 ★★ 可证伪断言（把下面任一条改错，本程序必须非零退出）：
   · `A.1`  ★★★ **EP × TP 组合与单卡一致** —— ★ 且**两个条件必须同时成立**：
@@ -456,7 +456,7 @@ def preflight():
     print("      · **all-to-all 的通信量分析** → `110-communication/collectives`（未建成）、")
     print("        `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已让渡。")
     print("      · **kernel 侧的 permute / unpermute / grouped GEMM** → "
-          "`40-kernels/moe-kernels/02,03`、`00-meta/glossary.md:262`。")
+          "`40-kernels/moe-kernels/02,03`、`00-meta/glossary.md` 的 `grouped GEMM` 条。")
     before = len(FAILS)
 
     # ── D.1 ★ 标记自检（AST 读出，**不写死**）──────────────────────────────

@@ -79,7 +79,7 @@ r"""02_load_imbalance.py —— ★★★ **EP 的负载账**：**发出量均�
     ★★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡**了它给 `110`。
     ⇒ ★ 本程序量的是**搬运的条数**（一个**计数**），**不是字节数、也不是带宽**。
   · **kernel 侧的 permute / unpermute / grouped GEMM** → `40-kernels/moe-kernels/02,03`；
-    `00-meta/glossary.md:262`。
+    `00-meta/glossary.md` 的 `grouped GEMM` 条。
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:417`（★ **不是 `:223`**）。
 
@@ -502,7 +502,7 @@ def preflight():
     print("      · **all-to-all 的通信量分析** → `110-communication/collectives`（未建成）、")
     print("        `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已让渡。")
     print("      · **kernel 侧的 permute / unpermute / grouped GEMM** → "
-          "`40-kernels/moe-kernels/02,03`、`00-meta/glossary.md:262`。")
+          "`40-kernels/moe-kernels/02,03`、`00-meta/glossary.md` 的 `grouped GEMM` 条。")
     print("      · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与 "
           "`10-foundations/performance-models/02:417`（★ **不是 `:223`**）。")
     before = len(FAILS)

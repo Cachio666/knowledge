@@ -43,7 +43,7 @@ r"""03_constraints.py —— **SP 与 CP 的分工**、`cp` 的约束、以及 *
     ★★★ **本程序不使用「online softmax」这个词** —— 措辞照 Ring Attention 原文
     （**置换不变性** + **统计量重缩放**）；本程序写的是**跨设备**的块统计量结合。
   · **`S×S` 矩阵的访存账**（FlashAttention 的字节数收益）→
-    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md:261`；
+    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md` 的 `flash attention` 条；
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`
     （★ 本程序只谈「**用哪一段的绝对位置**」，**不谈位置编码本身怎么造**）；
@@ -407,7 +407,7 @@ def preflight():
     print("        ★★★ **本程序不使用「online softmax」这个词** —— 措辞照 Ring Attention 原文"
           "（置换不变性 + 统计量重缩放）。")
     print("      · `S×S` 矩阵的访存账（FlashAttention 的字节数收益）→ "
-          "`40-kernels/attention/03-flash-attention-backward.md`、`00-meta/glossary.md:261`；")
+          "`40-kernels/attention/03-flash-attention-backward.md`、`00-meta/glossary.md` 的 `flash attention` 条；")
     print("      · 位置编码的外推（PI / NTK / ALiBi、混叠周期）→ "
           "`80-model-architectures/positional-encoding/02,03`"
           "（★ 本程序只谈「**用哪一段的绝对位置**」，不谈编码本身怎么造）；")

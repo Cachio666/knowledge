@@ -49,7 +49,7 @@ r"""02_ring_attention.py —— Ring Attention：**跨设备的【块统计量�
   · **「在线 softmax」的 `(m, l)` 更新公式本身** →
     `40-kernels/softmax-normalization/02-online-softmax.md` 与 `40-kernels/attention/`；
   · **`S×S` 矩阵的访存账**（FlashAttention 的字节数收益）→
-    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md:261`
+    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md` 的 `flash attention` 条
     （★ 本程序只做**数组规模**的对照，**不重算**那些字节账）；
   · **集合通信原语的算法与复杂度**（ring allreduce、reduce-scatter / all-gather 的阶段划分）→
     `110-communication/collectives`（**未建成**）与 `10-foundations/performance-models/02:209`
@@ -432,7 +432,7 @@ def preflight():
     print("      · 「在线 softmax」的 `(m, l)` 更新公式本身 → "
           "`40-kernels/softmax-normalization/02-online-softmax.md` 与 `40-kernels/attention/`；")
     print("      · `S×S` 矩阵的访存账（FlashAttention 的字节数收益）→ "
-          "`40-kernels/attention/03-flash-attention-backward.md`、`00-meta/glossary.md:261`；")
+          "`40-kernels/attention/03-flash-attention-backward.md`、`00-meta/glossary.md` 的 `flash attention` 条；")
     print("      · 集合通信原语的算法与复杂度 → `110-communication/collectives`（未建成）"
           "与 `10-foundations/performance-models/02:209`；")
     print("      · **通信-计算重叠的机制** → `110-communication` 的 `overlap`（未建成）；")

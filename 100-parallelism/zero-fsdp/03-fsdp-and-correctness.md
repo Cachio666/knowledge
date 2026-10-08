@@ -91,7 +91,7 @@ updated: 2026-10-08
 
 ### 1.4 ★★★ 「分片」（显存）与「分片检查点」（落盘）是【同名不同指】
 
-★★ 本文的「分片」是**显存**里的切分；而 `00-meta/glossary.md:275` 的 `sharded checkpoint`
+★★ 本文的「分片」是**显存**里的切分；而 `00-meta/glossary.md` 的 `sharded checkpoint` 条 的 `sharded checkpoint`
 是**落盘**。⇒ ★★★ **落盘一律回链 `90-training/checkpointing/02,03`** —— **本文不写落盘**。
 
 ## 2. 执行映射

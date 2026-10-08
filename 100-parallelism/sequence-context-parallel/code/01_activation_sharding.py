@@ -49,7 +49,7 @@ r"""01_activation_sharding.py —— SP 切的是**张量并行没切到的那�
     **块统计量重缩放**，术语用 Ring Attention 原文的措辞（**置换不变性** + **统计量重缩放**）。
     ★ **本程序连那一套都没有**（`01` 讲的是**激活显存**，不是注意力内核）。
   · **`S×S` 矩阵的访存账**（FlashAttention 的字节数收益）→
-    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md:261`。
+    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md` 的 `flash attention` 条。
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`。
   · **集合通信原语的算法与复杂度**（`V(N)`、reduce-scatter / all-gather 的阶段划分）→
@@ -471,7 +471,7 @@ def preflight():
     print("        ★★★ **本主题一律不使用「online softmax」这个词** —— 本域写的是**跨设备**的")
     print("            块统计量重缩放，术语用 Ring Attention 原文的措辞（置换不变性 + 统计量重缩放）。")
     print("      · `S×S` 矩阵的访存账（FlashAttention 的字节数收益）→ "
-          "`40-kernels/attention/03-flash-attention-backward.md`、`00-meta/glossary.md:261`；")
+          "`40-kernels/attention/03-flash-attention-backward.md`、`00-meta/glossary.md` 的 `flash attention` 条；")
     print("      · 位置编码的外推（PI / NTK / ALiBi、混叠周期）→ "
           "`80-model-architectures/positional-encoding/02,03`；")
     print("      · 集合通信原语的算法与复杂度 → `110-communication/collectives`（未建成）"

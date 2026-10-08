@@ -264,7 +264,7 @@ updated: 2026-10-08
     与 `40-kernels/attention/`。★★★ **本文**（以及本主题的另外两篇）**一律不使用「online softmax」这个词** ——
     本域写的是**跨设备**的块统计量重缩放，术语照 Ring Attention 原文（**置换不变性** + **统计量重缩放**）；
   · **`S×S` 矩阵的访存账**（FlashAttention 的字节数收益）→
-    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md:261`；
+    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md` 的 `flash attention` 条；
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`；
   · **集合通信原语的算法与复杂度** → `110-communication/collectives`（**未建成**）与

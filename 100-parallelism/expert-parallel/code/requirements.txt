@@ -29,7 +29,7 @@
 #     **all-to-all 的通信量分析** ⇒ `110-communication/collectives`（未建成）+
 #     `20-gpu-architecture/interconnect/03`（★ `40-kernels/moe-kernels/01:243` 已逐字让渡）；
 #     **kernel 侧的 permute / unpermute / grouped GEMM** ⇒ `40-kernels/moe-kernels/02,03`、
-#     `00-meta/glossary.md:262`；
+#     `00-meta/glossary.md` 的 `grouped GEMM` 条；
 #     **TP 本身的切法与配对约束** ⇒ `tensor-parallel/01,02,03` 与
 #     `10-foundations/performance-models/02:417`（★ **不是 `:223`**）。
 #

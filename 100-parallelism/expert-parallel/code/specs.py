@@ -88,7 +88,7 @@
     **容量因子的定义与语义**（定义式、取整口径、dropping vs No-Token-Left-Behind、丢弃率口径）
       ⇒ 正文在 `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）。
       ★★★ **让渡的方向**：是**本域把这几样让渡给该篇**（★ 该篇自己接住的是
-        `00-meta/glossary.md:240` 与 `40-kernels/moe-kernels/*` 的让渡，**不是本域**）
+        `00-meta/glossary.md` 的 `容量因子` 条 与 `40-kernels/moe-kernels/*` 的让渡，**不是本域**）
         ⇒ ★ **不得写成「该篇已逐字让渡给本域」** —— 实测该篇全篇里
         `EP` / `expert parallel` / `100-parallelism` / `all-to-all` / `并行` / `设备` / `通信`
         **各 0 次**（2026-10-08 实测）⇒ 它**根本没有**把任何东西让渡给本域。
@@ -99,7 +99,7 @@
       `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
       ★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡了它给 `110`**。
     **kernel 侧的 permute / unpermute / grouped GEMM** ⇒ `40-kernels/moe-kernels/02,03`；
-      `00-meta/glossary.md:262`（`grouped GEMM` 词条）。
+      `00-meta/glossary.md` 的 `grouped GEMM` 条（`grouped GEMM` 词条）。
     **TP 每层 `2+2` 次 all-reduce** ⇒ `tensor-parallel/03` 与
       `10-foundations/performance-models/02-amdahl-and-scaling.md:417`（★ **不是 `:223`**）。
 """

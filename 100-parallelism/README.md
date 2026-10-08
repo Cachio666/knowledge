@@ -98,8 +98,8 @@
 
 | 词 | 库内已有的含义 | 本域的含义与纪律 |
 |---|---|---|
-| `气泡`（bubble） | `00-meta/glossary.md:23`（**`TLP` 条**）的「流水线气泡」= **GPU 指令流水线**的气泡 | **流水线并行**的气泡 ⇒ 本域一律写全「**流水线并行的气泡（bubble）**」，**首次出现处**注明与 TLP 那条不是同一个量 |
-| `分片`（shard） | `00-meta/glossary.md:275` 的 `sharded checkpoint` = **落盘**；另有 **JAX 的 Sharding API**（`70-frameworks/jax/03`） | **显存**分片 ⇒ 写「**显存分片**」并点明；落盘一律回链 `90-training/checkpointing/02` |
+| `气泡`（bubble） | `00-meta/glossary.md` 的 `TLP` 条（**`TLP` 条**）的「流水线气泡」= **GPU 指令流水线**的气泡 | **流水线并行**的气泡 ⇒ 本域一律写全「**流水线并行的气泡（bubble）**」，**首次出现处**注明与 TLP 那条不是同一个量 |
+| `分片`（shard） | `00-meta/glossary.md` 的 `sharded checkpoint` 条 的 `sharded checkpoint` = **落盘**；另有 **JAX 的 Sharding API**（`70-frameworks/jax/03`） | **显存**分片 ⇒ 写「**显存分片**」并点明；落盘一律回链 `90-training/checkpointing/02` |
 | **`stage`** | `60-compilers/tvm/01-compute-and-schedule.md` 的 TVM **计算阶段**；`30-gpu-programming/cutlass/02-hierarchical-tiling.md` 的**流水级数**（★ `cutlass/02:455` 已记为**同名不同指**） | ★★ **本域一部域内就有两个含义**：**流水线并行的 stage** 与 **ZeRO 阶段** ⇒ **一律写全称，不得只写 `stage`** |
 | **`bucket`** | **形状分桶**（`70-frameworks/jax/01-jit-and-tracing.md`、`tensorflow/01`） | **DDP 的梯度桶** ⇒ 本域一律写「**梯度分桶**」 |
 | `rank` | **张量秩**（`60-compilers/xla/01`、`80-model-architectures/attention-variants/02-mla-low-rank.md`）；**设备号**（`performance-models/02` 等） | 设备号 ⇒ 本域**尽量写「设备」** |

@@ -197,7 +197,7 @@ updated: 2026-10-08
 | **迭代精化 / 主权重为什么必须 fp32** | `10-foundations/numerical-linear-algebra/04-iterative-methods.md:229-266` |
 
 ★★★ **「分片」与「分片检查点」是【同名不同指】**：本文的「分片」是**显存**里的切分，
-而 `00-meta/glossary.md:275` 的 `sharded checkpoint` 是**落盘** ⇒ **落盘一律回链 90 域**。
+而 `00-meta/glossary.md` 的 `sharded checkpoint` 条 的 `sharded checkpoint` 是**落盘** ⇒ **落盘一律回链 90 域**。
 
 ## 4. 踩坑与失败模式
 

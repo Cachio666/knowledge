@@ -88,7 +88,7 @@
 #     **aux loss 的式子 / 路由 gating 的机制** → `80-model-architectures/moe/01,03`；
 #     **all-to-all 的通信量分析** → `110-communication/collectives`（未建成）与
 #     `20-gpu-architecture/interconnect/03`；**kernel 侧的 permute / unpermute / grouped GEMM** →
-#     `40-kernels/moe-kernels/02,03` 与 `00-meta/glossary.md:262`；
+#     `40-kernels/moe-kernels/02,03` 与 `00-meta/glossary.md` 的 `grouped GEMM` 条；
 #     **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
 #     `10-foundations/performance-models/02:417`（★ **不是 `:223`**）。
 #   ★ **本主题的 `ASSERT_FAIL_MARK`**：`\|\| FAIL: expert-parallel`（**每个主题一个，不跨主题照抄**；

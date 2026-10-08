@@ -207,7 +207,7 @@ updated: 2026-10-08
     `40-kernels/softmax-normalization/02-online-softmax.md` 与 `40-kernels/attention/`
     ⇒ ★★★ **本文不使用这个词**，写的是**跨设备**的块统计量重缩放；
   · **`S×S` 矩阵的访存账**（FlashAttention 的字节数收益）→
-    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md:261`；
+    `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md` 的 `flash attention` 条；
   · **集合通信原语的算法与复杂度**（ring allreduce、reduce-scatter / all-gather 的阶段划分）→
     `110-communication/collectives`（**未建成**）与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:209`

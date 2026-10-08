@@ -26,7 +26,7 @@ r"""03_fsdp_correctness.py —— **FSDP 的策略与分片后的正确性**。
   但**不扩写成「FSDP 怎么用」的教程**。
 
 ★★★ **同名不同指（本主题必须点明）**：本域写的是**「显存分片」**（`ZeRO`/`FSDP`），
-  而 `00-meta/glossary.md:275` 的 `sharded checkpoint` 是**落盘** ⇒
+  而 `00-meta/glossary.md` 的 `sharded checkpoint` 条 的 `sharded checkpoint` 是**落盘** ⇒
   ★★ **落盘一律回链 `90-training/checkpointing/02,03`**（本程序**不写落盘**）。
 
 ★★★ **一条判据性的自查**（计划 §1.3.3，放在每个 `code/` 的头部）：
@@ -474,7 +474,7 @@ def part_D():
     check("D.6", specs.FSDP_STRATEGY_VALUES[0] == "FULL_SHARD"
           and len(specs.FSDP_STRATEGY_VALUES) == 5,
           "★★★ **同名不同指**：本域写的是**「显存分片」**（`ZeRO`/`FSDP`），而 "
-          "`00-meta/glossary.md:275` 的 `sharded checkpoint` 是**落盘** ⇒ ★★ **落盘一律回链 "
+          "`00-meta/glossary.md` 的 `sharded checkpoint` 条 的 `sharded checkpoint` 是**落盘** ⇒ ★★ **落盘一律回链 "
           "`90-training/checkpointing/02,03`**（本程序**不写落盘**）。\n"
           "        ★★ `FSDP_STRATEGY_VALUES` 的**五个取值**（★ 第二个是 `SHARD_GRAD_OP`；"
           "最后一个**带下划线前缀**：`_HYBRID_SHARD_ZERO2`）。")
