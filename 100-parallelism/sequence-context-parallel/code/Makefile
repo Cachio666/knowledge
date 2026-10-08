@@ -5,9 +5,41 @@
 #   失败时以**非零退出码**结束 —— 即「断言失败 ⇒ `make run` 非零」。**没有 `verify.py`**，
 #   也**没有** `meta_falsify.py`（那是 `50-performance` 这种**测量域**的形态，见域 README）。
 #
-# ★★ **Chunk 0 只落骨架**（2026-09-23）：本目录**尚无任何编号程序** ⇒ `SCRIPTS` 为空，
-#    `make run` 走「空分母」分支（见下），**它不构成任何证据**。
-#    ★ Chunk 0 也**尚未落 `mutate.py`** ⇒ 此刻 `make mutate` 会报「找不到 mutate.py」。**这是预期行为。**
+# ★★ **Chunk 4 已落盘**（提交日 2026-10-08）：三个编号程序与 `mutate.py` 都已就位 ⇒
+#    `make run` 走**非空分母**分支，`SCRIPTS` 一行就是下面那三个。
+#    01_activation_sharding.py ↔ 01-activation-sharding.md（SP 切什么 · 式(1)/(2)/(4) 的恒等式）
+#    02_ring_attention.py      ↔ 02-ring-attention.md      （跨设备**块统计量重缩放**）
+#    03_constraints.py         ↔ 03-constraints.md         （SP 与 CP 的分工 · `cp` 的约束 · causal 跨块）
+#    （**编号即外键**：与同目录的三篇文档一一对应；`CONTRIBUTING` §2：`<名称>` 与
+#     `<程序名>` 不要求相同 —— 文档名讲**讲什么**、程序名讲**这个程序做什么**。）
+#
+# ★★★ **本主题最容易写错的三条结论（三个程序都在抬头里回链它们）**：
+#    · **SP 的收益是 `10sbh`（`O(s)`）、它【不切】注意力的 `O(s²)`** ⇒
+#      **序列越长，SP 的相对收益越小、CP 越必需**（`01` 的 `B.2`/`B.3` 用真的数钉住，
+#      `03` 的 `D.5` 用 Megatron CP 文档的逐字收口）；
+#    · ★★★ **「SP 不引入通信开销」是原文的【结论】**（`specs.SP_NO_OVERHEAD_QUOTE`）——
+#      **不得**把它写成 C 类反例（那会与原文相反）；★ 它的**前提是「与 TP 混用」**：
+#      **裸着上 SP 是有开销的**（`specs.SP_NAIVE_EXTRA_COMM_QUOTE`），
+#      原文的处置是**把转换操作合并进 TP 的那两个集合通信**（`specs.SP_FUSE_CONVERTER_QUOTE`）。
+#    · ★★★ **本主题【不使用】「online softmax」这个词** —— 本域写的是**跨设备**的
+#      **块统计量重缩放**，术语照 Ring Attention 原文（**置换不变性** + **统计量重缩放**）；
+#      块内那套 `(m, l)` 更新公式的正文在
+#      `40-kernels/softmax-normalization/02-online-softmax.md`（此处**回链、一字不写**）。
+#    ★★ **另有三条硬边界**：`S×S` 矩阵的访存账（FlashAttention 的字节数收益）→
+#      `40-kernels/attention/03-flash-attention-backward.md`；位置编码的外推 →
+#      `80-model-architectures/positional-encoding/02,03`；集合通信原语的算法与复杂度 →
+#      `110-communication/collectives`（**未建成**）与 `10-foundations/performance-models/02:209`。
+#
+# ★★★ **本主题最要紧的三处形态风险**（每一条都对应一个程序里的真实现场）：
+#    · **`01` 的 A 类是「恒等式核对」，不是「实现 vs 参照」** —— 它的三式都是从 `specs.py`
+#      的引文抄来的闭式 ⇒ 判据**对转写错误敏感、对物理错误不敏感**。
+#      ⇒ **内容判据在 C 类**：`C.1`（只切一半）与 `C.2`（切错轴），两条都**真的会失败**。
+#    · **`02`/`03` 是「分块 vs 全量」的逐位对拍** ⇒ 两条路径**必须不共享代码**；
+#      `D.8` 用 AST 调用表给出**源码级线索**（★ 不是证明），
+#      真正的独立性由 `A.1g`（抽掉重缩放 / 去掉掩码 ⇒ 判据必须失败）**行为级**兜底。
+#    · **每条 A 类都配一条「真的会改变被判量」的守卫**（`CONTRIBUTING:235`）：
+#      `01` 的三个守卫分别打式(1)/式(2)/式(4)（★ 不是「换个等价写法」）；
+#      `02` 的守卫是 **`alpha ≡ 1`**；`03` 的守卫是**去掉 causal mask**。
 #
 # 用法：
 #   make                    同 make run
@@ -22,10 +54,11 @@
 #   specs.py        外部事实常量源：本主题**真的会断言**的那批常量。
 #                   ★ 每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`；
 #                   ★★ **来源必须分级并写明是哪一级** —— 本域的头号错误模式是
-#                     **把「某实现的文档」当成「规范的文档」**（B 级当 A 级）。
+#                     **把「某实现的文档」当成「规范的文档」**（B 级当 A 级）
+#                     ⇒ 本主题的三条来源分属 **[C] 论文 ×2 + [B] 实现文档 ×1**。
 #                   ★★ 本域所有数值常量**一律 `< 2^53`**（`mutate.py` 的浮点变异是 `v + 1.0`），
 #                     且**幂次写成十进制字面量**（`_walk()` 不下钻 `BinOp`）。
-#   mutate.py       ★ **叶子级变异测试**（**Chunk 0 尚未落**，Chunk 1 起与编号程序同时落盘）。
+#   mutate.py       ★ **叶子级变异测试**（**Chunk 4 已落**，与三个编号程序同时）。
 #                   用 **AST** 从编号程序里读出 `ASSERT_FAIL_MARK`（**不得写死**），逐个叶子改值，
 #                   看断言是否捕获。**只在副本上做**（仓库文件只读）。分母为 0 时以**说明性非零码**退出。
 #   Makefile / requirements.txt   构建入口
@@ -34,22 +67,33 @@
 #   **无 GPU、无多卡、无 NCCL、无真实网络**；`python3` = 3.13.5、`numpy` = 2.4.4（已装）。
 #   ★ **本域不 import 任何第三方框架**（`CONTRIBUTING` §2 的「永不 import 目标框架」，
 #     原文的措辞比 torch 宽 —— 本域按宽的口径执行），`numpy` 是唯一例外（见 requirements.txt）。
-#   ★★ **通信被实现为一个显式的张量搬运**（`all_reduce = Σ局部`、`all_gather = concat`）——
+#   ★★ **本主题【需要】`numpy`**：`02`/`03` 要做矩阵乘法（分块注意力 vs 全量）。
+#     ★ 只有 `01` 是**纯标量算术**（三式与它们的恒等式）⇒ 单跑 `make 01_activation_sharding`
+#       不需要 numpy；但**整个主题的依赖**（`requirements.txt` 与下面的 `check-env`）
+#       按**三个程序的并集**要求它。
+#   ★★ **通信被实现为一个显式的张量搬运**（`all_reduce = Σ局部`、`all_gather = concat`；
+#     本主题的「环」是 **KV 块按次序逐个流过**每一段 query）——
 #     本域的知识对象是**切分策略**，不是通信原语的实现（通信算法的正文在 `110-communication`）。
-#     ⇒ 一切程序验证的是**切分的代数**（等价性 / 通信次数 / 字节账 / 气泡率 / 负载分布），
+#     ⇒ 一切程序验证的是**切分的代数**（等价性 / 通信量 / 数组规模 / 补齐代价 / 掩码边界），
 #       **不是**任何关于真实集群性能的结论。★ 强制限定语：**「不是 NCCL，也不是真机」**。
-#   ★★ **本主题只写**：SP / CP / **ring attention** / 长序列切分（★ 主题名**涵盖 SP 与 CP 两者**，正文**逐篇点明**讲的是哪一个）
+#   ★★ **本主题的定位**（与 `requirements.txt` **抬头那段**同一句，两处同步）：
+#      · SP **切的是什么**（TP 没切到的那些逐 token 算子）+ **它不引入通信开销**（原文结论）；
+#      · **Ring Attention**：跨设备的**块统计量重缩放**（KV 在环上传递）；
+#      · **SP 与 CP 的分工**、`cp` 的约束、**causal mask 跨块**。
 #   ★★ **本主题的禁区**：
-#     **「在线 softmax」的 `(m, l)` 更新公式本身**（`40-kernels/softmax-normalization/02-online-softmax.md`）与
-#     **注意力变体的结构**（MHA / MQA / GQA 的定义与配比，`80-model-architectures/attention-variants/01-mha-mqa-gqa.md`）
-#     —— 本主题写的是**跨设备**的块统计量重缩放、以及**头怎么分给设备**
+#     **「在线 softmax」的 `(m, l)` 更新公式本身** → `40-kernels/softmax-normalization/02-online-softmax.md`；
+#     **`S×S` 矩阵的访存账** → `40-kernels/attention/03-flash-attention-backward.md`；
+#     **位置编码的外推** → `80-model-architectures/positional-encoding/02,03`；
+#     **集合通信原语的算法与复杂度** → `110-communication/collectives`（未建成）与
+#     `10-foundations/performance-models/02:209`；**TP 每层 `2+2` 次 all-reduce** →
+#     `tensor-parallel/03` 与 `10-foundations/performance-models/02:417`（★ **不是 `:223`**）。
 #   ★ **本主题的 `ASSERT_FAIL_MARK`**：`{{ FAIL: seq-context-parallel`（**每个主题一个，不跨主题照抄**；
 #     标记**只允许出现在 `print()` 的字符串里**，**不得**出现在任何 shell 命令行里）；
 #     每个编号程序另加一条**标记自检**断言（去重后只有一个、等于本主题的值、含 `FAIL`，**字面量比较**）。
 #   ★ 同域的 `../probes/` 是**域级**探测目录（**只打印、不断言**），**不在本 Makefile 的扫描范围内**。
 
 PYTHON  ?= python3
-SCRIPTS :=
+SCRIPTS := 01_activation_sharding 02_ring_attention 03_constraints
 
 .PHONY: all run lint mutate lines clean check-env
 
@@ -125,8 +169,7 @@ lint: check-env
 	sys.exit(1 if hit else 0)'
 
 # ★ **不进 `run`**：变异测试要跑很多副本，慢；而且它的结论是「元层」的。
-# ★ Chunk 0 **尚未落 `mutate.py`** ⇒ 此刻本目标会以「没有 mutate.py」失败，**这是预期行为**。
-# ★ 退出码的含义（Chunk 1 起）：
+# ★ 退出码的含义：
 #   0 = 全部捕获 · 1 = **有漏网**（逐条列出）· 2 = 读数不可信（仓库文件被改过）·
 #   3 = 空分母。
 #   ⚠ **读数陷阱**：`make mutate > file; echo $?` 拿到的是 **make 自己的码（2）**，
@@ -135,7 +178,6 @@ mutate: check-env
 	@$(PYTHON) mutate.py || { rc=$$?; echo; \
 		echo "★ mutate.py 的退出码 = $$rc 。它的含义：1 = 有漏网（见上「漏网」清单）；"; \
 		echo "  2 = 仓库文件在本次运行中被改动，读数不可信；3 = 空分母。"; \
-		echo "  ★ 若本主题还没有 mutate.py（Chunk 0），也会给 2 —— 那是「文件不存在」，不是读数不可信。"; \
 		exit $$rc; }
 
 lines:

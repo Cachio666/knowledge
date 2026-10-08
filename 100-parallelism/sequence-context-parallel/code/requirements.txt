@@ -3,25 +3,49 @@
 # ★ 只有 numpy。本域**任何第三方框架都不 import**（`CONTRIBUTING` §2「永不 import 目标框架」，
 #   原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
 #
-# ★★ **本主题的定位**：SP / CP / **ring attention** / 长序列切分（★ 主题名**涵盖 SP 与 CP 两者**，正文**逐篇点明**讲的是哪一个）
+# ★★ **三个程序的依赖【不一样】，这里按并集要求**（这一点必须写明，否则会误以为 `01` 也要它）：
+#   · `01_activation_sharding.py` —— **不用 numpy**（全是标量算术：式(1)/(2)/(4) 与它们的恒等式）
+#     ⇒ ★ 单跑 `make 01_activation_sharding` **不需要** numpy（那一个文件里一行都没 import 它）。
+#   · `02_ring_attention.py` / `03_constraints.py` —— **需要 numpy**（`Q @ K.T` 走 BLAS）。
+#   ⇒ `Makefile` 的 `check-env` 按**并集**做硬性检查（缺 numpy 即 `exit 1`）。
+#
+# ★★ **本主题的定位**：
+#   · SP **切的是什么**（TP 没切到的那些逐 token 算子）+ ★★★ **它不引入通信开销**（**原文的结论**）；
+#   · **Ring Attention**：跨设备的**块统计量重缩放**（KV 在环上传递）；
+#   · **SP 与 CP 的分工**、`cp` 的约束、**causal mask 跨块**。
 #
 # ★★ **本主题的禁区**：
-#     **「在线 softmax」的 `(m, l)` 更新公式本身**（`40-kernels/softmax-normalization/02-online-softmax.md`）与
-#     **注意力变体的结构**（MHA / MQA / GQA 的定义与配比，`80-model-architectures/attention-variants/01-mha-mqa-gqa.md`）
+#     **「在线 softmax」的 `(m, l)` 更新公式本身**（`40-kernels/softmax-normalization/02-online-softmax.md`）
+#     与 **注意力变体的结构**（MHA / MQA / GQA 的定义与配比，`80-model-architectures/attention-variants/01-mha-mqa-gqa.md`）。
+#     ★★★ **术语纪律**：本主题**不使用「online softmax」这个词** —— 本域写的是
+#       **跨设备**的**块统计量重缩放**，术语一律照 Ring Attention 原文
+#       （**置换不变性** + **统计量重缩放**）。
+#     ★★ 另有三条：**`S×S` 矩阵的访存账** → `40-kernels/attention/03-flash-attention-backward.md`；
+#       **位置编码的外推** → `80-model-architectures/positional-encoding/02,03`；
+#       **集合通信原语的算法与复杂度** → `110-communication/collectives`（未建成）与
+#       `10-foundations/performance-models/02:209`。
 #
 # ★★ **四类数字纪律**（`CONTRIBUTING` §2；域 README 的「代码约定」表）：
 #    · **规格值** → `specs.py`（每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`）
 #    · **推导值** → 由编号程序算出（**可手算复核**，并标为「推导值」）
+#      ⇒ ★★ 本主题的收益比（`1.1039` 等）、补齐代价（`104` / `4`）、通信字节数**都是推导值**
+#        ⇒ 按纪律它们**不进 `specs.py`**，而是写在断言里当**期望值**。
 #    · **引用值** → 外部来源的实测（**须注明「本仓库不复核其测量口径」**）
+#      ⇒ ★ 本主题的 `B.2`（`02`）就是这么处理的：`O(S²)` → `O(S·d)` **是引用，不重推**。
 #    · **本机实测值** → 本机真跑的数（**须写 python3 与 numpy 版本**）
 #    ★ **不得把推导写成实测**。
 #    ★★ 本域另加两条落法：**所有数值常量取到 `< 2^53`**（`mutate.py` 的浮点变异是 `v + 1.0`，
 #       大浮点数会吞掉它）；**幂次一律写成十进制字面量**（`_walk()` 不下钻 `BinOp`）。
+#    ★★ **随机数的种子**取 **`991`**（**不是 2 的幂**），且写在编号程序的**函数体里**
+#       （不是模块级常量 —— 改它没有可观察后果，进变异分母只会成为漏网）。
 #
 # ★★ **「本机无 GPU」的限定语**：本机**没有多卡 / 没有 NCCL / 没有真实网络** ⇒
 #    一切数值都是 `python3` + `numpy` 的**玩具规模**真跑，验证的是**切分的代数**
-#    （等价性、通信次数、字节账、气泡率、负载分布），
+#    （等价性、通信量、数组规模、补齐代价、掩码边界），
 #    **不是**任何关于真实集群性能的结论。★ 强制限定语：**「不是 NCCL，也不是真机」**。
+#    ★★ **判据依赖 BLAS**（`02`/`03` 的 `Q @ K.T`）⇒ ★ **换机器可能需要重新标定**
+#      （本主题的两个量级相隔十几个数量级 —— `A` 类差在 `1e-16` 档、`C` 类差在 `1e-1` 档 ——
+#       所以阈 `1e-12` 在换 BLAS 后仍然安全；★ 但**具体数值**会变）。
 #
 # 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
 numpy>=2.0
