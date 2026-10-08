@@ -27,8 +27,11 @@ r"""01_algorithm_family.py —— **集合通信的算法族**：有哪几种、
   · **结果正确性**对块索引**敏感**。
   ⇒ ★★ 所以「**搬运量 == 闭式**」这一条**过不了** `CONTRIBUTING:235` 的守卫
     （把块索引改错，它**照样通过**）；**过守卫的是结果正确性那条**。
-  ★ 本程序把两件事**分别**记成 `A.1`（含正确性）与 `A.2`（纯结构），并在 `A.1g` 里
+  ★ 本程序把两件事**分别**记成 `A.1`（含正确性）与 `D.4b`（纯结构），并在 `D.4` 里
     用**同一个模拟器的错法变体**证明「换掉块索引**真的**改变了被判量」。
+    ★★ **为什么这两条不叫 `A.2`/`A.1g`**：它们**不测任何实现** —— 任何算法变异都不会让
+    它们失败（一条是**实验守卫**、一条是**整除口径**）⇒ 按 `CONTRIBUTING` §4「A 类 = 算法
+    正确性」的含义，它们**必须归 D 类**（否则 A 类的计数会把「非实现判据」算进去）。
 
 ★★ **覆盖边界**（`CONTRIBUTING` §2「不得声称验证了更多」）：
   本程序守的是「**算法写对了没有**」（步数、块索引、累加目标、搬运量）+
@@ -47,10 +50,12 @@ r"""01_algorithm_family.py —— **集合通信的算法族**：有哪几种、
 ★★ 可证伪断言（把下面任一条改错，本程序必须非零退出）：
   · `A.1`  ★★★ ring allreduce 的**真消息序列模拟**：① 结果与**单进程参照**逐位相同；
     ② 步数 == `2(N−1)`；③ 每卡搬运量 == `2(N−1)/N × S`（`DEV_GRID` 五档）；
-  · `A.1g` ★★★ **守卫**（`CONTRIBUTING:235`）：把**块索引**换成 `(d+k)%N` ⇒
-    结果**必须变**、而**搬运量不变** ⇒ 证明「正确性那条**真的**改变了被判量」；
-  · `A.2`  ★★ **整除守卫**：`RING_ELEMS` 被 `DEV_GRID` 五档**全部整除** ⇒ 块大小是整数
-    （★ 若这条不成立，A 类的块大小会有余数、搬运量闭式**前提失效**）；
+  · `D.4`  ★★★ **守卫**（`CONTRIBUTING:235`）：把**块索引**换成 `(d+k)%N` ⇒
+    结果**必须变**、而**搬运量不变** ⇒ 证明「正确性那条**真的**改变了被判量」
+    （★ 它**不测实现** ⇒ 归 D 类，**不占 A 类**）；
+  · `D.4b` ★★ **整除口径**：`RING_ELEMS` 被 `DEV_GRID` 五档**全部整除** ⇒ 块大小是整数
+    （★ 若这条不成立，A 类的块大小会有余数、搬运量闭式**前提失效**；
+     ★ 它同样**不测实现** ⇒ 归 D 类）；
   · `A.3`  ★★ allgather 的 **ring 与递归倍增**：ring `p−1` 步、递归倍增 `lg p` 步，
     而**每卡搬运量两者相同**（`(p−1)/p × n`）；
   · `A.4`  ★★★ allgather 的 **Bruck**：`⌈lg p⌉` 步（★ 含 `GATHER_ODD = 6` 这个**非 2 的幂**档，
@@ -59,8 +64,10 @@ r"""01_algorithm_family.py —— **集合通信的算法族**：有哪几种、
   · `A.6`  ★★★ **halving-doubling（Rabenseifner）allreduce**：`2 lg p` 步，
     搬运量 `2(p−1)/p × n`；★ 结果与单进程参照逐位相同；
   · `B.1`  ★★ `V(N)/S` 的**饱和**（`SAT_GRID` 六档，含 `4096` 档）；
-  · `B.2`  ★★★ **三算法对照**：ring / 递归倍增 / Rabenseifner 的**步数**与**每卡搬运量**
-    —— 由 `MPICH_*` 的逐字式**复核**（★ 不是自证：式子来自 `specs.py` 的 [C] 级载体）；
+  · `B.2`  ★★★ **三算法对照**：ring / 递归倍增 / Rabenseifner 的**步数**与**每卡搬运量**；
+    ★★★ **数值那半是【跨模拟器】的真对照** —— `ring allreduce` 与 `Rabenseifner` 两个
+    **独立消息序列模拟器**枚举出来的每卡搬运量必须相等（★ 拿两条**逐字同形**的闭式互比
+    是**恒真**的，原写法已删）；★ 式子本身的载体是 `specs.py` 的 [C] 级逐字常量（`D.6` 钉住）；
   · `C.1`  ★★★ **环形块索引写错（发哪块）** ⇒ 结果错、**不报错**；
   · `C.2`  ★★★ **环形块索引写错（累加到哪块）** ⇒ 结果错、**不报错**（与 `C.1` 不同值）；
   · `D.*`  口径常量逐个钉住 + **逐元素**元组钉住 + **引文逐字**钉住 + **失败标记自检**。
@@ -189,12 +196,12 @@ def ref_allreduce_sum(x):
 
 
 # ===========================================================================
-# 2. 参照：三个**真消息序列模拟器**（逐步枚举 `(phase, sender, receiver, block, n_elem)`）
-#    ★★★ 它们**不调用**上节的任何 `cf_*`（`D.8` 核）。
+# 2. 参照：**六个**真消息序列模拟器（逐步枚举 `(phase, sender, receiver, block, n_elem)`）
+#    ★★★ 它们**不调用**上节的任何 `cf_*`（`D.8` 核 —— ★★ **逐个审这六个**，不再只审一个）。
 #    ★★ 每个模拟器都**驱动真实数据**，最后返回 `(每个设备手里的结果, 消息清单)`。
 # ===========================================================================
 def _split(n_elem, p):
-    """把 `range(n_elem)` 均分成 `p` 块（★ 调用方保证整除 —— `A.2` 守这件事）。"""
+    """把 `range(n_elem)` 均分成 `p` 块（★ 调用方保证整除 —— `D.4b` 守这件事）。"""
     w = n_elem // p
     return [(i * w, (i + 1) * w) for i in range(p)]
 
@@ -237,7 +244,32 @@ def sim_ring_allreduce(n_dev, n_elem, x=None, corrupt=None):
         return slot[blk] if blk in slot else np.zeros_like(like)
 
     # ── 第一段：reduce-scatter ────────────────────────────────────────────
-    for k in range(n_dev - 1):
+    # ★★★ **步数【涌现】自【一个工作队列】**（**不是** `for k in range(n_dev - 1)`）：
+    #   `todo[d]` = 设备 `d` 还要转发几块 —— 初始值**取自数据**（`len(held[d]) - 1`，
+    #   即「每台设备初始持有几块」减 1）；每转发一块减 1，队列空了就停。
+    #
+    # ★★★ 【现场】为什么这里**不写** `while max(len(h))>1`（`01` 其余四个模拟器 + AG 段用的
+    #   那种【状态】条件）—— ★ 这是本库一个**实测顶掉处方**的现场，留给下一个域：
+    #
+    #     做法                              `C.1` 每卡搬运量（正确版 vs `corrupt="send"`）  判据/D.4
+    #     ────────────────────────────────  ──────────────────────────────────────────  ────────
+    #     `for k in range(n_dev - 1)`        `96 vs 96`    ✓                                通过
+    #     `while max(len(h) for h in held)>1`**`96 vs 1088`** ✗（跑飞撞 `k>64` 护栏）        **失败**
+    #     本行的工作队列 `while max(todo)>0` `96 vs 96`    ✓                                通过
+    #
+    #   ★★★ **可证的理由**（不是"看起来会"）：本段**唯一**两条错法
+    #   （`corrupt="send"`/`"accum"`）**扰动的【正是】`held` 的块数** ——
+    #   `corrupt="send"` 下，设备 `d` 第 `k` 步发出的块 `(d+k)%N` **恰好就是它第 `k−1` 步
+    #   刚被腾空的那个槽**（`(d−1+k)%N == (d+(k−1))%N`）⇒ 设备 `d` **每步丢掉一块、又收回一块**
+    #   ⇒ **它的块数【永不下降】** ⇒ `max(len(h))>1` **永不成立** ⇒ 循环跑到 `k>64` 的护栏
+    #   ⇒ 搬运量从 `96` 变 `1088`、`A.1g`/`D.4` 的「**搬运量对块索引不变**」当场失效。
+    #   ★ **转发次数不随错法变**（错法只改「**发哪块 / 加到哪块**」，**不改「发几次」**）
+    #   ⇒ ★ 队列驱动的读法对**正确版与两条错法都成立**。
+    #   ★★ 一句话：**环上的 RS 段是【固定调度】（每台转发 `N−1` 次），它的完成不能由
+    #      `held` 的块数判定**；AG 段（与其余五个模拟器）**能**用状态条件（已独立实测）。
+    todo = [len(h) - 1 for h in held]      # ★ 取自数据：每台要转发「初始块数 − 1」块
+    k = 0
+    while max(todo) > 0:
         batch = []
         for d in range(n_dev):
             blk = ring_send_block(d, k, n_dev) if corrupt != "send" else (d + k) % n_dev
@@ -248,18 +280,29 @@ def sim_ring_allreduce(n_dev, n_elem, x=None, corrupt=None):
             tgt = blk if corrupt != "accum" else (blk + 1) % n_dev
             held[dst][tgt] = _get(held[dst], tgt, src) + src
             held[d].pop(blk, None)                          # 发过的块本设备不再需要
+            todo[d] -= 1
+        k += 1
+        if k > 64:
+            break
+    n_rs_steps = k                                     # ★ 第一段【枚举出来】的步数
 
     # ── 第二段：all-gather ────────────────────────────────────────────────
-    for k in range(n_dev - 1):
+    # ★★★ **步数【涌现】自【数据】**：还有设备没拿全（`min(len(h)) < n_dev`）就再来一步
+    #   —— 这一段是**状态驱动**的，且**对两条错法都成立**（实测 `C.1`/`C.2` 全过）。
+    k = 0
+    while min(len(h) for h in held) < n_dev:
         batch = []
         for d in range(n_dev):
             blk = (d + 1 - k) % n_dev
             src = _get(held[d], blk, np.zeros(n_elem // n_dev, dtype=np.int64))
             batch.append((d, (d + 1) % n_dev, blk, src.copy()))
         for d, dst, blk, src in batch:
-            msgs.append(MSG(n_dev - 1 + k, "all-gather", d, dst, blk, len(src)))
+            msgs.append(MSG(n_rs_steps + k, "all-gather", d, dst, blk, len(src)))
             held[dst][blk] = src                            # 收下
             held[d].setdefault(blk, src)                    # ★ 发起方保留自己那份
+        k += 1
+        if k > 64:
+            break
 
     order = list(range(n_dev))
     out = [np.concatenate([held[d][i] for i in order]) for d in range(n_dev)]
@@ -267,12 +310,18 @@ def sim_ring_allreduce(n_dev, n_elem, x=None, corrupt=None):
 
 
 def sim_allgather_ring(p, n):
-    """ring allgather 的消息序列模拟：**逐步枚举**每步谁把哪一块传给谁。"""
+    """ring allgather 的消息序列模拟：**逐步枚举**每步谁把哪一块传给谁。
+
+    ★★★ **步数是【涌现的】**：还有设备没拿全（`min(len(h)) < p`）就再来一步 ——
+      **不是** `for k in range(p - 1)`（那会把「`p−1`」预先塞进控制流，让
+      「步数 == 闭式」变成**准恒真**，`P12`）。
+    """
     w = n // p
     base = [np.arange(i * w, (i + 1) * w, dtype=np.int64) for i in range(p)]
     held = [{d: base[d].copy()} for d in range(p)]
     msgs = []
-    for k in range(p - 1):
+    k = 0
+    while min(len(h) for h in held) < p:            # ★ 涌现：还缺块就再来一步
         batch = []
         for d in range(p):
             blk = (d - k) % p
@@ -280,17 +329,26 @@ def sim_allgather_ring(p, n):
         for d, dst, blk, src in batch:
             msgs.append(MSG(k, "allgather-ring", d, dst, blk, len(src)))
             held[dst][blk] = src
+        k += 1
+        if k > 64:
+            break
     out = [np.concatenate([held[d][i] for i in range(p)]) for d in range(p)]
     return out, msgs
 
 
 def sim_allgather_recdub(p, n):
-    """递归倍增 allgather 的消息序列模拟：第 `k` 步与 `d XOR 2^k` 交换**手里全部的块**。"""
+    """递归倍增 allgather 的消息序列模拟：第 `k` 步与 `d XOR 2^k` 交换**手里全部的块**。
+
+    ★★★ **步数是【涌现的】**：还有设备没拿全（`min(len(h)) < p`）就再来一步 ——
+      **不是** `for k in range(cf_allgather_lg_steps(p))`（那会把**被测的闭式**当控制流上界 ⇒
+      「步数 == 闭式」变成**准恒真**，`P12`）。
+    """
     w = n // p
     base = [np.arange(i * w, (i + 1) * w, dtype=np.int64) for i in range(p)]
     held = [{d: base[d].copy()} for d in range(p)]
     msgs = []
-    for k in range(cf_allgather_lg_steps(p)):
+    k = 0
+    while min(len(h) for h in held) < p:            # ★ 涌现：还缺块就再来一步
         batch = []
         for d in range(p):
             partner = d ^ (1 << k)
@@ -299,18 +357,25 @@ def sim_allgather_recdub(p, n):
         for d, partner, blk, src in batch:
             msgs.append(MSG(k, "allgather-recdub", d, partner, blk, len(src)))
             held[partner][blk] = src
+        k += 1
+        if k > 64:                                  # ★ 防跑飞（本主题只用到 `p <= 16`）
+            break
     out = [np.concatenate([held[d][i] for i in range(p)]) for d in range(p)]
     return out, msgs
 
 
 def sim_allgather_bruck(p, n):
     """Bruck allgather 的消息序列模拟：第 `k` 步与 `(d − 2^k) mod p` 交换、
-    ★★ **只发目标缺的那些块**（这正是它能在**任意 `p`** 上保持 `(p−1)/p × n` 的原因）。"""
+    ★★ **只发目标缺的那些块**（这正是它能在**任意 `p`** 上保持 `(p−1)/p × n` 的原因）。
+
+    ★★★ **步数【涌现】**（`min(len(h)) < p`），不是 `range(cf_allgather_ceil_steps(p))`。
+    """
     w = n // p
     base = [np.arange(i * w, (i + 1) * w, dtype=np.int64) for i in range(p)]
     held = [{d: base[d].copy()} for d in range(p)]
     msgs = []
-    for k in range(cf_allgather_ceil_steps(p)):
+    k = 0
+    while min(len(h) for h in held) < p:            # ★ 涌现：任意 `p`（含 GATHER_ODD）都靠它
         batch = []
         for d in range(p):
             partner = (d - (1 << k)) % p
@@ -320,16 +385,23 @@ def sim_allgather_bruck(p, n):
         for d, partner, blk, src in batch:
             msgs.append(MSG(k, "allgather-bruck", d, partner, blk, len(src)))
             held[partner][blk] = src
+        k += 1
+        if k > 64:
+            break
     out = [np.concatenate([held[d][i] for i in range(p)]) for d in range(p)]
     return out, msgs
 
 
 def sim_broadcast_binomial(p, n, root=0):
-    """二项树广播的消息序列模拟：第 `k` 步，**已有数据的** `r < 2^k` 发给 `r + 2^k`。"""
+    """二项树广播的消息序列模拟：第 `k` 步，**已有数据的** `r < 2^k` 发给 `r + 2^k`。
+
+    ★★★ **步数【涌现】**（`len(have) < p`），不是 `range(cf_allgather_ceil_steps(p))`。
+    """
     msg = np.arange(n, dtype=np.int64)
     have = {root: msg.copy()}
     msgs = []
-    for k in range(cf_allgather_ceil_steps(p)):
+    k = 0
+    while len(have) < p:                            # ★ 涌现：还没铺满就再来一步
         batch = []
         for r in sorted(have):
             if r < (1 << k) and r + (1 << k) < p:
@@ -337,20 +409,27 @@ def sim_broadcast_binomial(p, n, root=0):
         for r, dst in batch:
             msgs.append(MSG(k, "broadcast-tree", r, dst, 0, n))
             have[dst] = have[r].copy()
+        k += 1
+        if k > 64:
+            break
     return have, msgs
 
 
 def sim_allreduce_rabenseifner(p, n):
     """halving-doubling（Rabenseifner）allreduce = **recursive halving 的 reduce-scatter**
-    + **recursive doubling 的 all-gather**（★ 两段，各自逐步枚举）。"""
+    + **recursive doubling 的 all-gather**（★ 两段，各自逐步枚举）。
+
+    ★★★ **两段的步数都是【涌现的】**：第一段问「**还有设备手里多于一块吗**」、
+      第二段问「**还有设备没拿全吗**」—— **不是** `range(lg)`（那又是把闭式抄一遍）。
+    """
     parts = _split(n, p)
     x = np.arange(p * n, dtype=np.int64).reshape(p, n)
     held = [{i: x[d][s:e].copy() for i, (s, e) in enumerate(parts)} for d in range(p)]
     msgs = []
-    lg = cf_allgather_lg_steps(p)
 
     # ── 第一段：recursive halving 的 reduce-scatter（每步减半）─────────────
-    for k in range(lg):
+    k = 0
+    while max(len(h) for h in held) > 1:            # ★ 涌现：减到每台只剩一块为止
         batch = []
         for d in range(p):
             partner = d ^ (1 << k)
@@ -362,17 +441,25 @@ def sim_allreduce_rabenseifner(p, n):
             held[partner][blk] = held[partner][blk] + src   # ★ 累加进**保留的那一半**
         for d, partner, blk, src in batch:
             del held[d][blk]
+        k += 1
+        if k > 64:
+            break
+    n_rs = k                                        # ★ 第一段【枚举出来】的步数
 
     # ── 第二段：recursive doubling 的 all-gather ──────────────────────────
-    for k in range(lg):
+    k = 0
+    while min(len(h) for h in held) < p:            # ★ 涌现：还没拿全就再来一步
         batch = []
         for d in range(p):
             partner = d ^ (1 << k)
             for blk, arr in held[d].items():
                 batch.append((d, partner, blk, arr.copy()))
         for d, partner, blk, src in batch:
-            msgs.append(MSG(lg + k, "ag-recdub", d, partner, blk, len(src)))
+            msgs.append(MSG(n_rs + k, "ag-recdub", d, partner, blk, len(src)))
             held[partner][blk] = src
+        k += 1
+        if k > 64:
+            break
     out = [np.concatenate([held[d][i] for i in range(p)]) for d in range(p)]
     return out, msgs
 
@@ -417,9 +504,9 @@ def part_A():
           "③ **每卡搬运量 == `2(N−1)/N × S`**（相对差**恰好 `0`**）；④ 消息总数 == `N × 2(N−1)`",
           "**ring allreduce 的消息序列模拟与闭式对不上** —— ★ 先查块索引 `ring_send_block`")
 
-    # ── A.1g ★★★ 守卫 ────────────────────────────────────────────────────
+    # ── D.4 ★★★ 守卫（★ 归 D 类：它**不测实现**，任何算法变异都不会让它失败）──────
     print()
-    print("  ── A.1g ★★★ **守卫**（`CONTRIBUTING:235`）：把块索引改成 `(d+k)%N` ──")
+    print("  ── D.4 ★★★ **守卫**（`CONTRIBUTING:235`）：把块索引改成 `(d+k)%N` ──")
     n_g = specs.DEV_GRID[1]
     sub_g = x[:n_g]
     good, m_good = sim_ring_allreduce(n_g, specs.RING_ELEMS, x=sub_g)
@@ -430,21 +517,23 @@ def part_A():
     vol_same = vol_of(m_good, n_g)[0] == vol_of(m_bad, n_g)[0]
     print("     N=%d：正确索引 ⇒ 结果逐位相同 = %s；改成 `(d+k)%%N` ⇒ 结果变 = %s；"
           "而**搬运量不变** = %s" % (n_g, same_good, bad_differs, vol_same))
-    check("A.1g", same_good and bad_differs and vol_same,
+    check("D.4", same_good and bad_differs and vol_same,
           "★★★ **守卫成立**：换掉块索引 ⇒ ① 正确版仍逐位相同；② 错法版结果**真的变了**；"
           "③ **搬运量两者相同** ⇒ ★★ **证明「正确性」那条真的改变了被判量**，"
-          "而「搬运量」那条**对块索引不敏感**（★ 这正是本程序把两件事分成 `A.1`/`A.2` 的原因）",
+          "而「搬运量」那条**对块索引不敏感**（★ 这正是本程序把两件事分成 `A.1`/`D.4b` 的原因）"
+          "\n        ★★ **它归 D 类而不是 A 类**：它是**实验守卫**，不测任何实现。",
           "**守卫失效** —— 块索引改成 `(d+k)%%N` 后结果居然不变（`A.1` 对块索引不敏感）")
 
-    # ── A.2 ★★ 整除守卫 ──────────────────────────────────────────────────
+    # ── D.4b ★★ 整除口径（★ 归 D 类：不测实现）──────────────────────────────
     print()
-    print("  ── A.2 ★★ **整除守卫**：`RING_ELEMS` 被 `DEV_GRID` 五档全部整除 ──")
+    print("  ── D.4b ★★ **整除口径**：`RING_ELEMS` 被 `DEV_GRID` 五档全部整除 ──")
     div = [specs.RING_ELEMS % n for n in specs.DEV_GRID]
     print("     `RING_ELEMS=%d` 对 `DEV_GRID=%s` 取余 ⇒ `%s`（全为 0 ⇒ 块大小是整数）"
           % (specs.RING_ELEMS, specs.DEV_GRID, div))
-    check("A.2", all(r == 0 for r in div) and len(specs.DEV_GRID) == 5,
-          "★★ **守卫成立**：`RING_ELEMS = %d` 是 `DEV_GRID` **五档的最小公倍数**的倍数 ⇒"
+    check("D.4b", all(r == 0 for r in div) and len(specs.DEV_GRID) == 5,
+          "★★ **口径成立**：`RING_ELEMS = %d` 是 `DEV_GRID` **五档的最小公倍数**的倍数 ⇒"
           "**每块的元素数都是整数** ⇒ `A.1` 的闭式 `2(N−1)/N × S` 的**整除前提**成立"
+          "\n        ★★ **它归 D 类而不是 A 类**：它是**口径检查**，不测任何实现。"
           % specs.RING_ELEMS,
           "**整除被破坏** —— ★ 那意味着块大小有余数，`A.1` 的闭式前提失效")
 
@@ -469,7 +558,10 @@ def part_A():
                   % (p, name, cf_s(p), vol, cf_v, "相同 ✓" if exact else "不同 ✗"))
         # ★★ 同一个 p 下两个算法的搬运量必须相同（★ 这是本判据的核心）
         ok3 = ok3 and vols_here["ring"] == vols_here["recdub"]
-    same_vol = all(r[3] == r[3] for r in rows3) and len(rows3) == 8
+    # ★★ 真对照：**跨算法**比 —— 同一个 `p` 下 `rows3` 里相邻两行是 (ring, recdub)，
+    #   ★ 它们的**枚举出来的搬运量**必须相等（★ 原写法 `r[3] == r[3]` 是恒真，已删）。
+    same_vol = all(rows3[i][3] == rows3[i + 1][3] for i in range(0, len(rows3), 2)) \
+        and len(rows3) == 8
     check("A.3", ok3 and same_vol,
           "★★ **判据成立**：ring `p−1` 步、递归倍增 `lg p` 步；★★★ **而【同一个 p 下】两者的"
           "每卡搬运量完全相同**（`GATHER_GRID` 四档逐一核过，都是 `(p−1)/p × n`）"
@@ -588,12 +680,30 @@ def part_B():
     print("       · Rabenseifner 的**搬运量与 ring 相同**、而**步数是对数级** ⇒ 它**两头都占**；")
     print("       · 递归倍增的**步数最少**（`lg p`）、代价是**搬运量 `n lg p` 最大**；")
     print("       · ring 的**搬运量最小**、代价是**步数 `2(p−1)` 线性**。")
-    ok = all(abs(t[2] - t[6]) < 1e-12 and t[6] <= t[4] for t in tbl)
-    check("B.2", ok and len(tbl) == 4,
-          "★★★ **判据成立**（`GATHER_GRID` 四档）：**Rabenseifner 的每卡搬运量恒等于 ring 的**"
-          "（`2(p−1)/p × n`），且**恒不超过递归倍增的**（`n lg p`）—— "
+    print("     ★★ **注意**：闭式里 Rabenseifner 与 ring 的每卡搬运量**逐字同形**"
+          "（都是 `2(p−1)/p × n`）")
+    print("        ⇒ 拿**两条闭式**互比是**恒真**的（★ 原写法 `abs(t[2]-t[6]) < 1e-12` 已删）；")
+    print("        ★ 所以这里比的是**两个模拟器【枚举出来】的每卡搬运量**（真对照）。")
+    # ★★★ **真对照**：`ring allreduce` 与 `Rabenseifner allreduce` 是**两条独立的**消息序列路径；
+    #   同一个 `p`、同一个每设备输入 `ne = STAGE_ELEMS × p`（块大小是整数）下，两者的枚举
+    #   搬运量必须相等 —— ★ 这才是有信息量的那一条（闭式同形不算）。
+    enum_ok = True
+    for p in specs.GATHER_GRID:
+        ne = specs.STAGE_ELEMS * p
+        _o, m_ring = sim_ring_allreduce(p, ne)
+        _o2, m_ra = sim_allreduce_rabenseifner(p, ne)
+        v_ring = vol_of(m_ring, p)[0]
+        v_ra = vol_of(m_ra, p)[0]
+        enum_ok = enum_ok and (v_ring == v_ra)
+        print("     p=%-3d **枚举**：ring allreduce %-4d · Rabenseifner %-4d ⇒ 相等 = %s"
+              % (p, v_ring, v_ra, v_ring == v_ra))
+    ok = enum_ok and all(t[6] <= t[4] for t in tbl) and len(tbl) == 4
+    check("B.2", ok,
+          "★★★ **判据成立**（`GATHER_GRID` 四档）：**两个模拟器【枚举出来】的每卡搬运量相等**"
+          "（`ring allreduce` 与 `Rabenseifner` —— ★ 两条**独立**的消息序列路径，**不是**两条"
+          "同形的闭式互比），且 **Rabenseifner 的搬运量恒不超过递归倍增的**（`n lg p`）—— "
           "★ 三条式子的载体是 `specs.py` 的 [C] 级逐字常量（`D.6` 钉住它们）",
-          "**三算法的对照关系不成立** —— ★ 先查 `specs.py` 的 `MPICH_*` 逐字式有没有被改动")
+          "**三算法的对照关系不成立** —— ★ 先查两个模拟器（不是闭式）的枚举量")
 
 
 # ===========================================================================
@@ -683,7 +793,10 @@ def preflight():
           == ("Thakur, Rabenseifner, Gropp, Optimization of Collective Communication "
               "Operations in MPICH, IJHPCA 19(1):49-66, 2005")
           and specs.UNSOURCED == (),
-          "★ 机器精度档阈 = %g（★ 本程序只在 `D.9` 用它做浮点边界）；"
+          "★ `TOL_MACHINE` = %g；★★ **它的唯一消费者【就是这条 `D.3` 的钉住】** ——"
+          "★ **本程序【不用】它做浮点边界**（`A.1` 用**精确相等** `rel == 0.0`，"
+          "因为纯两段式的搬运量是**整数**）；★ 另两个程序的 `TOL_MACHINE` **确有**实质消费者"
+          "（`02` 的 `B.2` / `03` 的 `B.1`）；"
           "★★ **[C] 级载体的书目字段用 `==` 逐字钉住**（★ 不用 `startswith` ——"
           "那抓不到「末尾追加一个 `X`」这类变异，`mutate.py` 的盲区③）；"
           "★ `UNSOURCED == ()` 一并钉住" % specs.TOL_MACHINE)
@@ -741,7 +854,9 @@ def part_D():
           == "Trabenseifner = 2 lg p α + 2(p−1)/p · nβ + (p−1)/p · nγ."
           and specs.MPICH_BCAST_VDG_QUOTE.startswith("the message to be broadcast is first")
           and specs.MPICH_BRUCK_SCOPE_NOTE != "",
-          "★★★ **allreduce 的算法清单逐元素钉住**（5 个名字，`MPICH_REDUCE_ALGOS`）+\n"
+          "★★★ **reduce / allreduce【共用】的算法清单**逐元素钉住（5 个名字，`MPICH_REDUCE_ALGOS`；"
+          "★ 论文原句是 `five different algorithms for implementing allreduce and reduce` —— "
+          "**两原语共列**）+\n"
           "        ★★★ **同名不同指**：`MPICH_ALLREDUCE_RECDUB_TIME_QUOTE`（allreduce，"
           "带宽项 `n lg p`）与 `MPICH_AG_RECDUB_TIME_QUOTE`（allgather，带宽项 `(p−1)/p · n`）"
           "**同名 `Trec dbl`** —— 差一个 `lg p`；\n"
@@ -761,29 +876,36 @@ def part_D():
           "—— ★ 只钉「整体」会让**元素级**变异漏网（本库实测过：一次报出 58 条漏网）",
           "**元组的元素或某个标量被动过**")
 
-    # ── D.8 ★★ 独立性线索（源码级）──────────────────────────────────────────
-    srcs = {inspect.getsource(f) for f in (sim_ring_allreduce, ref_allreduce_sum,
-                                           cf_ring_volume, cf_ring_steps)}
-    calls_sim = {n.func.id for n in ast.walk(
-        ast.parse(textwrap.dedent(inspect.getsource(sim_ring_allreduce))))
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    # ── D.8 ★★ 独立性线索（源码级）—— ★★ **遍历全部 6 个模拟器**（不再只审一个）──
+    sims = (sim_ring_allreduce, sim_allgather_ring, sim_allgather_recdub,
+            sim_allgather_bruck, sim_broadcast_binomial, sim_allreduce_rabenseifner)
+    srcs = {inspect.getsource(f) for f in sims + (ref_allreduce_sum,)}
+    call_tables = {}
+    for f in sims:
+        call_tables[f.__name__] = {n.func.id for n in ast.walk(
+            ast.parse(textwrap.dedent(inspect.getsource(f))))
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
     calls_ref = {n.func.id for n in ast.walk(
         ast.parse(textwrap.dedent(inspect.getsource(ref_allreduce_sum))))
         if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
     print()
-    print("  ── D.8 ★★ **源码级线索**（★ **不是证明**）：参照与被测的**调用表** ──")
-    print("     `sim_ring_allreduce()`（参照）里调用的函数：%s"
-          % (", ".join(sorted(calls_sim)) if calls_sim else "**空集**"))
+    print("  ── D.8 ★★ **源码级线索**（★ **不是证明**）：**六个模拟器 + 单进程参照**的调用表 ──")
+    for _name, _tbl in call_tables.items():
+        print("     `%s()` 里调用的函数：%s"
+              % (_name, ", ".join(sorted(_tbl)) if _tbl else "**空集**"))
     print("     `ref_allreduce_sum()`（单进程参照）里调用的函数：%s"
           % (", ".join(sorted(calls_ref)) if calls_ref else "**空集**"))
-    print("     ⇒ ★★ **参照不调用任何 `cf_*`**（闭式）—— `CONTRIBUTING:232` 的"
+    cf_hits = sorted({c for _tbl in call_tables.values() for c in _tbl if c.startswith("cf_")})
+    print("     ⇒ ★★ **六个模拟器都不调用任何 `cf_*`（闭式）** —— `CONTRIBUTING:232` 的"
           "「参照不得用被测的输出」在此**在源码层面成立**。")
+    print("        ★★ **本轮修正**：原写法只审 `sim_ring_allreduce` 一个，却把结论写成"
+          "「全体」；现在**逐个打印六个的调用表**。")
     print("     ★★★ **降级措辞**：这只是「**两段代码不互相调用**」的**源码级线索**，")
     print("        **不证明**判据有物理信息量 —— 后者由 `C.1`/`C.2` 的**行为**兜底。")
-    check("D.8", "cf_ring_volume" not in calls_sim and "cf_ring_steps" not in calls_sim
-          and "sim_ring_allreduce" not in calls_ref and len(srcs) == 4,
-          "★★ **源码级线索成立**：四个函数两两不同源；★ 参照的调用表里**没有** `cf_*`"
-          " ⇒ ★ **参照不调用被测**（源码层面）",
+    check("D.8", not cf_hits and len(srcs) == 7
+          and all(n not in calls_ref for n in call_tables),
+          "★★ **源码级线索成立**：**七个函数两两不同源**；★★ **六个模拟器的调用表里都没有**"
+          " `cf_*`（★ **全体**结论，不是只审一个）⇒ ★ **参照不调用被测**（源码层面）",
           "**参照与闭式互相调用** —— A 类可能退化成自证")
 
     # ── D.9 ★★ 浮点边界与 `UNSOURCED` ──────────────────────────────────────

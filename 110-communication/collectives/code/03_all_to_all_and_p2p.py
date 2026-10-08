@@ -305,16 +305,19 @@ def part_A():
     for p in specs.A2A_GRID:
         recv_buf, sd, rd, rounds = sim_sendrecv(p, specs.A2A_BLOCK, mode="sendrecv")
         want = [(d - 1) % p for d in range(p)]
+        # ★★ 「成功行为」归 **A 类**（`CONTRIBUTING:238`）：`sendrecv` **一轮**就把数据换好。
         ok4 = ok4 and all(recv_buf[d] is not None
                           and np.array_equal(recv_buf[d], np.full(specs.A2A_BLOCK, want[d]))
-                          for d in range(p)) and all(rd) and all(sd)
+                          for d in range(p)) and all(rd) and all(sd) and (rounds == 1)
         print("     p=%-3d 一轮完成（rounds=%d）· 每台设备收到来自 `(d−1)%%p` 的那一杯 ⇒ 正确 ✓"
               % (p, rounds))
     print("     ★★ `sendrecv` 的语义是**同时发与收** —— 它把「我等你、你等我」这件事消掉了。")
+    print("     ★★ **「一轮完成」这条【成功行为】在【本判据】里断言**（`C.2` 只量【失败量】）——")
+    print("        依 `CONTRIBUTING:238`：凡断言成功行为的归 A 类，**不塞进 C 类**。")
     check("A.4", ok4,
-          "★★ **判据成立**：`sendrecv` 在 `A2A_GRID` 三档上**一轮**就把数据换好，"
+          "★★ **判据成立**：`sendrecv` 在 `A2A_GRID` 三档上**一轮**（`rounds == 1`）就把数据换好，"
           "且每台设备收到的是**对端**（`(d−1) % p`）的缓冲区",
-          "**`sendrecv` 没有换成功** —— ★ 先查「谁发给谁」的配对")
+          "**`sendrecv` 没有换成功（或不是一轮）** —— ★ 先查「谁发给谁」的配对")
 
 
 # ===========================================================================
@@ -382,6 +385,13 @@ def part_C():
     print("=" * 78)
 
     # ── C.1 ★★★ 每个设备只发一份 ────────────────────────────────────────
+    # ★★ 两条**闭式**（★ 本机算过的值，**贴在这里免得下次再写错** —— 文档里曾误写成
+    #    `(p−1)(p−2)` 个格子与「`(p−1)/p` 分之一」，**两个都是错的**）：
+    #      · 缺格数  = p² − (p[对角] + p[一次发送]) = p² − 2p = **p(p−2)**
+    #      · 搬运量比 = b / ((p−1)·b) = **1/(p−1)**
+    #    p=4  ⇒ 缺 8   个、1/3  ≈ 0.3333
+    #    p=8  ⇒ 缺 48  个、1/7  ≈ 0.1429   （★ `28 → 4`）
+    #    p=16 ⇒ 缺 224 个、1/15 ≈ 0.0667
     print()
     print("  ── C.1 ★★★ **「每个设备只发一份」**（只发给 `(d+1)%p`，其余块没发）──")
     p = specs.A2A_GRID[-1]
@@ -404,19 +414,22 @@ def part_C():
     print()
     print("  ── C.2 ★★★ **P2P：「先 `recv` 后 `send`」⇒ 互等（死锁）** ──")
     p2 = specs.A2A_GRID[-1]
-    _rb_ok, sd_ok, rd_ok, r_ok = sim_sendrecv(p2, specs.A2A_BLOCK, mode="sendrecv")
     _rb_bad, sd_bad, rd_bad, r_bad = sim_sendrecv(p2, specs.A2A_BLOCK,
                                                   mode="recv_then_send")
-    print("     `sendrecv`（同时收发）：rounds=%d，完成 = %s" % (r_ok, all(rd_ok)))
     print("     「先 recv 后 send」：rounds=%d，收到数据 = %d / %d 台，发出 = %d / %d 台"
           % (r_bad, sum(rd_bad), p2, sum(sd_bad), p2))
     print("     ★★★ **一台都不进展** —— 每台设备都在等它的**前驱**先发，而前驱也在等**它的**前驱。")
+    print("     ★★ **对照物**：同一组数据用 `sendrecv` **一轮**（`rounds == 1`）就完成 ——")
+    print("        ★ 那一条是**成功行为**，在 `A.4` 里断言（依 `CONTRIBUTING:238`，"
+          "成功行为归 A 类，**不塞进 C 类**）。")
     print("     ★★ **模型声明**：这是**一个简化的「就绪」模型**（不是真 socket 死锁 ——")
     print("        真的那个在 `../probes/`，走 loopback，**只打印不断言**）。")
-    check("C.2", (not any(rd_bad)) and (not any(sd_bad)) and r_bad <= 100 and all(rd_ok),
+    # ★★ C 类只量【失败量】：**0 台**收到、**0 台**发出。
+    #   ★ 原写法另含 `all(rd_ok)`（**成功行为**）与 `r_bad <= 100`（**恒真**，循环上界就是 100）
+    #     —— 两条**都不合规**（`CONTRIBUTING:238` + 恒真），已移走/删除。
+    check("C.2", (not any(rd_bad)) and (not any(sd_bad)),
           "★★★ **判据成立**：「先 `recv` 后 `send`」下 **0 / %d 台**收到数据、"
-          "**0 台**发出数据 ⇒ **互等**；★ 而 `sendrecv` 一轮就完成 ⇒ "
-          "★ **这不是「慢」，是「一步都不动」**" % p2,
+          "**0 台**发出数据 ⇒ **互等**（★ **这不是「慢」，是「一步都不动」**）" % p2,
           "**「先 recv 后 send」居然进展了** —— ★ 那说明就绪模型写错了（死锁应无进展）")
 
 

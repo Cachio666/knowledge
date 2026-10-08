@@ -50,7 +50,8 @@ r"""02_stages_and_costs.py —— **两段式**（reduce-scatter + all-gather）
   · `A.4`  ★★ **reduce 与 broadcast 的互逆**：两者的**总搬运量都是 `(p−1) × n`**
     （一个是把 `p` 份合成 `1`，一个是把 `1` 份摊成 `p`）；
   · `B.1`  ★★★ **四原语 + allreduce 的代价表**；
-  · `B.2`  ★★★ **`2(N−1)/N × S` 是两段之和**（★ **不重推**，只做**结构验证**）；
+  · `B.2`  ★★★ **`2(N−1)/N × S` == 两段【消息序列枚举】出来的搬运量之和**（★ **不重推**，
+    只做**结构验证**：★ **闭式 vs 枚举**，**不是**拿两条逐字同形的闭式互比 —— 那是恒真）；
   · `C.1`  ★★★ **漏掉 all-gather 那一段** ⇒ 每个设备只有**自己那一块**是对的，其余是**半成品**
     ⇒ 结果错、**不报错**；
   · `C.2`  ★★★ **漏掉 reduce-scatter 那一段**（只 gather 不 reduce）⇒ 每块只有**一台设备**的贡献
@@ -213,13 +214,18 @@ def sim_all_gather(p, n, held_in, corrupt=None):
 def sim_ring_allreduce(p, n, x=None):
     """**不分段的独立路径**：ring allreduce（reduce-scatter + all-gather 走环）。
     ★ 它与上面那两个分段的模拟器**是【两套不同的实现】**（走环 vs 走超立方配对）
-      —— 用来当分阶段对拍的第 ③ 条路径。"""
+      —— 用来当分阶段对拍的第 ③ 条路径。
+    ★★★ **两段的步数都是【涌现的】**（本路径**没有**错法变体 ⇒ 两段都能用状态条件）：
+      · 第一段（reduce-scatter）走环，`while max(len(h)) > 1`（每台减到只剩一块）；
+      · 第二段（all-gather）走环，`while min(len(h)) < p`（每台涨到拿全）。
+      **不是** `for k in range(p - 1)`（那会把「`p−1`」预先塞进控制流）。"""
     parts = _split(n, p)
     if x is None:
         x = np.arange(p * n, dtype=np.int64).reshape(p, n)
     held = [{i: x[d][s:e].copy() for i, (s, e) in enumerate(parts)} for d in range(p)]
     msgs = []
-    for k in range(p - 1):
+    k = 0
+    while max(len(h) for h in held) > 1:            # ★ 涌现：减到每台只剩一块为止
         batch = []
         for d in range(p):
             blk = (d - k) % p
@@ -228,7 +234,11 @@ def sim_ring_allreduce(p, n, x=None):
             msgs.append(MSG("ring-rs", k, d, dst, blk, len(src)))
             held[dst][blk] = held[dst][blk] + src
             del held[d][blk]
-    for k in range(p - 1):
+        k += 1
+        if k > 64:
+            break
+    k = 0
+    while min(len(h) for h in held) < p:            # ★ 涌现：还没拿全就再来一步
         batch = []
         for d in range(p):
             blk = (d + 1 - k) % p
@@ -237,6 +247,9 @@ def sim_ring_allreduce(p, n, x=None):
             msgs.append(MSG("ring-ag", k, d, dst, blk, len(src)))
             held[dst][blk] = src
             held[d].setdefault(blk, src)
+        k += 1
+        if k > 64:
+            break
     outs = [np.concatenate([held[d][i] for i in range(p)]) for d in range(p)]
     return outs, msgs
 
@@ -245,7 +258,19 @@ def sim_reduce_tree(p, n, x=None, root=0):
     """**reduce（→ 根 0）**：二项树，★ **它就是 broadcast 那棵树的【反向遍历】** ——
     边还是那些边 `(r, r + 2^k)`，只是**步序倒过来**、数据从 `r + 2^k` 流向 `r` 并**累加**。
     ★★ 「reduce 与 broadcast 是同一棵树的两种遍历方向」这件事让它们的**总搬运量相等**
-      （`A.4` 量它）。"""
+      （`A.4` 量它）。
+
+    ★★ **一条如实的限定（本模拟是【唯一】一处仍是"预设步数"的循环，已裁定【不改】）**：
+      本模拟的步数上界是 `⌈lg p⌉` —— `lg` 由 `while (1 << lg) < p: lg += 1` **从 `p` 推出**，
+      **不是**从闭式函数取。★ 但它**不比 `range(cf_*)` 更涌现**（两者都**预设**了循环次数）。
+      ★★★ **之所以不改**（三条，★ 按重要性倒序）：
+        ① **结果项能过守卫**（★ 决定性）：`A.3` 用 `have[root]` 与**单进程参照**对它，
+           那一条**过 `CONTRIBUTING:235` 的守卫** ⇒ 「步数项准恒真」**不构成本域的判据失效**；
+        ② `lg` **不调用任何被测函数**（从 `p` 算）⇒ 不违反 `CONTRIBUTING:235` 的**字面**禁令；
+        ③ ★ **改成真正涌现需要【重排报文顺序】**，而 `MSG` 带 `step` 字段 ⇒ 会动
+           `A.3`/`A.4` 的**步数语义** ⇒ **风险 > 收益**。
+      ⇒ ★★ 本域按「**结果项过守卫即可**」的口径接受它（★ `01` 的 ring 五个循环**不**适用这条
+         豁免：那里**有**错法变体、且我们**能**用事件/状态条件，见 `01` 的 RS 段现场）。"""
     if x is None:
         x = np.arange(p * n, dtype=np.int64).reshape(p, n)
     lg = 0
@@ -302,7 +327,7 @@ def part_A():
     # ── A.1 ★★★ 三条路径给同一个结果 ──────────────────────────────────────
     print()
     print("  ── A.1 ★★★ **三条路径**给同一个结果（`STAGE_GRID` 两档）──")
-    ok1, rec = True, []
+    ok1 = True
     for p in specs.STAGE_GRID:
         n = specs.STAGE_ELEMS * p
         sub = np.arange(p * n, dtype=np.int64).reshape(p, n)
@@ -317,7 +342,6 @@ def part_A():
         ok_whole = all(np.array_equal(g, ref) for g in whole)
         # ★ 两条路径**逐位相同**
         ok_cross = all(np.array_equal(staged[d], whole[d]) for d in range(p))
-        rec.append((p, len(m_rs), len(m_ag), len(m_whole)))
         ok1 = ok1 and ok_staged and ok_whole and ok_cross
         print("     N=%-3d 分段路径：RS %-2d 条 + AG %-2d 条 = %-2d 条消息；"
               "不分段（ring）：%-2d 条 ⇒ 三条路径**逐位相同** = %s"
@@ -332,8 +356,6 @@ def part_A():
     print()
     print("  ── A.2 ★★★ **两段的每卡搬运量相等**，**和被闭式给出** ──")
     ok2 = True
-    for p, n_rs, n_ag, n_whole in rec:
-        pass
     for p in specs.STAGE_GRID:
         n = specs.STAGE_ELEMS * p
         sub = np.arange(p * n, dtype=np.int64).reshape(p, n)
@@ -435,19 +457,32 @@ def part_B():
 
     # ── B.2 ★★★ 结构验证（★ 不是重推）────────────────────────────────────
     print()
-    print("  ── B.2 ★★★ allreduce 的 `2(N−1)/N × S` **是两段之和**（★ **不重推**）──")
+    print("  ── B.2 ★★★ 闭式 == **消息序列枚举出来的两段之和**（★ **不重推**）──")
     print("     `specs.MPICH_RABENSEIFNER_TIME_QUOTE`：")
     print("        `%s`" % specs.MPICH_RABENSEIFNER_TIME_QUOTE)
     print("     ★★ 它的带宽项 `2(p−1)/p · nβ` **逐字就是**「两段各 `(p−1)/p · n`」——")
-    print("        这与 `A.2` **枚举出来**的两段量**同值**。")
     print("     ★★★ **本程序【不推导】它**（推导在 `performance-models/02:147-155`，含 `S` 的饱和）——")
     print("        这里做的是**另一个方向**的检查：**闭式 == 消息序列枚举出来的两段之和**。")
-    okb2 = all(abs(cf_allreduce_volume_two_stage(p, n) - 2 * cf_stage_volume(p, n)) < 1e-12
-               for p in specs.GATHER_GRID)
+    print("     ★★ **本轮修正**：原写法拿**两条逐字同形的闭式**互比"
+          "（`cf_allreduce_volume_two_stage ≡ 2 × cf_stage_volume`）⇒ **恒真**，")
+    print("        已换成**枚举**：把两段各自跑一遍、**逐条消息求和**，再与闭式比。")
+    okb2 = True
+    for p in specs.GATHER_GRID:
+        ne = specs.STAGE_ELEMS * p                       # ★ 每设备输入（块大小是整数）
+        sub = np.arange(p * ne, dtype=np.int64).reshape(p, ne)
+        held_rs, m_rs = sim_reduce_scatter(p, ne, x=sub)
+        held_ag, m_ag = sim_all_gather(p, ne, held_rs)
+        enum_sum = vol_of(m_rs, p)[0] + vol_of(m_ag, p)[0]      # ★ 逐条枚举求和
+        closed = cf_allreduce_volume_two_stage(p, ne)
+        okb2 = okb2 and abs(enum_sum - closed) < TOL_MACHINE
+        print("     p=%-3d 枚举：RS %-4d + AG %-4d = **%-4d** · 闭式 %.0f ⇒ 一致 = %s"
+              % (p, vol_of(m_rs, p)[0], vol_of(m_ag, p)[0], enum_sum, closed,
+                 abs(enum_sum - closed) < TOL_MACHINE))
     check("B.2", okb2 and specs.MPICH_RABENSEIFNER_TIME_QUOTE.startswith("Trabenseifner = 2 lg p α"),
-          "★★★ **判据成立**：闭式的带宽项与「两段之和」**逐位一致**；★ 且**闭式的载体**"
+          "★★★ **判据成立**：**消息序列枚举出来的两段之和** == 闭式 `2(N−1)/N × S`"
+          "（★ 逐条求和，**不是**拿两条同形闭式互比）；★ 且**闭式的载体**"
           "（`MPICH_RABENSEIFNER_TIME_QUOTE`）一并钉住 ⇒ ★ 「为什么是 `2×`」有**结构解释**：**两段**",
-          "**结构验证不成立** —— ★ 先查 `cf_stage_volume` 与 `cf_allreduce_volume_two_stage`")
+          "**结构验证不成立** —— ★ 先查两段模拟器**枚举出来**的量（不是闭式）")
 
 
 # ===========================================================================

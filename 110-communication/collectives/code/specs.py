@@ -31,9 +31,14 @@
     ⇒ 本文件用**两个不同的常量名**存放它们（`MPICH_AG_RECDUB_TIME_QUOTE` /
       `MPICH_ALLREDUCE_RECDUB_TIME_QUOTE`），并在注释里互指。
 
-★★★ **另一条【同名不同指】**：论文的 **Bruck 算法是 allgather 与 all-to-all（index）的算法**，
+★★★ **第二条【同名不同指】**：论文的 **Bruck 算法是 allgather 与 all-to-all（index）的算法**，
     **不是 allreduce 的算法** —— allreduce 里它只作为**组合件**出现
     （见 `MPICH_BRUCK_SCOPE_NOTE`）。
+
+★★★ **第三条【同名不同指】（引文层）**：`Tbruck` 这个名字**被用在两个算法上** ——
+    **allgather** 的 Bruck（`⌈lg p⌉α + (p−1)/p · nβ`）与 **all-to-all** 的 index
+    （`lg p α + n/2 · lg p β`），**逐项都不同**（★ 见 `MPICH_AG_BRUCK_TIME_QUOTE` 下方那段注释）。
+    ★★ 它与第一条（`Trec dbl`）**完全同型**：一个名字、两支式子。
 
 ★★★ **一条【禁写清单】纪律（`F5`）**：论文里的**分档阈值**是
     **2005 年 MPICH 在 Myrinet / IBM SP 上的【实现选择】** ⇒ **不得**写成
@@ -171,6 +176,22 @@ MPICH_AG_BRUCK_TIME_QUOTE = "Tbruck = ⌈lg p⌉α + (p−1)/p · nβ."
 #         丢掉了最后一步的重复）—— 这一点由 `01` 的模拟在 `p = 6` 上验证。
 # 消费者：`01_algorithm_family.py` 的 `A.4`/`D.5`。
 # 同值位置：`MPICH_AG_RING_TIME_QUOTE` / `MPICH_AG_RECDUB_TIME_QUOTE`。
+#
+# ★★★ **又一条【同名不同指】（引文层）—— `Tbruck` 也被用在【两个算法】上**（★ 与原登记
+#   `Trec dbl` 的情形**完全同型**）：本库**没有**为第二条另立常量（它**没有消费者**，
+#   立了会成为 `make mutate` 的漏网候选）⇒ 此处**只作记录**，供 `01` 的 §1.3 引用。
+#   · **allgather 的 Bruck**（§4.1.2，就是上一条 `MPICH_AG_BRUCK_TIME_QUOTE`）：
+#     `Tbruck = ⌈lg p⌉ α + (p−1)/p · nβ.`
+#     ★ 提取形态 = `Tbruck = dlg pe α + p−1 p nβ.`（**有 ⌈⌉**）；
+#   · **all-to-all 的 index（Bruck）**（§4.3）：
+#     `Tbruck = lg p α + n/2 · lg p β.`
+#     ★ 提取形态 = `Tbruck = lg p α + n2 lg p β.`（**裸 `lg p`，无取整**；`n2` = 分数线压平的 `n/2`）。
+#   ★★★ **两条式子【逐项都不同】**：步数项 `⌈lg p⌉` 对裸 `lg p`；带宽项 `(p−1)/p · n` 对 `n/2 · lg p`
+#     ⇒ ★ **同名不同指**在这里的落法：`Tbruck` ≠ 单一式子，**引用时必须说清是哪一支**。
+#   ★★ all-to-all 那条**自身也有两档**（§4.3）：2 的幂是裸 `lg p`；非 2 的幂是
+#     `Tbruck = ⌈lg p⌉α + (n/2 lg p + n/p(p − 2^⌊lg p⌋))β`
+#     （提取形态 `Tbruck = dlg peα + ( n2 lg p + np (p − 2blg pc )) β.`）。
+#   ★★ 载体 = 同一篇一手 PDF（§4.1.2 与 §4.3），抓取日 2026-10-08。
 
 MPICH_ALLREDUCE_RECDUB_TIME_QUOTE = "Trec−dbl = lg p α + n lg p β + n lg p γ."
 # 来源：[C] 论文，**allreduce · 递归倍增**。载体 = 一手 PDF，抓取日 2026-10-08。
@@ -215,6 +236,15 @@ MPICH_TREC_HALF_QUOTE = "Trec half = (⌊lg p⌋ + 2)α + 2nβ + n(1 + (p−1)/p
 #         引用时**必须带上**，否则是把一条近似式当成精确式。
 # 消费者：`02_stages_and_costs.py` 的 `D.6`。
 # 同值位置：无。
+#
+# ★★★ **同一条式子【有两档】**（★ 本常量只存了**非 2 的幂**那一支）—— 论文 §4.4 先给 2 的幂、
+#   再给非 2 的幂：
+#   · **`p` 是 2 的幂**：`Trec half = lg p α + (p−1)/p · nβ + …γ`（★ 提取形态
+#     `Trec half = lg pα+ p−1 p nβ+ p nγ.` —— **裸 `lg p`**；★★ **最后一项的分数线被压平，
+#     本库【未逐字判读**它是 `n/p·γ` 还是别的**】** ⇒ 故此处**不把它规范化成一条 `[C]` 引文**）；
+#   · **`p` 不是 2 的幂**（= 本常量 `MPICH_TREC_HALF_QUOTE`）：带 `⌊lg p⌋` 与 `This cost is
+#     approximate …` 的限定语。
+#   ★★ 两档的**存在理由**（论文 §4.4）：非 2 的幂时先「把进程数降到最近的 2 的幂」再补一步。
 
 MPICH_TREC_HALF_QUALIFIER = "This cost is approximate because some imbalance exists in the amount of work each process does"
 # 来源：[C] 论文 —— 紧跟 `MPICH_TREC_HALF_QUOTE` 的**限定句**。载体 = 一手 PDF，抓取日 2026-10-08。
@@ -271,7 +301,9 @@ MPICH_REDUCE_ALGOS = ("binomial tree", "recursive doubling",
 #          binary blocks, and ring.`
 #       ★★ 本常量把那一串**拆成 5 个名字**（★ 拆开是为了能**逐元素**钉住；
 #         把整句存成一个串会让**元素级变异**漏网）。
-# 口径：★★★ **这是论文自己给的 allreduce 算法清单**（5 个）。
+# 口径：★★★ **这是论文自己给的、`allreduce` 与 `reduce`【共用】的算法清单**（5 个）——
+#       ★ 论文原句是 `five different algorithms for implementing allreduce and reduce`
+#         （**两个原语共列**；`reduce` 与 `allreduce` 各取其中之合适者）。
 #       ★★ 注意 `recursive halving and doubling` 就是 halving-doubling（Rabenseifner）。
 #       ★★ 而 **Bruck 不在这个清单里** —— 见 `MPICH_BRUCK_SCOPE_NOTE`。
 # 消费者：`01_algorithm_family.py` 的 `D.6`（逐元素）。
@@ -326,7 +358,7 @@ DEV_GRID = (2, 4, 8, 16, 64)
 #          「块大小不等」这个干扰项在 A 类里**不存在**（余数的账在 `02` 的 D 类）。
 #       ★★ 第 5 档 `64` 是**饱和那一条**（`V(64)/S = 1.968750`）的档位。
 #       ★★ **本元组必须逐元素钉住**（`01` 的 `D.7`）—— 只钉「整体」会让元素级变异漏网。
-# 消费者：`01_algorithm_family.py` 的 `A.1`/`A.2`/`D.7`。
+# 消费者：`01_algorithm_family.py` 的 `A.1`/`D.4b`/`D.7`。
 # 同值位置：无。
 
 SAT_GRID = (2, 4, 8, 64, 512, 4096)
@@ -344,8 +376,8 @@ RING_ELEMS = 64
 # 口径：★★ 取 `64` 的理由：`DEV_GRID` 的**五档全部整除它**（含 `64/64 = 1`）⇒
 #       每个块的元素数是整数 ⇒ 「块大小不等」不进 A 类。
 #       ★★ 它是**标量**（不是元组）⇒ `mutate.py` 的整型变异 `v + 1` 会把它变成 `65`，
-#         那时 `64 % 65 != 0` ⇒ 会被 `A.2` 的**整除守卫**抓住。
-# 消费者：`01_algorithm_family.py` 的 `A.1`/`A.2`/`D.7`。
+#         那时 `64 % 65 != 0` ⇒ 会被 `D.4b` 的**整除口径**抓住。
+# 消费者：`01_algorithm_family.py` 的 `A.1`/`D.4b`/`D.7`。
 # 同值位置：无。
 
 GATHER_GRID = (2, 4, 8, 16)
@@ -416,7 +448,13 @@ TOL_MACHINE = 1.0e-12
 #       ★★★ 本主题**另有两条**与它并列的**内容级**阈，写在编号程序内部（**不进本模块**）：
 #         · `1e-6`：C 类是**内容级**错法 ⇒ 用它区分「错法真的错了」与「舍入」；
 #         · 本主题的 A 类是**计数**（步数、元素数、块数）⇒ **整数相等**，不用浮点阈。
-# 消费者：`01`/`02`/`03` **各自**的 `D.3`（`preflight()`，先跑）。
+# 消费者：★★ **逐个【如实】记**（★ 不写「三个都拿它做阈值」——那是**编机制从句**的形态）：
+#   · `01_algorithm_family.py` —— **仅 `D.3` 的钉住**（`specs.TOL_MACHINE == 1.0e-12`）；
+#     ★★ **本程序【不用】它做浮点边界**（`A.1` 用**精确相等** `rel == 0.0`，因为
+#        ring allreduce 的搬运量是**整数**）；
+#   · `02_stages_and_costs.py` —— **实质消费者**：`B.2` 的 `abs(enum_sum − closed) < TOL_MACHINE`；
+#   · `03_all_to_all_and_p2p.py` —— **实质消费者**：`B.1` 的 `abs(ratio − 2.0) < TOL_MACHINE`；
+#   · 三个程序的 `D.3`（`preflight()`，先跑）各**钉住**它一次。
 # 同值位置：`100-parallelism/expert-parallel` 等**同域别的主题**的编号程序里各有一个
 #           同名常量（★ 它们**不在**那几篇的 `specs.py` 里）；本文件这一份**独立存放**。
 
