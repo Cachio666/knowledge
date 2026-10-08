@@ -4,14 +4,24 @@
 #   编号程序是纯 `.py`，**默认 `python3` 下可跑** ⇒ **三类断言放在编号程序内部**，
 #   失败时以**非零退出码**结束。**没有 `verify.py`**，也**没有** `meta_falsify.py`。
 #
-# ★★ **Chunk 0 只落骨架**：本目录**尚无任何编号程序** ⇒ `SCRIPTS` 为空，
-#    `make run` 走**空分母**分支（★ **它不构成证据**）。
+# ★★ **Chunk 2 已落盘**：本目录现有 **3 个编号程序** ⇒ `SCRIPTS` 非空，
+#    `make run` **真跑**三个程序（★ 走不到空分母分支）。
+#
+#    ★★★ **本主题【没有 A 类】**：本机**无 GPU / 无 NCCL / 无真网卡** ⇒
+#      「算法正确性」**无处可验** ⇒ 按 `CONTRIBUTING` §2 的第三种形态【写明不可测】；
+#      ★★ **「常量钉住」归 `D` 类**，**不得**冒充 A 类（那是 `P12` 的变体）。
+#      ★ 每个程序用 `D.0` **机械地**证明「本文件里一条 A 类判据都没有」（AST 扫自己）。
+#    ★★ **载体全是 `[B]` 级**（NCCL 官方产品文档 2.32.3，抓取日 2026-10-08），
+#      另一条 `[B']` 是**官方源码**（`v2.26.2-1` 的 `src/init.cc:2198`）。
 #
 #    本主题的定位：NCCL 的算法取值（`NCCL_ALGO`）与协议（`NCCL_PROTO`）、拓扑感知、报错归因
 #
 #   ★ 本主题的禁区：**框架 API 的用法**（全库无正文）· **任何 NCCL 的性能数字**（本机无 NCCL / 无 GPU）
 #   ★★ 判据纪律：★★ **本主题【没有 A 类】**（本机无 NCCL）⇒ 按 `CONTRIBUTING` §2 的第三种形态【写明不可测】；★ **不得把「常量钉住」冒充 A 类**
 #
+#   ★★ **本主题的三个编号程序【只用标准库】**（`ast` / `collections` / `sys`）——
+#     ★ 它们**不 import `numpy`**（本主题是字符串与整数的比对，没有数组运算）；
+#     `check-env` 里的 `numpy` 探测是**保守**要求（沿用同域形态），★ **本主题不需要它**。
 # ── 本机的硬约束 ──────────────────────────────────────────────────────────────
 #   **无 GPU、无 NCCL、无 InfiniBand / RoCE 网卡、无 NVLink**；
 #   `python3` = 3.13.5、`numpy` = 2.4.4（已装）。
@@ -37,7 +47,7 @@
 #   Makefile / requirements.txt   构建入口
 
 PYTHON  ?= python3
-SCRIPTS :=
+SCRIPTS := 01_architecture_and_selection 02_topology_awareness 03_failures_and_limits
 
 .PHONY: all run lint mutate lines clean check-env
 
