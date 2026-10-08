@@ -5,7 +5,9 @@
 #
 # ★★ **三个程序的依赖【不一样】，这里按并集要求**（这一点必须写明，否则会误以为 `01` 也要它）：
 #   · `01_activation_sharding.py` —— **不用 numpy**（全是标量算术：式(1)/(2)/(4) 与它们的恒等式）
-#     ⇒ ★ 单跑 `make 01_activation_sharding` **不需要** numpy（那一个文件里一行都没 import 它）。
+#     ⇒ ★ **直接 `python3 01_activation_sharding.py` 不需要** numpy（那一个文件里一行都没 import 它）；
+#       ★★ **但 `make 01_activation_sharding` 会先跑 `check-env`**（`Makefile: $(SCRIPTS): check-env`）
+#       ⇒ 那条路**仍要求**它 —— 下面第 10 行的并集检查对 `make` 的每一个入口都生效。
 #   · `02_ring_attention.py` / `03_constraints.py` —— **需要 numpy**（`Q @ K.T` 走 BLAS）。
 #   ⇒ `Makefile` 的 `check-env` 按**并集**做硬性检查（缺 numpy 即 `exit 1`）。
 #

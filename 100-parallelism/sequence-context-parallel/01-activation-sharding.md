@@ -23,7 +23,7 @@ updated: 2026-10-08
 
 > **TP 把 attention 与 MLP 的矩阵乘按列/行切开了，但有一批算子它切不到** ——
 > **LayerNorm、以及 attention / MLP 之后的 dropout**：它们**逐 token 独立**，
-> 没有可切的矩阵维，于是在 TP 组内**被复制**（每个 rank 各存一份完整的激活）。
+> 没有可切的矩阵维，于是在 TP 组内**被复制**（每台设备各存一份完整的激活）。
 > **序列并行（SP）做的就是切掉这一批**：既然它们逐 token 独立，
 > 那就**按序列维**切成 `t` 份。
 > ★★★ **本文要钉死两件事**：① 它省的**恰好是** `10sbh`（`O(s)` 的那一项）；
@@ -33,13 +33,13 @@ updated: 2026-10-08
 ## 0. 背景与动机
 
 先看 TP 切完之后剩下了什么。`tensor-parallel/01` 讲过：TP 把 attention 与 MLP 的
-**矩阵乘**按列/行切开，每个 rank 只算自己那一段。但一个 transformer 层里还有一批算子
+**矩阵乘**按列/行切开，每台设备只算自己那一段。但一个 transformer 层里还有一批算子
 **没有矩阵维可切**：
 
 - **LayerNorm**：对每个 token 的隐向量做归一化 —— **逐 token**，`s` 个 token 各自独立；
 - **attention / MLP 之后的 dropout**：逐元素乘掩码 —— **逐 token、逐通道**。
 
-⇒ 这批量**在 TP 组内被完整复制**：`t` 个 rank 各存一份**一样**的激活。
+⇒ 这批量**在 TP 组内被完整复制**：`t` 台设备各存一份**一样**的激活。
 ★★ 它们**几乎不吃算力**，却**吃显存** —— 论文的原文是
 （`specs.SP_LN_DROP_QUOTE`，载体 = ar5iv `2205.05198` 正文）：
 
@@ -139,8 +139,9 @@ updated: 2026-10-08
 
 ⇒ ★★★ **SP 切不到 `O(s²)` 的那一项**，所以**分母长得比分子快**。
 
-> ★★ **这就是 `03` 的引子**：Megatron CP 文档逐字说（`specs.CP_VS_SP_QUOTE`）
-> `Unlike prior SP …, which only splits the sequence of Dropout and LayerNorm activations, CP partitions the network inputs and all activations along the sequence dimension.`
+> ★★ **这就是 `03` 的引子**：Megatron CP 文档把 SP 与 CP 的**分工**逐字分开
+> （`specs.CP_VS_SP_QUOTE`；★★ **那句的正文在 [03-constraints](03-constraints.md) §0** ——
+> 依 `CONTRIBUTING` §7「一个知识点只有一处正文，其他位置只放链接」，**此处不复制整句**）。
 > ⇒ **CP 连 `O(s²)` 的注意力一起切** ⇒ **序列越长，SP 越不够用、CP 越必需**
 > ⇒ [03-constraints](03-constraints.md)。
 
@@ -295,13 +296,18 @@ updated: 2026-10-08
 ## 编译与运行
 
 ```sh
-cd code && make run          # 三个编号程序，任一断言失败即非零退出
-make 01_activation_sharding  # 只跑本文的配套程序（★ 不需要 numpy）
+cd code && make run                 # 三个编号程序，任一断言失败即非零退出
+python3 01_activation_sharding.py   # 只跑本文的配套程序（★ 直接跑它**不需要 numpy**）
+make 01_activation_sharding         # ★★ 这条**仍要求 numpy** —— 它先走 `check-env`（缺则 exit 1）
 ```
 
 ★ 本机的运行条件：`python3 3.13.5`，macOS arm64，**无 GPU、无多卡、无 NCCL、无真实网络**。
 ★★ **本文的配套程序不用 `numpy`**（纯标量算术）—— 但**同主题的 `02`/`03` 要**，
-所以 `requirements.txt` 与 `Makefile` 的 `check-env` 按**并集**要求它。
+所以 `requirements.txt` 与 `Makefile` 的 `check-env` 按**并集**要求它；
+★★★ **那条并集要求对 `make` 的每一个入口都生效**（`$(SCRIPTS): check-env`）——
+⇒ **「不需要 numpy」只对 `python3 01_activation_sharding.py` 成立**，对
+`make 01_activation_sharding` **不成立**（★ 本机实测：挡掉 numpy 后跑那条 `make`，
+`!! 缺 numpy` / `make: *** [check-env] Error 1`、`rc=2`，`01` 一行都没跑）。
 ★ 强制限定语：**不是 NCCL，也不是真机** —— 本文的一切数字都是**论文公式的代数**，
 **不得**支撑关于真实训练运行的结论。
 ★ 本文的判据**不依赖 BLAS**（是标量算术）⇒ 换机器不会因 BLAS 路径不同而误报。

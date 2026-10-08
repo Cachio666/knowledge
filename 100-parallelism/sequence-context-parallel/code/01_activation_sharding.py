@@ -13,8 +13,10 @@ r"""01_activation_sharding.py —— SP 切的是**张量并行没切到的那�
 > ★★ 强制限定语：**「不是 NCCL，也不是真机」** —— 本程序验证的是**切分的代数**。
 ★★ **本程序【不用 numpy】**（★ 订正说明：本主题的 `02`/`03` 需要 numpy —— 它们要做矩阵乘法；
   但 `01` 全是**标量算术**（三式与它们的恒等式）⇒ **本文件一行都没 import numpy**
-  ⇒ 单跑 `make 01_activation_sharding` 不需要 numpy。`requirements.txt` 与 `Makefile`
-  的 `check-env` 按**三个程序的并集**要求 numpy，那一份要求是**真的**（`02`/`03` 用）。
+  ⇒ ★★ **直接 `python3 01_activation_sharding.py` 不需要 numpy**。
+  ★★★ **但 `make 01_activation_sharding` 【仍要求】它** —— `Makefile` 里 `$(SCRIPTS): check-env`，
+    而 `check-env` 在缺 numpy 时 `exit 1`（那一份要求按**三个程序的并集**做，是**真的**：
+    `requirements.txt` 与 `Makefile` 的 `check-env` 都这么写，`02`/`03` 用得上）。
 
 ★★★ **本程序的判据形态：把论文的公式钉成【可验证的恒等式】**。
   三式（式(1)/(2)/(4)）都是**从 `specs.py` 的逐字引文抄来的闭式** ⇒ 本程序
