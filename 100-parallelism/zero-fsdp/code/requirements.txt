@@ -3,13 +3,23 @@
 # ★ 只有 numpy。本域**任何第三方框架都不 import**（`CONTRIBUTING` §2「永不 import 目标框架」，
 #   原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
 #
-# ★★ **本主题的定位**：ZeRO 三阶段 / FSDP / **显存占用核算**（★ 本主题只写「**分片后**」的账）
+# ★★ **本主题的定位**（与 `Makefile` **抬头那段**同一句，两处同步）：
+#      · ZeRO **三个阶段的账**（★★★ **分片不是除法**：`P_os` 的下界是 `4Ψ`、`P_os+g` 是 `2Ψ`）；
+#      · **通信量**（**不增 / `2Ψ` / `3Ψ`** —— `P_os`/`P_g` 不增、`P_os+g` = baseline、
+#        只有 `P_os+g+p` = `1.5x`）；
+#      · **FSDP 的策略**（`sharding_strategy` 的取值列表，★ 只引列表、不解释语义）
+#        与**分片后的正确性**（★★ A 类【很弱】，如实写）。
 #
 # ★★ **本主题的禁区**：
 #     **`16Ψ` 的组成与字节分解**（`2Ψ+2Ψ+KΨ=16Ψ`，`90-training/checkpointing/01-state-and-bytes.md`）、
 #     **`4x`/`8x` 与 `P_os`/`P_os+g` 的对应关系**（`90-training/checkpointing/02-sharded-save-and-load.md`）、
+#     **优化器状态的更新式**（`90-training/optimizers/01,02`）、**混合精度的类型选择**
+#     （`90-training/mixed-precision/01-type-selection.md`）、**分片检查点的落盘与恢复**
+#     （`90-training/checkpointing/02,03` —— ★ 本域只写「**分片**（放进显存）」，不写「**落盘**」；
+#     ★★ 「分片」与「分片检查点」是**同名不同指**）、**迭代精化 / 主权重为什么必须 fp32**
+#     （`10-foundations/numerical-linear-algebra/04-iterative-methods.md:229-266`）、
 #     以及**框架的分布式 API 语义**（**全库当前没有正文** ⇒ 只引 `sharding_strategy` 的取值列表，
-#     标 B 级 + 版本 + URL + 抓取日，**不解释其语义**）
+#     标 B 级 + 版本 2.14 + URL + 抓取日，**不解释其语义** —— **P19**）
 #
 # ★★ **四类数字纪律**（`CONTRIBUTING` §2；域 README 的「代码约定」表）：
 #    · **规格值** → `specs.py`（每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`）
