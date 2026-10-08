@@ -243,11 +243,31 @@
 | 相位比 `Φ_ratio` | — | 本域写出的统一量（**[E]**）：`Φ_ratio_i := 扩展窗口下第 i 维的最大相位 ÷ 训练窗口下它的最大相位`；它的意义只有一句——**`Φ_ratio_i ≤ 1` 才叫「没有外推」**。⇒ 四种 RoPE 外推方法（PI / NTK-aware / NTK-by-parts / 不做任何事）是**同一个一参数族的四个成员**，差别只在**每维的频率缩放**：PI 恒 `1`（把不该缩的高频也缩了）；NTK-aware 的 `i = 1` 那一维 `= s` ⇒ **那一维被外推**；NTK-by-parts 恒落在 `[1/s, 1]`。（正文在 `80-model-architectures/positional-encoding/03-extrapolation.md`，此处回链） |
 | ALiBi | — | **另一条路**：不加位置编码，直接在 logits 上加一项与 `(i−j)` 成正比的偏置 —— `softmax(q_i K^⊤ + m·[−(i−1), …, −1, 0])`，其中 `m` 是**训练前固定的、每个 head 一个的 slope**（闭式 `slope_h = (2^{−8/n})^h`）。★★ **脚注 10 逐字**：那条偏置**不乘** `1/√d_k` ⇒ 近因效应与 `d_k` **无关**。位置越新权重越大 ⇒ 它是一个**纯近因核**。（正文在 `80-model-architectures/positional-encoding/03-extrapolation.md`，此处回链） |
 
+## 并行策略
+
+> ★ **本节是 `100-parallelism` 的归口**：六个切分轴的正文在该域。
+> ★ 本节每条只写「**这一刀切的是什么、代价记在哪**」；**每个量的推导与判据**在对应主题目录里。
+> ★ 本节**不另立**已在别处的词条：`all-to-all` 在「互联与多卡」节、`ZeRO` / `FSDP` 在「训练与推理系统」节（正文都在 `100-parallelism`）。
+
+| 英文 | 中文 | 说明 |
+|---|---|---|
+| 数据并行 (DP / DDP) | 数据并行 | 每设备一份**完整模型副本**、吃不同数据，梯度做 **all-reduce 求平均**（★ **不是求和** —— 求和会让有效学习率随 `N` 放大）。★★ **收益是吞吐、不是显存**：每卡的模型状态**不随 `N` 下降**（`16Ψ` 恒定）⇒ **DP 的规模上限由单卡显存定**，这正是 ZeRO 的引出点。★ 一条判据陷阱：`(Σg)/N` 与 `Σ(g/N)` 在 `N` 取 **2 的幂**时**逐位相同**（判据**恒真**），换非 2 的幂才分叉。（正文在 `100-parallelism/data-parallel/`） |
+| 张量并行 (TP) | 张量并行 | 把**权重矩阵**按**列**（切 `D_out`）或**行**（切 `D_in`）切开分到各设备。★ **两者的性质不同**：列并行**不改变求值顺序**（纯搬运 ⇒ 等价性判据**恒真、无信息量**）、行并行**改变了求值顺序**（求和顺序变了）⇒ 二者**成对使用**（MLP 的列+行、attention 的 QKV 列 + 输出行）。★ 通信发生在**每一层内部**（每层 `2+2` 次 all-reduce），通信量 `∝ 激活`，**不是** `∝ 参数量`。（正文在 `100-parallelism/tensor-parallel/`） |
+| 流水线并行 (PP) | 流水线并行 | 把**层**分成 `p` 个 stage 分到各设备，微批依次流过。★ 代价记在**气泡**上（见下条）。★ 三种调度：**GPipe**（全前向再全反向）· **1F1B**（见下条）· **interleaved**（每设备多个 model chunk ⇒ 气泡除 `v`、通信乘 `(p·v−1)/(p−1)`）。★★ **换调度不换气泡**：真正改善气泡的是 **interleaved**；1F1B 省的是**显存**。（正文在 `100-parallelism/pipeline-parallel/`） |
+| 序列并行 / 上下文并行 (SP / CP) | — | ★★★ **两者不是同一件事**：**SP** 只切层内**逐 token 的复制激活**（`10sbh` 那一项：LayerNorm、Dropout 等**非张量并行区**），**不引入任何通信**；**CP** 把**输入与全部激活**（含 `O(s²)` 的 attention）都沿序列切，需要**额外 all-gather KV**。★ 二者构成**一条线**：SP 只切 `O(s)` 那一项 ⇒ **序列越长，SP 越不够用、CP 越必需**。（正文在 `100-parallelism/sequence-context-parallel/`） |
+| 专家并行 (EP) | 专家并行 | 把 MoE 的**专家**分到各设备上。★ 通信是**数据依赖**的（token 走到持有目标专家之处），每层**两次 all-to-all**（dispatch 出去 / combine 回来 —— ★ 出处是 Switch §5.4，**原话只讲 forward**）。★ 负载特征：**发出量恒等**（每源设备发 `T·top_k/EP` 条）、**接收量不均**（`max/min` 随 `EP` 度上升）。（正文在 `100-parallelism/expert-parallel/`） |
+| micro-batch | 微批 | 把一次迭代的批切成若干**小批**依次送进流水线，用来**填满** stage、把气泡摊薄。★ 气泡率的分母是**微批数**；GPipe 的实测经验是 `M ≥ 4×K` 时气泡可忽略。★ **与「梯度累积」不是一回事**（那是「多步算一次更新」）。（正文在 `100-parallelism/pipeline-parallel/01`） |
+| 流水线并行的气泡 (bubble) | 流水线气泡 | 流水线**设备之间**的空闲时间。★★ **与「GPU 硬件与执行模型」节 `TLP` 条里的「流水线气泡」不是同一个量** —— 那条是 SM **内部**指令流水线的气泡，这条是**设备之间**的等待。★ 两个流传很广的公式**不矛盾**（同一个气泡的两种分母）：GPipe 的 `O((K−1)/(M+K−1))`（分母 = **总时间**）与 Megatron 的 `(p−1)/m`（分母 = **理想时间**），换算恒等式 `b_m = b_g/(1−b_g)`。（正文在 `100-parallelism/pipeline-parallel/01`） |
+| 1F1B | — | 流水线调度：每 stage 交替做一个前向（`F`）与一个反向（`B`），使**未完成的前向**最多积压 `p` 个（GPipe 是全前向再全反向 ⇒ 积压 `m` 个）。★★ **它换的是显存、不是气泡**（原话：`The time spent in the bubble is the same for this new schedule`）。★ 术语警告：**`virtual pipeline stages`（VPP）不在 Megatron 论文里** —— 那里的词是 **interleaved** 与 **model chunk**。（正文在 `100-parallelism/pipeline-parallel/02`） |
+| 3D 并行 | — | `DP × TP × PP` 三个轴同时用。★ 配置建议：**TP 用到「单节点内的卡数」为止**（跨节点时 TP 的通信 `∝ 激活`、太贵），再往上用 PP、最后用 DP 把算力填满。★ `t · p` 只需**装得下模型**。（正文在 `100-parallelism/tensor-parallel/03` 与 `pipeline-parallel/03`） |
+| bucket | 分桶 | ★★ **两个含义**：**① 梯度分桶**（DDP）—— 梯度按大小装桶、**桶满即发起通信**，让通信尽早开始（★「能藏多少」属**通信-计算重叠**，本库该主题**未建成**）；**② 形状分桶**（JAX 的 `jit`）—— **输入形状**不同的调用分到不同编译产物。★ **同名不同指**：一个是**梯度**的分组、一个是**形状**的分组。★ 本域正文一律写「**梯度分桶**」。（① 的正文在 `100-parallelism/data-parallel/02`；② 的正文在 `70-frameworks/jax/01-jit-and-tracing.md`） |
+
 ## 训练与推理系统
 
 > ★ **本节与 `120-inference` 共享**：**训练部分**的正文在 `90-training`；
 > **推理部分**的正文在 `120-inference`（未建成）。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
 > （★ 另两条不属本节的归口：`ZeRO` / `FSDP` 的正文在 `100-parallelism` 的 `zero-fsdp`，此处只回链。）
+> ★★ **六个切分轴**（`DP` / `TP` / `PP` / `SP·CP` / `EP` / `ZeRO`）已归口到上面新增的「**并行策略**」节。
 
 | 英文 | 中文 | 说明 |
 |---|---|---|
@@ -272,4 +292,4 @@
 | 学习率 warmup（LR warm-up） | 学习率预热 | 训练开头**若干步**把 `lr` 从 ~0 抬到峰值，再交给调度衰减。★ **与「性能工程与测量」节的 `warmup（benchmark 预热）` 是同名不同指**（那条是丢弃前导测量）。★ 它**不改变总步长预算、只改变分配**：实测 `Σ lr(t) = lr_max·T/2`，**与 `W` 无关**。（正文在 `90-training/optimizers/03-schedules-and-clipping.md`，此处回链；★ **机制解释**（post-LN 的平均场理由）的正文在 `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100`） |
 | loss spike | 损失尖峰 | 训练中 loss 在某一两步突然放大。★ **本库的立场**：机制层**没有一手结论** —— 能写的只有**现象**（Adam 的更新量在 spike 那一步**变小**、随后几百步被压低）、**已被证伪**的归因（坏数据；以及「开了 clip 就不会 spike」）、和**仍是假设**的归因（梯度范数突增）。（正文在 `90-training/initialization-and-stability/03-instability-and-spikes.md`，此处回链） |
 | 重算换显存 (gradient checkpointing / recompute) | 重算换显存 | 前向**丢掉**中间激活、反向时**重算**它们，把 `n` 层的激活账压到 `O(√n)`；代价记在**时间**上（前向次数从 `n` 到 `2n − ⌈√n⌉`）。★ **两个口径必须分开**：`O(√n)` 是**内存**、`≈2n` 是**前向次数**。★★ **中文「检查点」不得用于它**；英文 `checkpointing` 在这里只在**论文术语**（Chen 2016）的意义上用。（正文在 `90-training/autograd-and-backward/02-gradient-checkpointing.md`，此处回链；★ 与本节的 `sharded checkpoint` 是**同名不同指**） |
-| sharded checkpoint | 分片检查点 | 把训练状态切成 `N` 份分别落盘。★ **它不省总字节**（多出 `N × 每片头开销`），省的是**单卡峰值**；★ 而「拼得回来」**完全依赖元数据**（头里的 `start` / 摘要 / 覆盖率或全局元数据，**三层缺一不可**）。★ 检查点**不含梯度** ⇒ 它的字节账与「训练显存」（ZeRO 那个 `16Ψ`）**差一个梯度项**。（正文在 `90-training/checkpointing/02-sharded-save-and-load.md` 与 `90-training/checkpointing/01-state-and-bytes.md`，此处回链） |
+| sharded checkpoint | 分片检查点 | 把训练状态切成 `N` 份分别落盘。★ **它不省总字节**（多出 `N × 每片头开销`），省的是**单卡峰值**；★ 而「拼得回来」**完全依赖元数据**（头里的 `start` / 摘要 / 覆盖率或全局元数据，**三层缺一不可**）。★ 检查点**不含梯度** ⇒ 它的字节账与「训练显存」（ZeRO 那个 `16Ψ`）**差一个梯度项**。（正文在 `90-training/checkpointing/02-sharded-save-and-load.md` 与 `90-training/checkpointing/01-state-and-bytes.md`，此处回链）★★ **注意「分片」这个词在这里指【落盘】** —— `ZeRO` / `FSDP` 的「**显存分片**」指【放进显存】，二者**同名不同指**，不要混。 |

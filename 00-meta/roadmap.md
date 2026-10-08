@@ -1,7 +1,7 @@
 # 实施进度表
 
-> 最后更新：2026-09-23
-> 进度：50 / 65 主题完成
+> 最后更新：2026-10-08
+> 进度：56 / 65 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -71,12 +71,12 @@
 - [x] checkpointing
 
 ## 100-parallelism
-- [ ] data-parallel
-- [ ] tensor-parallel
-- [ ] pipeline-parallel
-- [ ] sequence-context-parallel
-- [ ] expert-parallel
-- [ ] zero-fsdp
+- [x] data-parallel
+- [x] tensor-parallel
+- [x] pipeline-parallel
+- [x] sequence-context-parallel
+- [x] expert-parallel
+- [x] zero-fsdp
 
 ## 110-communication
 - [ ] collectives

@@ -10,7 +10,7 @@ prerequisites:
 tags: [checkpoint, sharded, distributed-checkpoint, metadata, resharding, byte-account]
 related:
   - 90-training/checkpointing/03-consistency-and-fault-tolerance
-  - 100-parallelism
+  - 100-parallelism/zero-fsdp
 code:
   - code/02_sharded.py
 status: stable

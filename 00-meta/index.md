@@ -219,7 +219,30 @@
   - [03-instability-and-spikes](../90-training/initialization-and-stability/03-instability-and-spikes.md)
 
 ## 100-parallelism
-尚未开始。
+- [data-parallel](../100-parallelism/data-parallel/) —— 梯度为什么是平均不是求和 / 全局 batch 的等价性 / 副本一致性与 DP 的显存瓶颈
+  - [01-gradient-averaging](../100-parallelism/data-parallel/01-gradient-averaging.md)
+  - [02-gradient-synchronization](../100-parallelism/data-parallel/02-gradient-synchronization.md)
+  - [03-redundancy-and-limits](../100-parallelism/data-parallel/03-redundancy-and-limits.md)
+- [tensor-parallel](../100-parallelism/tensor-parallel/) —— 列 / 行并行与它们的配对 / 头切分与 vocab 并行 / 通信量为什么也饱和
+  - [01-column-and-row](../100-parallelism/tensor-parallel/01-column-and-row.md)
+  - [02-heads-and-vocab](../100-parallelism/tensor-parallel/02-heads-and-vocab.md)
+  - [03-saturation-and-limits](../100-parallelism/tensor-parallel/03-saturation-and-limits.md)
+- [pipeline-parallel](../100-parallelism/pipeline-parallel/) —— 微批与气泡率 / GPipe · 1F1B · interleaved 三种调度 / 各 stage 的负载均衡
+  - [01-microbatches-and-bubbles](../100-parallelism/pipeline-parallel/01-microbatches-and-bubbles.md)
+  - [02-schedules](../100-parallelism/pipeline-parallel/02-schedules.md)
+  - [03-memory-balance](../100-parallelism/pipeline-parallel/03-memory-balance.md)
+- [sequence-context-parallel](../100-parallelism/sequence-context-parallel/) —— SP 与 CP 的分工（切的范围不同）/ 跨设备的块统计量重缩放 / 顺序与通信的约束
+  - [01-activation-sharding](../100-parallelism/sequence-context-parallel/01-activation-sharding.md)
+  - [02-ring-attention](../100-parallelism/sequence-context-parallel/02-ring-attention.md)
+  - [03-constraints](../100-parallelism/sequence-context-parallel/03-constraints.md)
+- [expert-parallel](../100-parallelism/expert-parallel/) —— 专家分片与两次 all-to-all / 负载不均与 straggler / EP 与其他轴的组合
+  - [01-expert-sharding](../100-parallelism/expert-parallel/01-expert-sharding.md)
+  - [02-load-imbalance](../100-parallelism/expert-parallel/02-load-imbalance.md)
+  - [03-ep-and-other-axes](../100-parallelism/expert-parallel/03-ep-and-other-axes.md)
+- [zero-fsdp](../100-parallelism/zero-fsdp/) —— ZeRO 三个阶段的账（分片不是除法）/ 通信量 / FSDP 的策略与分片的正确性
+  - [01-three-stages](../100-parallelism/zero-fsdp/01-three-stages.md)
+  - [02-communication](../100-parallelism/zero-fsdp/02-communication.md)
+  - [03-fsdp-and-correctness](../100-parallelism/zero-fsdp/03-fsdp-and-correctness.md)
 
 ## 110-communication
 尚未开始。
