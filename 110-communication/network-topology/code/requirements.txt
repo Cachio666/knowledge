@@ -1,5 +1,10 @@
 # 110-communication/network-topology · 运行要求
 #
-# 本目录的编号程序只需要 **`python3` + `numpy`**（本机 3.13.5 / 2.4.4 已装）。
+# 本目录的编号程序 **只需要 `python3`（>= 3.9）与标准库**：
+#   `ast` / `collections` / `inspect` / `textwrap` / `sys`。
+#
+# ★★ 它们**不 import `numpy`**（本主题是图遍历、整数与字符串的比对，没有数组运算）
+#   ⇒ ★★ **本文件【不列】任何依赖**，`Makefile` 的 `check-env` 也**不探测 `numpy`**。
+#   ★ 这是同域 `nccl` 那一轮的结构性发现（依赖与用途不符会让**根本不用它**的读者硬失败）。
+#
 # ★ **不 import 任何第三方框架**（`make lint` 用 AST 把关）。
-numpy>=2.0

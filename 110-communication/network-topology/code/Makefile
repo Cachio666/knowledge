@@ -4,17 +4,29 @@
 #   编号程序是纯 `.py`，**默认 `python3` 下可跑** ⇒ **三类断言放在编号程序内部**，
 #   失败时以**非零退出码**结束。**没有 `verify.py`**，也**没有** `meta_falsify.py`。
 #
-# ★★ **Chunk 0 只落骨架**：本目录**尚无任何编号程序** ⇒ `SCRIPTS` 为空，
-#    `make run` 走**空分母**分支（★ **它不构成证据**）。
+# ★★ **Chunk 3 已落盘**：本目录现有 **3 个编号程序** ⇒ `SCRIPTS` 非空，
+#    `make run` **真跑**三个程序（★ 走不到空分母分支）。
+#
+#    ★★★ **本主题【有真 A 类】**（★ 与同域的 `nccl` **相反**）：它的知识对象是
+#      **组合结构**（路径数 / 主机的 `k³/4` / rail 的划分）⇒ **本机可以算足**，
+#      并且**与外部工件对拍**：
+#        · `01` 把胖树**建成一张显式的图**再**数**，与 **SIGCOMM 2008 的论文值**对拍；
+#        · `02` 把 `N` 张卡**逐张摆**到 `R` 条轨上再**数回来**，与 `N/R` / `G/R` 对拍；
+#        · `03`（RoCE / InfiniBand）**A 类不可得**（本机**无网卡**）⇒ **如实声明**，
+#          ★★ 且用 **运行期记账 + 调用点核对** 让它**可机械复核**（★ 机制**不同于** `nccl` 的源码扫描）。
 #
 #    本主题的定位：胖树 / 三层 Clos / rail-optimized 的组合结构与 RoCE / PFC / ECN / SHARP 的机制
 #
 #   ★ 本主题的禁区：**NVLink 域 / NVSwitch / PCIe / IB 代际的带宽与拓扑** → `20-gpu-architecture/interconnect/01,02`；**bisection 的通用推导** → `interconnect/02`
-#   ★★ 判据纪律：本主题的 A 类钉在【组合结构】上（路径数 / `k³/4` / 等价路径数）—— ★ 与 SIGCOMM 2008 的**论文值**对拍（外部锚点，不是自证）
+#   ★★ 判据纪律：本主题的 A 类钉在【组合结构】上（路径数 / `k³/4` / 等价路径数）—— ★ 与 **SIGCOMM 2008 的论文值**对拍（外部锚点，不是自证）
 #
+#   ★★ **本主题的三个编号程序【只用标准库】**（`ast` / `collections` / `inspect` / `textwrap` /
+#     `sys`）—— ★ 它们**不 import `numpy`**（本主题是图遍历、整数与字符串的比对，没有数组运算）
+#     ⇒ ★★ `check-env` **不探测 `numpy`**（`requirements.txt` 也不列它）——
+#       否则**没装 numpy 的读者**会在一个**根本不用 numpy** 的主题上**硬失败**（依赖与用途不符）。
 # ── 本机的硬约束 ──────────────────────────────────────────────────────────────
 #   **无 GPU、无 NCCL、无 InfiniBand / RoCE 网卡、无 NVLink**；
-#   `python3` = 3.13.5、`numpy` = 2.4.4（已装）。
+#   `python3` = 3.13.5（★ 本主题**不需要** `numpy`，`check-env` 也不探测它）。
 #   ★ **本域最强的一条限定语**：**「不是 NCCL，也不是真机」**。
 #   ★ **多进程只进 `../probes/`**（实测：ring allreduce 原型连跑通都不稳，约 80% 概率挂）
 #     ⇒ **编号程序一律单进程**，保证 `make run` 快且稳。
@@ -34,10 +46,14 @@
 #                   盲区：①只变异常量 ②负字面量不进分母 ③前缀式检查漏网 ④`_walk` 不下钻 `BinOp`
 #                         ⑤`None` 计为「跳过」 ⑥浮点变异是 `v + 1.0`（大浮点吞掉它 ⇒ **常量 < 2^53**）
 #                         ⑧**「整体钉住」代替不了「元素钉住」**（每个元组/列表常量都要逐元素 `==`）
+#                   ★★★ **一条【不在上面正典里】的盲区（本主题实测）**：**跨行隐式字符串拼接的常量
+#                     会被【静默计入「跳过」】**（`ast` 把它折成一个 `Constant`，行号跨行 ⇒ `_patch` 拒绝）
+#                     ⇒ ★★ 本主题的 `specs.py` **所有字符串常量一律写成单行**（★ 同域 `collectives` /
+#                       `nccl` 也是单行 —— 复核过，它们的跳过数都是 `0`）。
 #   Makefile / requirements.txt   构建入口
 
 PYTHON  ?= python3
-SCRIPTS :=
+SCRIPTS := 01_fat_tree_and_clos 02_rail_optimized 03_roce_and_infiniband
 
 .PHONY: all run lint mutate lines clean check-env
 
@@ -63,7 +79,7 @@ check-env:
 	@if [ -z "$(PYTHON)" ]; then echo "!! PYTHON 是空的。请显式给：make run PYTHON=python3"; exit 1; fi
 	@if ! command -v "$(PYTHON)" >/dev/null 2>&1 && [ ! -x "$(PYTHON)" ]; then echo "!! 找不到解释器: $(PYTHON)"; exit 1; fi
 	@$(PYTHON) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' || { echo "!! 需要 python >= 3.9"; exit 1; }
-	@$(PYTHON) -c 'import numpy' 2>/dev/null || { echo "!! 缺 numpy。请先: $(PYTHON) -m pip install -r requirements.txt"; exit 1; }
+# ★★ 本主题**不探测 `numpy`**（三个编号程序只用标准库 ⇒ 依赖与用途相符；见文件抬头）。
 
 # ★ `ast` 而非 grep：注释里出现框架名不算违规，真 import 才算。
 lint: check-env
