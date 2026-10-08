@@ -3,12 +3,18 @@
 # ★ 只有 numpy。本域**任何第三方框架都不 import**（`CONTRIBUTING` §2「永不 import 目标框架」，
 #   原文的措辞比 torch 宽 —— 本域按宽的口径执行）。
 #
-# ★★ **本主题的定位**：PP 的**调度与气泡**：`1F1B` 的时序、气泡率的两个口径、stage 间的显存均衡
+# ★★ **本主题的定位**（与 `Makefile` 末尾那一行**同一句**，两处同步）：
+#     PP 的**微批与气泡率**（两个口径 + 换算恒等式）、**GPipe / 1F1B / interleaved 三种调度**
+#     （★ 1F1B 换的是**显存**不是气泡）、**各 stage 的负载均衡**（总时间由最慢的 stage 决定）
 #
 # ★★ **本主题的禁区**：
-#     **通信-计算重叠的机制**（双缓冲 / 分块流水 / 异步落盘）与**重算换显存**的机制
-#     —— 回链 `110-communication` 的 `overlap` 主题（未建成）与
-#     `90-training/autograd-and-backward/02-gradient-checkpointing.md`
+#     · **重算换显存**的机制（`O(√n)` 内存 vs `≈2n` 前向次数）→
+#       `90-training/autograd-and-backward/02-gradient-checkpointing.md`
+#       （★ 本主题只写「**PP 下用重算做显存均衡的取舍**」）
+#     · **transformer block 的结构** → `80-model-architectures/transformer/`
+#     · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`（**未建成**）
+#     · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03`（本域）与
+#       `10-foundations/performance-models/02-amdahl-and-scaling.md:223`（★ **不得重写**）
 #
 # ★★ **四类数字纪律**（`CONTRIBUTING` §2；域 README 的「代码约定」表）：
 #    · **规格值** → `specs.py`（每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`）
@@ -18,6 +24,10 @@
 #    ★ **不得把推导写成实测**。
 #    ★★ 本域另加两条落法：**所有数值常量取到 `< 2^53`**（`mutate.py` 的浮点变异是 `v + 1.0`，
 #       大浮点数会吞掉它）；**幂次一律写成十进制字面量**（`_walk()` 不下钻 `BinOp`）。
+#
+# ★★ **本主题的判据不涉及 BLAS**（那是 `tensor-parallel` 的可移植性风险）——
+#    这里的判据是**离散事件模拟 ↔ 闭式公式**对拍与**整数/算术**，
+#    所以换机器**不会**因 BLAS 路径不同而误报。★ 但仍然标「本机实测值」（见上）。
 #
 # ★★ **「本机无 GPU」的限定语**：本机**没有多卡 / 没有 NCCL / 没有真实网络** ⇒
 #    一切数值都是 `python3` + `numpy` 的**玩具规模**真跑，验证的是**切分的代数**
