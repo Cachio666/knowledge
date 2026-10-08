@@ -40,7 +40,7 @@ r"""03_redundancy.py —— ★★★ DP 的**冗余账**：`N` 个副本用 `N 
     `90-training/checkpointing/01-state-and-bytes.md` 写过（§1.3 + 判据表 +
     `code/01_state_bytes.py:310` 的 `A.3`）⇒ 本程序**只消费**那个系数（`A.2` 把它的
     **四项**建出来量一遍），**不重推分解**；
-  · ★★ **「按 `N` 分片后怎么变」不在本主题** —— 那是 `zero-fsdp/01`（**未建成，Chunk 6**）的正文
+  · ★★ **「按 `N` 分片后怎么变」不在本主题** —— 那是 `zero-fsdp/01`的正文
     （`P_os` 在 `N=512` 仍要 `4.0234Ψ`、「分片不是除法」）⇒ 本程序**只写 DP 的账**，
     并在 `B.2` 里给出**接口 + 回链**；
   · **梯度规约的算法**（ring allreduce / `V(N)`）⇒ `110-communication`。
@@ -445,7 +445,7 @@ def part_B():
           "NumPy 的 `nbytes` vs [C] 常量的整数倍）—— 「总量 ∝ `N`」是它们的**推论**，"
           "不另立判据。")
     print("     ★★ 而「**加卡不能解决显存问题**」这句话本身**在本程序只作陈述、不另给判据**"
-          "（计划 §1.3.3 第 3 条的裁定）⇒ 它的定量正文在 `zero-fsdp/01`（**未建成，Chunk 6**）"
+          "（计划 §1.3.3 第 3 条的裁定）⇒ 它的定量正文在 `zero-fsdp/01`"
           "（`P_os` 在 `N=512` 仍要 `4.0234Ψ`），此处**回链**。")
     check("B.2", len(set(per_card)) == 1
           and per_card[0] == int(specs.ZERO_TOTAL_MULTIPLE * psi),
@@ -513,11 +513,11 @@ def part_C():
     print("           ★ **消歧**：这里的 `2Ψ` 指**两倍参数个数**；`A.2` 表里那个 `2Ψ` 指"
           "**参数那一项的字节账**（fp16 ⇒ 2 字节/参数）—— **同名不同指、相差 8 倍**。")
     print("     ★★ **分片之后**怎么变（`P_os` 的 `4Ψ` 下界、「分片不是除法」）**不在本主题**"
-          " ⇒ 回链 `zero-fsdp/01`（**未建成，Chunk 6**）。")
+          " ⇒ 回链 `zero-fsdp/01`。")
     check("C.3", b2 == int(TOL_SCALE_UP * b1) and psi2 == 2 * psi and b1 == 16 * psi,
           "★★ **每卡字节只由 `Ψ` 决定**（`%d → %d B`，**恰好 %g 倍**）⇒ "
           "「加卡能装下更大的模型」是**错的**：每份副本都要放**完整**的状态"
-          "（分片后的账回链 `zero-fsdp/01`（**未建成，Chunk 6**））" % (b1, b2, TOL_SCALE_UP))
+          "（分片后的账回链 `zero-fsdp/01`）" % (b1, b2, TOL_SCALE_UP))
 
 
 # ===========================================================================
@@ -535,7 +535,7 @@ def preflight():
     print("  ★★ 强制限定语：**不是 NCCL，也不是真机** —— 验证的是**切分的代数**。")
     print("  ★★ **禁区回链**（本程序一行都不重写）：`16Ψ` 的**组成与分解**在 "
           "`90-training/checkpointing/01-state-and-bytes.md`；**按 `N` 分片后怎么变**在 "
-          "`zero-fsdp/01`（**未建成，Chunk 6**）；**梯度规约的算法**（ring allreduce / `V(N)`）在 `110-communication`。")
+          "`zero-fsdp/01`；**梯度规约的算法**（ring allreduce / `V(N)`）在 `110-communication`。")
     before = len(FAILS)
 
     hits = _mark_assignments_in(os.path.abspath(__file__))

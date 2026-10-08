@@ -11,7 +11,6 @@ prerequisites:
 tags: [pipeline-parallel, load-balance, embedding, lm-head, straggler, recomputation]
 related:
   - 100-parallelism/pipeline-parallel/02-schedules
-  # ★ 下面这一篇**未建成**（Chunk 5）—— 此处只作**前向声明**，不是一个可用链接。
   - 100-parallelism/expert-parallel/02-load-imbalance
   - 100-parallelism/tensor-parallel/03-saturation-and-limits
 code:
@@ -118,7 +117,7 @@ updated: 2026-10-08
 > **`p` 越大 ⇒ 每级分到的层数越少 ⇒ 同样的「差 1 层」占的比例越大。**
 > `p = 5` 时是 `3 : 2`（差 `50%`），`p = 8` 时是 `2 : 1`（**差 `100%`**）。
 
-★★ **这与 `expert-parallel` 的「EP 度越大 ⇒ 负载越不均」是同一个机制**（见 [../expert-parallel/02-load-imbalance](../expert-parallel/02-load-imbalance.md)，**未建成 · Chunk 5**）：
+★★ **这与 `expert-parallel` 的「EP 度越大 ⇒ 负载越不均」是同一个机制**（见 [../expert-parallel/02-load-imbalance](../expert-parallel/02-load-imbalance.md)）：
 **并行度越高，每一份越小，波动越难被平均掉**。
 
 ★ **每级负载的【最大/最小】之比随 `p` 变**（**不是常数**，`code/03_balance.py` 实测，`L=12`、带 embedding）：
@@ -275,7 +274,7 @@ PP 里常用**重算**来压首尾那一级偏高的**显存**（把激活丢掉
 - **气泡怎么算** → [01-microbatches-and-bubbles](01-microbatches-and-bubbles.md)；
 - **1F1B 与 interleaved 各换到什么** → [02-schedules](02-schedules.md)；
 - **专家级的负载不均**（★ 数据依赖的那种）→
-  `100-parallelism/expert-parallel/02-load-imbalance.md`（**未建成 · Chunk 5**）；
+  `100-parallelism/expert-parallel/02-load-imbalance.md`；
 - **重算换显存的机制** → `90-training/autograd-and-backward/02-gradient-checkpointing.md`（此处回链）；
 - ★ **点对点通信的实现**与**通信-计算重叠的机制**（本文只用到「首尾两级要互传激活」这个事实）
   → `110-communication/` 的 `overlap` 主题（**未建成**）—— ★ 本文**一行都不重写**它。
@@ -290,7 +289,7 @@ PP 里常用**重算**来压首尾那一级偏高的**显存**（把激活丢掉
 - 本仓库 [01-microbatches-and-bubbles](01-microbatches-and-bubbles.md) —— 气泡的两个口径；
   [02-schedules](02-schedules.md) —— 三种调度；
   [../expert-parallel/02-load-imbalance](../expert-parallel/02-load-imbalance.md) —— **同构**的那一笔账
-  （★ **未建成 · Chunk 5**）。
+。
 
 ## 编译与运行
 
