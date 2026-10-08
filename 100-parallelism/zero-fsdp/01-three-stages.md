@@ -81,7 +81,7 @@ updated: 2026-10-08
 （论文把它与 `P_os` 合称 `P_os+g`）；`P_p` = **p**arameter partitioning。
 ★★★ **`stage` 在这里一律写全称「ZeRO 阶段」** —— 本库的 `stage` 有**四个**含义
 （TVM 的计算阶段、cutlass 的流水级数、**流水线并行的 stage**、**ZeRO 阶段**），
-见域 README 的「同名不同指」（`100-parallelism/README.md:103`）。
+见域 README 的「同名不同指」一节。
 
 ### 1.3 ★★ 为什么下界是 `4Ψ` / `2Ψ`（「收益饱和」）
 

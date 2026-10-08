@@ -729,7 +729,7 @@ def preflight():
     print("  ★★ **禁区回链**：导出/推理格式的选择（`.keras` vs SavedModel）在 "
           "`70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；"
           "异步落盘 / 通信-计算重叠在 `110-communication/README.md:12`；"
-          "优化器状态的分片与通信量在 `100-parallelism/README.md:14`。")
+          "优化器状态的分片与通信量在 `100-parallelism/zero-fsdp/`。")
     before = len(FAILS)
 
     hits = _mark_assignments_in(os.path.abspath(__file__))

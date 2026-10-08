@@ -19,7 +19,7 @@
 #    （`.keras` vs SavedModel）→ `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`。
 #    ★ 另有两条**接口级**回链（不是禁区，是分工）：
 #      · **异步落盘 / 通信-计算重叠** → `110-communication/README.md:12`；
-#      · **优化器状态的分片与通信量** → `100-parallelism/README.md:14`。
+#      · **优化器状态的分片与通信量** → `100-parallelism/zero-fsdp/`。
 #
 # ★★ **本主题不需要网络**：`make run` 只读 `code/` 里的文件 + 写**系统临时目录**
 #    （分片要落盘才能量字节；`02`/`03` 跑完清理自己的临时目录）。

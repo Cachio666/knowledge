@@ -12,8 +12,8 @@ r"""03_schedule_clip.py —— 学习率调度 与 **梯度裁剪**（含它在�
 > 玩具规模的真跑，**不得支撑关于真实训练系统的结论**。
 
 ★★ **本主题的禁区**（`CONTRIBUTING` §7 + 域 README 的边界表）：
-  · **优化器状态的分片策略与通信量** → `100-parallelism/README.md:14`（`zero-fsdp`）；
-  · **数据并行 / DDP / 梯度规约** → `100-parallelism/README.md:9`、`110-communication/`；
+  · **优化器状态的分片策略与通信量** → `100-parallelism/zero-fsdp/`；
+  · **数据并行 / DDP / 梯度规约** → `100-parallelism/data-parallel/`、`110-communication/`；
   · ★★ **`LR warmup` 的机制解释**（post-LN 的平均场理由、`hypothesize` 的措辞纪律）→
     `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100`；
     **本程序一行都不重写它**，只做**工程判据与设定**（形状、峰值位置、末值、总账）。
@@ -778,7 +778,7 @@ def main():
     print("     `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100` ——")
     print("     本程序**不重写**它，只做**工程判据与设定**（形状 / 峰值 / 末值 / 总账）。")
     print("  ★ 禁区（一律回链，本程序不写）：优化器状态的**分片与通信量**在")
-    print("    `100-parallelism/README.md:14`（`zero-fsdp`）；DDP / 梯度规约在 `:9` 与 `110-communication/`。")
+    print("    `100-parallelism/zero-fsdp/`；DDP / 梯度规约在 `:9` 与 `110-communication/`。")
     print("  ★ 回链（**只实现、不重定义**）：裁剪的判据与阈值在")
     print("    `autograd-and-backward/03-gradient-lifecycle.md` 的表 A ⑦（**含 `A.2b` 的两侧判据**，T26）；")
     print("    `unscale` 的时机在 `mixed-precision/02-amp-execution.md` 的 `A.2`/`A.2c`/`A.2d`。")

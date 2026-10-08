@@ -76,7 +76,7 @@ updated: 2026-09-23
   `90-training/mixed-precision/02-amp-execution.md` 的 `A.2`/`A.2c`/`A.2d`**
   —— **本文回链、不重定义**；本文只**钉住管线里三格的次序**并把「`S` 与 `lr` 各管一格」
   写成**可分离性**的断言（§2.2）。
-- **优化器状态的分片与通信量** → `100-parallelism/README.md:14`（`zero-fsdp`）。
+- **优化器状态的分片与通信量** → `100-parallelism/zero-fsdp/`。
 - **`LR warmup` 的机制解释** → `80-model-architectures/normalization/02`（见上）。
 - **框架的 autograd 语义** → `70-frameworks/pytorch/02-autograd.md`。
 
@@ -348,7 +348,7 @@ unscale(÷S)  →  clip(max_norm)  →  ×(−lr)
 - **`LR warmup` 的机制解释**（post-LN 的平均场理由） ⇒
   `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100`（**正文在彼**）。
 - **`warmup` 这个词的另一个语义（benchmark 预热）** ⇒ `00-meta/glossary.md:146`。
-- **优化器状态的分片与通信量** ⇒ `100-parallelism/README.md:14`（`zero-fsdp`）。
+- **优化器状态的分片与通信量** ⇒ `100-parallelism/zero-fsdp/`。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU**、不训练任何真模型）⇒
   **不得支撑关于大规模训练的结论**。
@@ -425,5 +425,5 @@ python3 03_schedule_clip.py     # 只跑本程序
 - ★★ **边界声明跟着知识点走**：`LR warmup` 的**机制解释**在
   `80-model-architectures/normalization/02:83-100`，本文**回链、不重写**，
   且**这条声明写在本篇里**（不是只写在别处的抬头）。
-- **禁区**：优化器状态的**分片与通信量**在 `100-parallelism/README.md:14`（`zero-fsdp`）
+- **禁区**：优化器状态的**分片与通信量**在 `100-parallelism/zero-fsdp/`
   —— 本文**一行都不写**。

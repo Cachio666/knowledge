@@ -60,8 +60,8 @@
 | `mixed-precision` | **累加器宽度的误差界**（fp32 → fp16 使绝对误差界放大 **8192 倍**、split-K 的顺序不确定性） | `10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md:118-126,304-306,326` |
 | `mixed-precision` | 主权重「**为什么必须 fp32**」的**数值理由** | `10-foundations/numerical-linear-algebra/04-iterative-methods.md:229-266`（尤其 `:245,259-262`） |
 | `mixed-precision` | QAT 侧的「优化器更新的是谁」；STE / 伪量化 / LSQ / PACT 全主题 | `130-quantization/qat/02-fake-quant-and-lsq.md:69,420`、`01-ste.md:202` |
-| `optimizers` | ★★ **优化器状态的分片策略与通信量**（ZeRO 三阶段、FSDP、`4x/8x`、`16Ψ` 的账） | `100-parallelism/README.md:14`（`zero-fsdp` 那一栏）；`10-foundations/performance-models/02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文。★ 本域只留**接口** |
-| `optimizers` | 数据并行 / DDP / 梯度规约 | `100-parallelism/README.md:9`（`data-parallel`）、`110-communication/` |
+| `optimizers` | ★★ **优化器状态的分片策略与通信量**（ZeRO 三阶段、FSDP、`4x/8x`、`16Ψ` 的账） | `100-parallelism/zero-fsdp/`；`10-foundations/performance-models/02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文。★ 本域只留**接口** |
+| `optimizers` | 数据并行 / DDP / 梯度规约 | `100-parallelism/data-parallel/`、`110-communication/` |
 | `optimizers` | `lr` 被编译 guard 固化 | `60-compilers/inductor/04-dynamic-shapes.md:42,163`（**编译角度，不是优化器角度**） |
 | `optimizers` | 推理口径的「权重文件含优化器状态」 | `45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md:234,301`（那一行逐字：「权重文件里含优化器状态 ⇒ 那是**训练**侧的字节；**不得**计入推理的访存」） |
 | `initialization-and-stability` | ★ **warmup 的机制解释**（post-LN 的平均场理由） | `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`；`transformer/01:49,252`。★ 本域只写**工程判据与设定** |

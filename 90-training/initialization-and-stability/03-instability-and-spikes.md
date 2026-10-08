@@ -294,7 +294,7 @@ N 步   Σ_t ‖Δw_t‖ = N·lr·max_norm = 20000 · 0.01 · 1 = 200      ← �
 - **`LR warmup` 的机制解释** ⇒ `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`（**正文在彼**）。
 - **残差流/深度的账** ⇒ `80-model-architectures/transformer/01-block-and-residual-stream.md:191,232-233,263`（**正文在彼**）。
 - **误差沿深度的传播** ⇒ `130-quantization/theory/03-outliers-and-propagation.md:124,205`（**正文在彼**）。
-- **优化器状态的分片与通信量** ⇒ `100-parallelism/README.md:14`（`zero-fsdp`）—— 本文**一行都不写**。
+- **优化器状态的分片与通信量** ⇒ `100-parallelism/zero-fsdp/`—— 本文**一行都不写**。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU**、不训练任何真模型）⇒
   **不得支撑关于大规模训练的结论**。★ 尤其：本文量的是**更新量**的形态，**不是 loss 的形态**。
@@ -368,5 +368,5 @@ python3 03_spikes.py         # 只跑本程序
   `spike_mechanism_one_source_conclusion`。
 - **禁区**：`LR warmup` 的机制解释 → `80-…/normalization/02:83-100`；
   残差流/深度的账（`small sub-layers and large shortcut` 的结构侧）→ `80-…/transformer/01`；
-  误差传播 → `130-…/theory/03:124,205`；状态分片与通信量 → `100-parallelism/README.md:14`。
+  误差传播 → `130-…/theory/03:124,205`；状态分片与通信量 → `100-parallelism/zero-fsdp/`。
   本文**一行都不重推**。

@@ -62,9 +62,9 @@ updated: 2026-09-23
 ### 本文的范围
 
 - ★★ **优化器状态的分片策略与通信量**（ZeRO / FSDP / `4x` / `8x` / `16Ψ`）**全属**
-  `100-parallelism/README.md:14`（`zero-fsdp`）；`10-foundations/performance-models/
+  `100-parallelism/zero-fsdp/`；`10-foundations/performance-models/
   02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文 ⇒ **本文只写单卡口径**。
-- **数据并行 / DDP / 梯度规约** → `100-parallelism/README.md:9`、`110-communication/`。
+- **数据并行 / DDP / 梯度规约** → `100-parallelism/data-parallel/`、`110-communication/`。
 - **框架的 autograd 语义** → `70-frameworks/pytorch/02-autograd.md`（全篇 256 行）。
 - ★★ **`LR warmup` 的机制解释** → `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100`
   （`warmup` 与本文的关系只在「调度乘子」这一层，见 `03`）。
@@ -211,7 +211,7 @@ Adam+L2 与 AdamW 的第 1 步（`A.7`，`g₁` 随机、`λ = 0.1`、`w₀ = 1`
 —— **同一个量**）；而动量（`01`）只有**一份**状态 ⇒ `4` 字节，**不是同一个量**。
 
 ★★ **分片策略与通信量**（ZeRO 三阶段 / FSDP / `4x` / `8x` / `16Ψ` 的账）
-**正文在** `100-parallelism/README.md:14`（`zero-fsdp`）——**本文只留接口，不写**。
+**正文在** `100-parallelism/zero-fsdp/`——**本文只留接口，不写**。
 
 ### 2.2 ★★ 更新量的量级：Adam 的 `Δw` **与 `|g|` 无关**
 
@@ -380,7 +380,7 @@ Adam+L2 与 AdamW 的第 1 步（`A.7`，`g₁` 随机、`λ = 0.1`、`w₀ = 1`
 - **`Δw` 与 `ULP/2` 的那条判据**（以及「主权重 / 梯度 / 优化器状态 / loss 四行各是什么类型」） ⇒
   `90-training/mixed-precision/01-type-selection`（**判据与阈值在彼，此处只消费**）。
 - **梯度在训练循环里还要经历什么** ⇒ `90-training/autograd-and-backward/03-gradient-lifecycle`。
-- **优化器状态的分片与通信量** ⇒ `100-parallelism/README.md:14`（`zero-fsdp`）
+- **优化器状态的分片与通信量** ⇒ `100-parallelism/zero-fsdp/`
   —— **正文在彼，本文只留单卡口径与接口**。
 - **上游**：`10-foundations/numerical-linear-algebra/04-iterative-methods.md:386`
   （把「更新量 Δw 在什么精度下算」让渡给本域的那一行）。

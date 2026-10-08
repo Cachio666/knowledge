@@ -73,10 +73,10 @@ related:
 ⚠ **本文的范围**（`CONTRIBUTING` §7 与域 README 的边界表）：
 
 - **优化器状态的分片策略与通信量**（ZeRO 三阶段 / FSDP / `4x` / `8x` / `16Ψ` 的账）
-  **全属** `100-parallelism/README.md:14`（`zero-fsdp` 那一栏）；
+  **全属** `100-parallelism/zero-fsdp/`；
   `10-foundations/performance-models/02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文。
   ⇒ **本文只写单卡口径**，分布式只留接口。
-- **数据并行 / DDP / 梯度规约** → `100-parallelism/README.md:9`（`data-parallel`）、`110-communication/`。
+- **数据并行 / DDP / 梯度规约** → `100-parallelism/data-parallel/`、`110-communication/`。
 - **`lr` 被编译 guard 固化** → `60-compilers/inductor/04-dynamic-shapes.md:42,163`（那是**编译角度**）。
 - **框架的 autograd 语义**（`grad_fn` / `is_leaf` / `saved_tensors`）→
   `70-frameworks/pytorch/02-autograd.md`（**全篇 256 行**）—— 本文**一行都不重写**。
@@ -233,7 +233,7 @@ b_t = Σ_{k=0}^{t} μ^(t−k) · g_k
 
 **⇒ 动量让「状态 : 参数」从 `0` 变成 `1`（+100%）。**
 ★ **单卡口径**：这里只数「一个参数多占几字节」。
-**分片策略与通信量**的正文在 `100-parallelism/README.md:14`（`zero-fsdp`）—— 本文只留接口。
+**分片策略与通信量**的正文在 `100-parallelism/zero-fsdp/`—— 本文只留接口。
 ★ 与 `mixed-precision/01` 的「优化器状态 8 字节/参数」**不是同一个量**：那里的 8 数是
 **Adam 的 `m`+`v` 两份**；动量只有一份 ⇒ **4**。
 
@@ -353,7 +353,7 @@ b_t = Σ_{k=0}^{t} μ^(t−k) · g_k
   （**判据与阈值在彼，此处只消费**）。
 - **梯度本身怎么来、在训练循环里还要经历什么**（累积 / 清零 / 裁剪 / 二阶） ⇒
   `90-training/autograd-and-backward/03-gradient-lifecycle`。
-- **优化器状态的分片与通信量** ⇒ `100-parallelism/README.md:14`（`zero-fsdp`）
+- **优化器状态的分片与通信量** ⇒ `100-parallelism/zero-fsdp/`
   —— **正文在彼，本文只留单卡口径与接口**。
 - **上游**：`10-foundations/numerical-linear-algebra/04-iterative-methods`（`κ·u` 判据链，
   以及 `:386` 把「更新量 Δw 在什么精度下算」让渡给本主题的那一行）；

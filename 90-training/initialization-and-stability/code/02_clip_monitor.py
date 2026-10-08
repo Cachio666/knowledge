@@ -16,7 +16,7 @@ r"""02_clip_monitor.py —— 梯度裁剪，以及**范数监控的判据**。
     `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`；
   · **残差流的范数随深度增长** → `80-…/transformer/01:191,232-233,263`；
   · **误差沿深度的传播** → `130-quantization/theory/03-outliers-and-propagation.md:124,205`；
-  · **优化器状态的分片与通信量** → `100-parallelism/README.md:14`（`zero-fsdp`）。
+  · **优化器状态的分片与通信量** → `100-parallelism/zero-fsdp/`。
   ★ 本程序只写**单卡口径的范数与监控**；`B.1` 里那句「监控只需要每层一个标量」
     **是纯代数的**（`√Σ ‖g_l‖²` 与拼接/顺序无关），**不是**分布式的通信方案（那在 `100-parallelism`）。
 
@@ -815,7 +815,7 @@ def preflight():
           "`autograd-and-backward/03` 的表 A ⑦（**含 `A.2b`**，T26）；"
           "`unscale` 的时机/溢出跳步在 `mixed-precision/02`。")
     print("  ★★ **禁区**：`LR warmup` 的机制解释在 `80-…/normalization/02:83-100`；"
-          "范数的分片与通信量在 `100-parallelism/README.md:14`。")
+          "范数的分片与通信量在 `100-parallelism/zero-fsdp/`。")
     before = len(FAILS)
 
     hits = _mark_assignments_in(os.path.abspath(__file__))

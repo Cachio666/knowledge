@@ -13,9 +13,9 @@ r"""02_adam_adamw.py —— Adam / AdamW：**weight decay 的两种语义**，�
 
 ★★ **本主题的禁区**（`CONTRIBUTING` §7 + 域 README 的边界表）：
   · **优化器状态的分片策略与通信量**（ZeRO / FSDP / `4x` / `8x` / `16Ψ`）→
-    `100-parallelism/README.md:14`（`zero-fsdp`）；`10-foundations/performance-models/
+    `100-parallelism/zero-fsdp/`；`10-foundations/performance-models/
     02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文 ⇒ **本程序只写单卡口径**；
-  · **数据并行 / DDP / 梯度规约** → `100-parallelism/README.md:9`、`110-communication/`；
+  · **数据并行 / DDP / 梯度规约** → `100-parallelism/data-parallel/`、`110-communication/`；
   · **框架的 autograd 语义** → `70-frameworks/pytorch/02-autograd.md`（全篇 256 行）。
   ⇒ **本程序一行都不重写**这些。
 
@@ -494,7 +494,7 @@ def part_B():
           % (bytes_params, bytes_m, bytes_v, bytes_m + bytes_v, bytes_params))
     print("  ★ **单卡口径**：这里只数「一个参数多占几字节」。")
     print("    **分片策略与通信量**（ZeRO 三阶段 / FSDP / `4x` / `8x` / `16Ψ` 的账）的正文在")
-    print("    `100-parallelism/README.md:14`（`zero-fsdp`）；`10-foundations/performance-models/")
+    print("    `100-parallelism/zero-fsdp/`；`10-foundations/performance-models/")
     print("    02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文 ⇒ **本主题只留接口**。")
     print("  ★ 口径对照：`mixed-precision/01-type-selection.md` §2.2 的「优化器状态 8 字节/参数」"
           "数的正是这里的 `m`+`v`（**同一个量**）；而动量（`01`）只有**一份**状态 ⇒ **4** 字节。")
@@ -785,7 +785,7 @@ def main():
           % (sys.version.split()[0], np.__version__))
     print("  ★ 失败标记 ASSERT_FAIL_MARK = %r（本主题自定义；不跨主题照抄）" % ASSERT_FAIL_MARK)
     print("  ★ 禁区（一律回链，本程序不写）：优化器状态的**分片与通信量**在")
-    print("    `100-parallelism/README.md:14`（`zero-fsdp`）；DDP / 梯度规约在 `:9` 与 `110-communication/`；")
+    print("    `100-parallelism/zero-fsdp/`；DDP / 梯度规约在 `:9` 与 `110-communication/`；")
     print("    框架的 autograd 语义在 `70-frameworks/pytorch/02-autograd.md`。")
     print("  ★ 接口：`ULP/2` 的阈值与判据在 `mixed-precision/01-type-selection`（此处只消费）")
     print("    —— 本程序 `B.2b` 用它把「Adam 的更新量进得去、SGD 的被吞」落成一条断言。")

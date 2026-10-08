@@ -304,7 +304,7 @@ as if the norms of the individual gradients were concatenated into a single vect
 - **`LR warmup` 的机制解释**（post-LN 的平均场理由） ⇒
   `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`（**正文在彼**）。
 - **loss spike 的现象与归因** ⇒ `90-training/initialization-and-stability/03-instability-and-spikes.md`。
-- **优化器状态的分片与通信量** ⇒ `100-parallelism/README.md:14`（`zero-fsdp`）—— 本文**一行都不写**。
+- **优化器状态的分片与通信量** ⇒ `100-parallelism/zero-fsdp/`—— 本文**一行都不写**。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU**、不训练任何真模型）⇒
   **不得支撑关于大规模训练的结论**。
@@ -369,5 +369,5 @@ python3 02_clip_monitor.py        # 只跑本程序
   `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`；
   ★ 同名不同指（`glossary.md:146` 的 `warmup` 是 benchmark 预热）的正文在
   `90-training/optimizers/03-schedules-and-clipping.md`。
-- **禁区**：**优化器状态的分片与通信量**在 `100-parallelism/README.md:14`（`zero-fsdp`）——
+- **禁区**：**优化器状态的分片与通信量**在 `100-parallelism/zero-fsdp/`——
   本文**一行都不写**；`B.1` 那句「监控只需要每层一个标量」是**纯代数**，不是分布式方案。

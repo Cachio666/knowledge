@@ -68,7 +68,7 @@ ZERO_ARXIV_ID = "1910.02054"
 ZERO_TITLE = "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models"
 # 来源：[C] ZeRO（同上），abs 页 `<title>`，原始字节 1 次。
 # 口径：★ 计划把它放在「`optimizers` 与 `100-parallelism` 的边界」上（本域只留**接口**）——
-#       本主题**只用它的字节账**那一句，**不写**分片策略与通信量（那是 `100-parallelism/README.md:14`）。
+#       本主题**只用它的字节账**那一句，**不写**分片策略与通信量（那是 `100-parallelism/zero-fsdp/`）。
 # 消费者：`01_state_bytes.py` 的 `D.6`、`02_sharded.py` 的 `D.7b`。
 # 同值位置：`optimizers/code/specs.py`（那一篇引的是 Muon / Adam，不含本条）。
 

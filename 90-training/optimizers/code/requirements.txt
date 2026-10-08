@@ -15,7 +15,7 @@
 #      必须逐处写明是哪一档」在本主题的落法。
 #
 # ★★ **本主题的禁区**：**优化器状态的分片策略与通信量**（ZeRO / FSDP / `4x` / `8x` / `16Ψ`）
-#    全属 `100-parallelism/README.md:14`（`zero-fsdp`）—— 本主题只写**单卡口径**。
+#    全属 `100-parallelism/zero-fsdp/`—— 本主题只写**单卡口径**。
 #
 # 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
 numpy>=2.0

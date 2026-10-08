@@ -569,7 +569,7 @@ def preflight():
           % (sys.version.split()[0], np.__version__))
     print("  ★★ **禁区回链**：导出/推理格式的选择（`.keras` vs SavedModel）在 "
           "`70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；"
-          "优化器状态的分片与通信量在 `100-parallelism/README.md:14`；"
+          "优化器状态的分片与通信量在 `100-parallelism/zero-fsdp/`；"
           "重算换显存（`O(√n)` 是**内存**、`≈ 2n` 是**前向次数**）在 "
           "`90-training/autograd-and-backward/02-gradient-checkpointing.md`。")
     before = len(FAILS)

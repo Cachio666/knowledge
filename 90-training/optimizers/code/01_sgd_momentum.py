@@ -15,9 +15,9 @@ r"""01_sgd_momentum.py —— SGD / 动量 / Nesterov 的更新式与**状态**�
 
 ★★ **本主题的禁区**（`CONTRIBUTING` §7 + 域 README 的边界表）：
   · **优化器状态的分片策略与通信量**（ZeRO 三阶段、FSDP、`4x/8x`、`16Ψ` 的账）→
-    `100-parallelism/README.md:14`（`zero-fsdp` 那一栏）；`10-foundations/performance-models/
+    `100-parallelism/zero-fsdp/`；`10-foundations/performance-models/
     02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文。**本程序只写单卡口径**；
-  · **数据并行 / DDP / 梯度规约** → `100-parallelism/README.md:9`（`data-parallel`）、`110-communication/`；
+  · **数据并行 / DDP / 梯度规约** → `100-parallelism/data-parallel/`、`110-communication/`；
   · **`lr` 被编译 guard 固化** → `60-compilers/inductor/04-dynamic-shapes.md:42,163`（编译角度）；
   · **框架的 autograd 语义**（`grad_fn` / `is_leaf` / `saved_tensors`）→
     `70-frameworks/pytorch/02-autograd.md`（**全篇 256 行**）—— 本程序一行都不重写。
@@ -459,7 +459,7 @@ def part_B():
     print("  轨迹偏离：最大逐元素 %.6e（相对 %.4e）" % (dev, rel_dev))
     print("  ★ **单卡口径**：这里只数「一个参数多占几字节」。")
     print("    **分片策略与通信量**（`4x`/`8x`/`16Ψ` 的账）的正文在")
-    print("    `100-parallelism/README.md:14`（`zero-fsdp`）—— **本主题只留接口**。")
+    print("    `100-parallelism/zero-fsdp/`—— **本主题只留接口**。")
     check("B.1", dev > TOL_BUFFER_FP16,
           "★ **省一半状态字节的代价是真的**：fp16 buffer 让 %d 步后的轨迹偏离 %.3e（> %g）——"
           "「省精度」这一格的账记在**更新量的精度**上" % (N_STEPS, dev, TOL_BUFFER_FP16))
@@ -763,7 +763,7 @@ def main():
           % (sys.version.split()[0], np.__version__))
     print("  ★ 失败标记 ASSERT_FAIL_MARK = %r（本主题自定义；不跨主题照抄）" % ASSERT_FAIL_MARK)
     print("  ★ 禁区（一律回链，本程序不写）：优化器状态的**分片与通信量**在")
-    print("    `100-parallelism/README.md:14`（`zero-fsdp`）；DDP / 梯度规约在 `:9` 与 `110-communication/`；")
+    print("    `100-parallelism/zero-fsdp/`；DDP / 梯度规约在 `:9` 与 `110-communication/`；")
     print("    `lr` 被编译 guard 固化在 `60-compilers/inductor/04-dynamic-shapes.md:42,163`；")
     print("    框架的 autograd 语义在 `70-frameworks/pytorch/02-autograd.md`。")
     print("  ★ 接口：`Δw < ULP/2` 的阈值与判据在 `mixed-precision/01-type-selection`（此处只消费）。")
