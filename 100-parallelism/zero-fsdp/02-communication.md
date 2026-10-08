@@ -175,7 +175,7 @@ ZeRO §7.1 逐字（`specs.ZERO_RS_AG_QUOTE`，载体 = ar5iv `1910.02054` 正�
 | **集合通信的算法与复杂度**（ring / tree、`V(N)`、阶段划分） | `10-foundations/performance-models/02:209,428`、`110-communication/collectives`（**未建成**） |
 | **拓扑受限的集合通信**（bisection 下界、分层） | `20-gpu-architecture/interconnect/03-collectives-on-topology.md` |
 | **链路带宽的三种口径**与 NVLink / IB 的规格值 | `20-gpu-architecture/interconnect/01-bandwidth-conventions.md` |
-| **通信-计算重叠的机制** | `110-communication/README.md:12`（`overlap`，**未建成**） |
+| **通信-计算重叠的机制** | `110-communication/overlap/`（`overlap`，**未建成**） |
 | **显存的账**（各阶段每卡几个字节） | [01-three-stages](01-three-stages.md) |
 | **FSDP 的策略与分片后的正确性** | [03-fsdp-and-correctness](03-fsdp-and-correctness.md) |
 
@@ -271,7 +271,7 @@ baseline 里若已含一次 all-gather，那么「多一次」**就是对的**�
     `10-foundations/performance-models/02:209,428`、`110-communication/collectives`（未建成）；
   · **拓扑受限的集合通信** → `20-gpu-architecture/interconnect/03`；
     **链路带宽的三种口径** → 同域 `interconnect/01`；
-  · **通信-计算重叠的机制** → `110-communication/README.md:12`（`overlap`，未建成）。
+  · **通信-计算重叠的机制** → `110-communication/overlap/`（`overlap`，未建成）。
 
 ## 参考
 

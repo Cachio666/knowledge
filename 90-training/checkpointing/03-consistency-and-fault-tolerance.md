@@ -69,7 +69,7 @@ format`，即 `the contents of a given training batch is only a function of the 
   **中文词「检查点」不得用于重算**（域 README 的消歧节）。
 - **本文不写**（回链目标）：**导出 / 推理格式的选择** →
   `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；
-  **异步落盘 / 通信-计算重叠** → `110-communication/README.md:12`；
+  **异步落盘 / 通信-计算重叠** → `110-communication/overlap/`；
   **优化器状态的分片与通信量** → `100-parallelism/zero-fsdp/`；
   **「溢出检测 + 跳步」** → `90-training/mixed-precision/02-amp-execution.md`。
 - ★ **一处必须写明的让步**：本文的一切数值都是**本机玩具规模的真跑**
@@ -304,7 +304,7 @@ DCP uses that storage instead.` ⇒ ★★ **「写了一半」是这套接口�
 - **溢出的处置（检测 + 跳步）** ⇒ `90-training/mixed-precision/02-amp-execution.md`。
 - **「重算换显存」** ⇒ `90-training/autograd-and-backward/02-gradient-checkpointing.md`
   （★ 与本文的「检查点」**同名不同指**）。
-- **异步落盘 / 通信-计算重叠** ⇒ `110-communication/README.md:12`（**正文在彼**）。
+- **异步落盘 / 通信-计算重叠** ⇒ `110-communication/overlap/`（**正文在彼**）。
 - **优化器状态的分片与通信量** ⇒ `100-parallelism/zero-fsdp/`（**正文在彼**）。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU**、不训练任何真模型）⇒
@@ -384,6 +384,6 @@ python3 03_consistency.py    # 只跑本程序
 - ★★ **「同名不同指」**：本文的 `checkpoint` = **权重检查点**；
   「重算换显存」是另一件事（正文在 `autograd-and-backward/02`）。
 - **禁区**：导出/推理格式 → `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；
-  异步落盘 → `110-communication/README.md:12`；状态分片与通信量 → `100-parallelism/zero-fsdp/`。
+  异步落盘 → `110-communication/overlap/`；状态分片与通信量 → `100-parallelism/zero-fsdp/`。
   本文**一行都不重推**。
 - ★ **本主题在全库零让渡**（计划 §0.7-B 的边界表）⇒ 本文的知识点由本域**自己立**。

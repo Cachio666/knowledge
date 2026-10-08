@@ -1,0 +1,5 @@
+# 110-communication/overlap · 运行要求
+#
+# 本目录的编号程序只需要 **`python3` + `numpy`**（本机 3.13.5 / 2.4.4 已装）。
+# ★ **不 import 任何第三方框架**（`make lint` 用 AST 把关）。
+numpy>=2.0

@@ -40,7 +40,7 @@
   它是 `CONTRIBUTING` §2「本机实测值」的**限定语纪律**，不是一篇文档。
 - **「异步落盘」**（原属 `checkpointing`）——
   它与 `110-communication` 的 `overlap` 主题（通信-计算重叠 / 双缓冲 / 分块流水）
-  是同一件事，正文在 `110-communication/README.md:12`，**此处回链**。
+  是同一件事，正文在 `110-communication/overlap/`，**此处回链**。
 
 ## 本域不做什么（硬边界）
 

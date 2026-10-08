@@ -45,7 +45,7 @@ updated: 2026-09-23
 | RNG 状态的**结构**与它的一致性**要求** | **一致性恢复的实验与判据** → `90-training/checkpointing/03-consistency-and-fault-tolerance.md` |
 | 分片格式与它的**头开销**（只回链，不重推） | **分片的字节账与重分片** → `90-training/checkpointing/02-sharded-save-and-load.md` |
 | —— | **优化器状态的分片策略与通信量**（ZeRO 三阶段 / FSDP） → `100-parallelism/zero-fsdp/` |
-| —— | **异步落盘 / 通信-计算重叠** → `110-communication/README.md:12` |
+| —— | **异步落盘 / 通信-计算重叠** → `110-communication/overlap/` |
 
 ★ **一处必须写明的让步**：本文的一切数值都是**本机玩具规模的真跑**
 （`python3 3.13.5` + `numpy 2.4.4`、macOS arm64、**无 GPU**、不训练任何真模型）
@@ -166,7 +166,7 @@ load_state_dict ), save will call state_dict before serialization.`
 |---|---|
 | 单次存档的大小随训练时间变吗 | **不变**（张量部分是 `12Ψ`，与步数无关，§1.5） |
 | 那什么随训练时间变 | **累计落盘字节** = `次数 × W`（§1.5 的推论） |
-| 因此「该多久存一次」的账 | 记在**时间与 I/O** 上，不在**单次大小**上（异步落盘的正文在 `110-communication/README.md:12`） |
+| 因此「该多久存一次」的账 | 记在**时间与 I/O** 上，不在**单次大小**上（异步落盘的正文在 `110-communication/overlap/`） |
 
 ### 2.3 本机实测的一组典型值（口径写在 `[ ]` 里）
 
@@ -336,7 +336,7 @@ python3 01_state_bytes.py    # 只跑本程序
   「重算换显存」是另一件事（正文在 `autograd-and-backward/02`）。
 - **禁区**：导出/推理格式 → `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；
   主权重的数值理由 → `10-foundations/numerical-linear-algebra/04:229-266`；
-  状态分片与通信量 → `100-parallelism/zero-fsdp/`；异步落盘 → `110-communication/README.md:12`。
+  状态分片与通信量 → `100-parallelism/zero-fsdp/`；异步落盘 → `110-communication/overlap/`。
   本文**一行都不重推**。
 - ★ **本主题在全库零让渡**（计划 §0.7-B 的边界表）⇒ 本文的知识点由本域**自己立**，
   因此更要把上面这张界线表守住。

@@ -51,7 +51,7 @@ updated: 2026-09-23
 |---|---|
 | 分片的**格式**（每片一个文件 + 元数据）与**头部的组成** | **导出 / 推理格式的选择**（`.keras` vs SavedModel）→ `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188` |
 | 分片的**字节账**（判据 ②）与**每卡峰值 / 每卡读量** | **优化器状态的分片策略与通信量**（ZeRO 三阶段、`4x/8x`）→ `100-parallelism/zero-fsdp/` |
-| **重分片**（写 `N` 片、读 `M` 片）与它的代价 | **异步落盘 / 通信-计算重叠** → `110-communication/README.md:12` |
+| **重分片**（写 `N` 片、读 `M` 片）与它的代价 | **异步落盘 / 通信-计算重叠** → `110-communication/overlap/` |
 | 版本字段、原子性、覆盖率（**完整性**的三个层次） | **数据并行 / DDP / 梯度规约** → `100-parallelism/data-parallel/` |
 
 ★ **一处必须写明的让步**：本文的一切数值都是**本机玩具规模的真跑**
@@ -291,7 +291,7 @@ loading into another.` ⇒ **分片的边界不是格式的一部分，元数据
 - **一致性恢复（RNG / dataloader / 优化器状态）** ⇒ `90-training/checkpointing/03-consistency-and-fault-tolerance.md`
   （★ 本文的 §1.6 与它的 `C.2` 是同一件事的两个层次：**集合级** vs **对象级**）。
 - **优化器状态的分片策略与通信量（ZeRO 的 `4x/8x`）** ⇒ `100-parallelism/zero-fsdp/`（**正文在彼**）。
-- **异步落盘 / 通信-计算重叠** ⇒ `110-communication/README.md:12`（**正文在彼**）。
+- **异步落盘 / 通信-计算重叠** ⇒ `110-communication/overlap/`（**正文在彼**）。
 - **导出 / 推理格式的选择** ⇒ `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`（**正文在彼**）。
 - **「重算换显存」** ⇒ `90-training/autograd-and-backward/02-gradient-checkpointing.md`
   （★ 与本文的「检查点」**同名不同指**，见 `01` 的 §0）。
@@ -377,6 +377,6 @@ python3 02_sharded.py        # 只跑本程序
 - ★★ **「同名不同指」**：本文的 `checkpoint` = **权重检查点**；
   「重算换显存」是另一件事（正文在 `autograd-and-backward/02`）。
 - **禁区**：导出/推理格式 → `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；
-  优化器状态的分片与通信量 → `100-parallelism/zero-fsdp/`；异步落盘 → `110-communication/README.md:12`。
+  优化器状态的分片与通信量 → `100-parallelism/zero-fsdp/`；异步落盘 → `110-communication/overlap/`。
   本文**一行都不重推**。
 - ★ **本主题在全库零让渡**（计划 §0.7-B 的边界表）⇒ 本文的知识点由本域**自己立**。

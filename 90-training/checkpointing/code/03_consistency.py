@@ -608,7 +608,7 @@ def preflight():
           % (sys.version.split()[0], np.__version__))
     print("  ★★ **禁区回链**：导出/推理格式的选择在 "
           "`70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；"
-          "异步落盘 / 通信-计算重叠在 `110-communication/README.md:12`；"
+          "异步落盘 / 通信-计算重叠在 `110-communication/overlap/`；"
           "优化器状态的分片与通信量在 `100-parallelism/zero-fsdp/`。")
     before = len(FAILS)
 

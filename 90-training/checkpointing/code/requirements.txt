@@ -18,7 +18,7 @@
 # ★★ **本主题的禁区（计划 §2 只有一行）**：**导出/推理格式的选择**
 #    （`.keras` vs SavedModel）→ `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`。
 #    ★ 另有两条**接口级**回链（不是禁区，是分工）：
-#      · **异步落盘 / 通信-计算重叠** → `110-communication/README.md:12`；
+#      · **异步落盘 / 通信-计算重叠** → `110-communication/overlap/`；
 #      · **优化器状态的分片与通信量** → `100-parallelism/zero-fsdp/`。
 #
 # ★★ **本主题不需要网络**：`make run` 只读 `code/` 里的文件 + 写**系统临时目录**
