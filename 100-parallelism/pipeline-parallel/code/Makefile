@@ -5,8 +5,9 @@
 #   失败时以**非零退出码**结束 —— 即「断言失败 ⇒ `make run` 非零」。**没有 `verify.py`**，
 #   也**没有** `meta_falsify.py`（那是 `50-performance` 这种**测量域**的形态，见域 README）。
 #
-# ★★ **Chunk 3 已落盘**（2026-09-23）：三个编号程序与 `mutate.py` 都已就位 ⇒
+# ★★ **Chunk 3 已落盘**（提交日 2026-10-08）：三个编号程序与 `mutate.py` 都已就位 ⇒
 #    `make run` 走**非空分母**分支，`SCRIPTS` 一行就是下面那三个。
+#    ★ 订正 2026-10-08：原写「2026-09-23」，与提交日期及三篇文档的 `updated:` 打架（见 `requirements.txt`）。
 #    01_bubbles.py      ↔ 01-microbatches-and-bubbles.md（微批 / 气泡率 / **两个口径**）
 #    02_schedules.py    ↔ 02-schedules.md         （GPipe / 1F1B / interleaved）
 #    03_balance.py      ↔ 03-memory-balance.md    （各 stage 的**负载均衡**）
@@ -61,14 +62,18 @@
 #   Makefile / requirements.txt   构建入口
 #
 # ── 本机的硬约束 ──────────────────────────────────────────────────────────────
-#   **无 GPU、无多卡、无 NCCL、无真实网络**；`python3` = 3.13.5、`numpy` = 2.4.4（已装）。
+#   **无 GPU、无多卡、无 NCCL、无真实网络**；`python3` = 3.13.5（`numpy` = 2.4.4 本机已装）。
 #   ★ **本域不 import 任何第三方框架**（`CONTRIBUTING` §2 的「永不 import 目标框架」，
-#     原文的措辞比 torch 宽 —— 本域按宽的口径执行），`numpy` 是唯一例外（见 requirements.txt）。
+#     原文的措辞比 torch 宽 —— 本域按宽的口径执行）；★★ **本主题连 `numpy` 都不用**
+#     （三个程序是**纯 stdlib**：离散事件模拟 + 算术）—— 见 `check-env` 里的说明与
+#     `requirements.txt`（★ 同域其余五个主题才用 `numpy`）。
 #   ★★ **通信被实现为一个显式的张量搬运**（`all_reduce = Σ局部`、`all_gather = concat`）——
 #     本域的知识对象是**切分策略**，不是通信原语的实现（通信算法的正文在 `110-communication`）。
 #     ⇒ 一切程序验证的是**切分的代数**（等价性 / 通信次数 / 字节账 / 气泡率 / 负载分布），
 #       **不是**任何关于真实集群性能的结论。★ 强制限定语：**「不是 NCCL，也不是真机」**。
-#   ★★ **本主题只写**：PP 的**调度与气泡**：`1F1B` 的时序、气泡率的两个口径、stage 间的显存均衡
+#   ★★ **本主题的定位**（与 `requirements.txt` **抬头那段**同一句，两处同步）：
+#      PP 的**微批与气泡率**（两个口径 + 换算恒等式）、**GPipe / 1F1B / interleaved 三种调度**
+#      （★ 1F1B 换的是**显存**不是气泡）、**各流水线级的负载均衡**（总时间由最慢的那一级决定）
 #   ★★ **本主题的禁区**：
 #     **通信-计算重叠的机制**（双缓冲 / 分块流水 / 异步落盘）与**重算换显存**的机制
 #     —— 正文回链 `110-communication` 的 `overlap` 主题（未建成）与
@@ -132,7 +137,11 @@ check-env:
 	@$(PYTHON) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' \
 		|| { echo "!! 需要 python >= 3.9"; exit 1; }
 	@$(PYTHON) -c 'import numpy' 2>/dev/null \
-		|| { echo "!! 缺 numpy。请先: $(PYTHON) -m pip install -r requirements.txt"; exit 1; }
+		|| echo "★★ 本主题的三个编号程序**不用 numpy**（纯 stdlib：离散事件模拟 + 算术）⇒ 缺它**不影响** make run。" \
+		        "（同域其余五个主题需要 numpy —— 见域 README 的「代码约定」表。）"
+# ★★ 订正 2026-10-08：这一条原来是**硬性**的（缺 numpy 即 `exit 1`）—— 而本主题的
+#    三个程序**一次都不 import numpy** ⇒ 那个硬要求是一条**假依赖**（`mutate.py` 也不用它）。
+#    现在它降级为**提示**（`echo` 恒返回 0）。★ `code/` 的自包含不受影响。
 
 # ★ `ast` 而非 grep：注释与文档串里出现框架名**不算违规**，真 import 才算。
 #   ★ 扫的是本目录**全部** `*.py`（含 specs.py / mutate.py 与本主题的编号程序）。
@@ -151,11 +160,10 @@ lint: check-env
 	     if m.split(".")[0] in BAN]; \
 	[print("!! 违规 import: %s:%d  import %s" % (f,ln,m)) for f,ln,m in hit]; \
 	print("lint: 扫了 %d 个 .py 文件（%s），违规 %d 处" % (len(F), ", ".join(F) if F else "-", len(hit))); \
-	print("lint: numpy 是唯一允许的第三方库（见 requirements.txt）"); \
+	print("lint: 本主题连 numpy 都不用（见 requirements.txt）；白名单仅为与同域其余主题一致"); \
 	sys.exit(1 if hit else 0)'
 
 # ★ **不进 `run`**：变异测试要跑很多副本，慢；而且它的结论是「元层」的。
-# ★ Chunk 0 **尚未落 `mutate.py`** ⇒ 此刻本目标会以「没有 mutate.py」失败，**这是预期行为**。
 # ★ 退出码的含义（Chunk 1 起）：
 #   0 = 全部捕获 · 1 = **有漏网**（逐条列出）· 2 = 读数不可信（仓库文件被改过）·
 #   3 = 空分母。

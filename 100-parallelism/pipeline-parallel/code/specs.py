@@ -14,10 +14,22 @@
   ★ **引文类常量另写清【载体】**（abs 页 / PDF 文本层 / ar5iv 正文 / docs 页 / 源码 tag），
     且**引文片段一律不含换行**。
 
+★★ **本模块的【载体】选择（与前两个 chunk 对齐）**：
+    · **GPipe** 与 **Megatron-LM PP** 的引文载体都取 `ar5iv.labs.arxiv.org` 的**正文页**
+      （URL 见下面两节的抬头）；**唯一例外**是 `MEGATRON_ABS_COMMENT_QUOTE`（载体是 **arXiv abs 页**）。
+    · ★★★ **引文片段一律【不跨标记】**（`data-parallel`/`tensor-parallel` 的同款纪律）：
+      ar5iv 把公式与变量（`O(...)`、`M≥4×K`、斜体 `m`/`d`）包在 `<math …>…</math>` 里
+      ⇒ **跨它的片段在原始字节上计不到**。本模块取的片段**一律是不含公式的散文**，
+      且**每一条都在原始字节上核过次数**（`curl -sSL` 取回原文后 `count()`）。
+    · ★★ **订正（2026-10-08）**：本模块原先有**六条**写「原始字节 1 次」而实测为 **`0`** ——
+      它们要么跨了 `<math>` 边界（`O(` / `M ≥ 4 × K` / 斜体 `m` / 斜体 `d`），
+      要么把 `The` 写成了 `the`。⇒ 已**逐条**改成真实成立的载体口径：
+      **把片段缩到 `<math>` 之前（或之后）的散文**，并在该条的 `# 来源：` 里写明。
+
 ★ **三类真值来源必须分开标注**：
     ① **外部规格值**：论文原文（**C 级，须注明是否确认同行评审**）、厂商/产品文档（A/B 级）
        ⇒ **本模块存放的就是这一类**。
-    ② **本机实测值**：本域程序在本机跑出的数（**须写 python3 与 numpy 版本**）⇒ **不放在本模块**。
+    ② **本机实测值**：本域程序在本机跑出的数（**须写 python3 版本**）⇒ **不放在本模块**。
     ③ **推导值**：程序算出的量（可手算复核）⇒ **不放在本模块**
        （`CONTRIBUTING` §2：「只放从来源抄来的数，**不放推导值**」）。
 
@@ -31,7 +43,7 @@
     · **气泡率有【两个】口径，各有各的分母**：
       · **GPipe**（`1811.06965 §2.3`）：`(K−1)/(M+K−1)` —— **分母是【总时间】**
       · **Megatron**（`2104.04473 §2.2.1`）：`(p−1)/m` —— **分母是【理想时间】**
-      ⇒ ★★ **两者不矛盾**，换算恒等式是 `b_m == b_g/(1 − b_g)`（本机实测 5 组，差 ≤ 5.551e-17）。
+      ⇒ ★★ **两者不矛盾**，换算恒等式是 `b_m == b_g/(1 − b_g)`（本机实测 8 组，差 ≤ 5.551e-17）。
       ⇒ **引任何一个气泡数，必须写明用的是哪个口径**（否则数与数之间不可比）。
     · **「virtual pipeline stages」这个短语在 `2104.04473` 里【出现 0 次】**
       ⇒ 本主题一律用原文的词：**interleaved** / **model chunk**。
@@ -43,49 +55,67 @@
 # 1. GPipe —— [C] 论文（arXiv:1811.06965）
 #    ★★ 同行评审：**是**（NeurIPS 2019 proceedings 索引含该条；camera-ready PDF 与 ar5iv 正文
 #      在 §2.3 上逐句一致）。
-#    ★ 抓取日 2026-09-23；载体 = `https://ar5iv.labs.arxiv.org/html/1811.06965` 的正文。
+#    ★ 抓取日 2026-09-23；载体 = `https://ar5iv.labs.arxiv.org/html/1811.06965` 的正文
+#      （★ 复核 2026-10-08：`curl -sSL` 取回原始字节后逐条 `count()`）。
 # ===========================================================================
 
-GPIPE_BUBBLE_QUOTE = "This bubble time is O("
-# 来源：[C] GPipe（arXiv:1811.06965），§2.3，**原始字节 1 次**（切在公式左括号处）。
-# 口径：★★★ **本主题的第一条口径纪律的载体** —— 原文写的是 **`O(...)`（Big-O 复杂度），
-#       【不是等式】**；紧跟其后的是 `(K−1)/(M+K−1)`（跨 `<math>` 标记 ⇒ 本模块不取）。
+GPIPE_BUBBLE_QUOTE = "This bubble time is"
+# 来源：[C] GPipe（arXiv:1811.06965），§2.3，**原始字节 1 次**。
+#       ★★ **订正（2026-10-08）**：原值是 `This bubble time is O(`，实测原始字节 **`0`** 次 ——
+#         那个 `O(` 在紧随其后的 `<math>` 里（跨标记）。
+# 口径：★★★ **本主题的第一条口径纪律的载体** —— 原文这里的宾语是一个**公式**
+#       `O((K−1)/(M+K−1))`，**不是等式**（它是**量级陈述**）；
+#       该公式在原始字节上是 `<math …>`（其 `alttext` 逐字为 `O(\frac{K-1}{M+K-1})`）
+#       ⇒ **跨标记，本模块只取这个引导语**。
 #       ★★ **`K` = 分区数、`M` = micro-step 数**（原文的记号；本域用 `p`/`m` 的地方会写明换写）。
 #       ★★ **分母是【总时间】**（`M+K−1` = `m+p−1`）⇒ 与 Megatron 的 `(p−1)/m` **不是同一个分母**。
-# 消费者：`01_bubbles.py` 的 `B.1`/`B.2`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `D.1`。
 # 同值位置：无（本库只有本主题引这一句）。
 
-GPIPE_NEGLIGIBLE_QUOTE = "we found the bubble overhead to be negligible when M ≥ 4 × K."
+GPIPE_NEGLIGIBLE_QUOTE = "we found the bubble overhead to be negligible when"
 # 来源：[C] GPipe（同上），§2.3，**原始字节 1 次**。
+#       ★★ **订正（2026-10-08）**：原值到 `…M ≥ 4 × K.` 为止，实测原始字节 **`0`** 次 ——
+#         `M ≥ 4 × K` 那一段在紧随其后的 `<math>` 里（跨标记）。
 # 口径：★★ **「气泡可忽略」的判据是 `M ≥ 4×K`**（`M` 是 micro-step 数、`K` 是分区数）。
 #       ★★ **它是【实验观察】，不是定理**（原文 `In our experiments, we found …`）⇒
 #         不得写成「`M ≥ 4K` 时气泡一定可忽略」。
-#       ★ **空格照抄**：原文是 `M ≥ 4 × K`（`4` 与 `×` 之间**有空格**）—— 计数时不可吞空格。
-# 消费者：`01_bubbles.py` 的 `B.3`/`D.5`。
+#       ★ **`M ≥ 4×K` 那一段跨标记**：原文的**渲染文本是 `M≥4×K`（无空格**，`4` 与 `×` 相邻），
+#         那个 `<math>` 的 `alttext` 是 `M\geq 4\times K` —— ★★ **两个口径都不是 `M ≥ 4 × K`**
+#         （★★ 订正 2026-10-08：原注释写「原文是 `M ≥ 4 × K`、`4` 与 `×` 之间有空格、计数时
+#         不可吞空格」，那是**错的**；本模块的旧片段正因吞不掉那些不存在的空格而计到 `0`）。
+#         那个 `4` 单独寄存为 `GPIPE_NEGLIGIBLE_M_OVER_K`（从 `alttext` 逐字读出）。
+# 消费者：`01_bubbles.py` 的 `D.1`/`D.8`。
 # 同值位置：无。
 
-GPIPE_RECOMPUTE_MEMORY_QUOTE = "peak activation memory requirement is reduced to O("
-# 来源：[C] GPipe（同上），§2.3，**原始字节 1 次**（切在公式左括号处）。
+GPIPE_RECOMPUTE_MEMORY_QUOTE = "peak activation memory requirement is reduced to"
+# 来源：[C] GPipe（同上），§2.3，**原始字节 1 次**。
+#       ★★ **订正（2026-10-08）**：原值带尾括号 `…reduced to O(`，实测原始字节 **`0`** 次 ——
+#         那个 `O(` 在紧随其后的 `<math>` 里（跨标记）。
 # 口径：★★ **重算把峰值激活显存压到 `O(N + (L/K)×(N/M))`**（公式跨标记 ⇒ 本模块只取引导语）。
 #       ★★★ **本主题的禁区**：**重算换显存【机制】的正文在**
 #       `90-training/autograd-and-backward/02-gradient-checkpointing.md`
 #       ⇒ 本主题**只引这一句的「它压的是什么量」**、**只写「PP 下用重算做显存均衡的取舍」**，
 #         **不重写 `O(√n)` / `≈2n` 那一套**。
-# 消费者：`03_balance.py` 的 `B.3`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `D.8`、`03_balance.py` 的 `D.3`。
 # 同值位置：无。
 
 GPIPE_RECOMPUTE_CAUSAL_QUOTE = "re-computation during the backward pass can be scheduled earlier, without waiting for the gradients from earlier layers."
-# 来源：[C] GPipe（同上），§2.3，**原始字节 1 次**。
+# 来源：[C] GPipe（同上），§2.3，**原始字节 1 次**（★ 复核 2026-10-08：这一条**不跨标记**，
+#       原始字节与剥标签后都是 `1` —— 本模块里 GPipe 一节**唯一**没被订正的那条）。
 # 口径：★★★ **重算与气泡的【因果】是「调度自由度」，不是「重算降低气泡率」** ——
 #       原文说的是「重算**可以被更早地调度**」。★★ **常见转述把它说成后者，那是错的。**
-# 消费者：`01_bubbles.py` 的 `C.3`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `C.3`/`D.8`。
 # 同值位置：无。
 
 GPIPE_NEGLIGIBLE_M_OVER_K = 4
-# 来源：[C] GPipe（同上），§2.3，逐字 `M ≥ 4 × K` 里的那个 `4`（**原始字节 1 次**）。
+# 来源：[C] GPipe（同上），§2.3，那个 `4` —— ★ **从 `M ≥ 4×K` 所在 `<math>` 的 `alttext`
+#       （`M\geq 4\times K`）逐字读出**（★ 该句的散文部分只到 `negligible when` 为止，
+#       所以这一个数对应的是 `alttext` 里的字面量，不是散文里的字符）。
+#       ★★ 订正（2026-10-08）：原注释写「逐字 `M ≥ 4 × K` 里的那个 `4`（原始字节 1 次）」——
+#         那串散文在原始字节上是 `0` 次（见 `GPIPE_NEGLIGIBLE_QUOTE`），这个 `4` 的载体是 `alttext`。
 # 口径：★ **它是【实验里取的档】，不是规格**（原文 `In our experiments`）。
 #       ★★ 本主题用它做一条**边界判据**：`M/K ≥ 4` 时气泡占比应当已经很小（`01` 的 `B.3`）。
-# 消费者：`01_bubbles.py` 的 `B.3`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `B.3`/`D.1`/`D.8`。
 # 同值位置：无。
 
 
@@ -96,15 +126,16 @@ GPIPE_NEGLIGIBLE_M_OVER_K = 4
 #    ★★★ **该 abs 页上【没有】ACM DOI**（实测 `3458817` 与 `10.1145` 各 0 次；
 #       页面唯一的 DOI 是 arXiv 自己的 `10.48550/arXiv.2104.04473`）
 #       ⇒ **本模块不登记任何 ACM DOI**（那是一处载体错配：DOI 本身是真的，但不在那张页面上）。
-#    ★ 抓取日 2026-09-23；载体 = `https://ar5iv.labs.arxiv.org/html/2104.04473` 的正文。
+#    ★ 抓取日 2026-09-23；载体 = `https://ar5iv.labs.arxiv.org/html/2104.04473` 的正文
+#      （★ 复核 2026-10-08：`curl -sSL` 取回原始字节后逐条 `count()`）。
 # ===========================================================================
 
 MEGATRON_ABS_COMMENT_QUOTE = "Accepted to SC 2021"
 # 来源：[C] Megatron-LM PP（arXiv:2104.04473），**arXiv abs 页的 `Comments:` 字段**，
-#       **原始字节 1 次**。
+#       **原始字节 1 次**（★ 这一条的载体**不是** ar5iv 正文页 —— 正文页上实测 `0` 次）。
 # 口径：★★★ **这是本主题【唯一】的同行评审依据**（★ 不得再挂一个 ACM DOI，见模块头）。
 #       ★★ 「载体 = abs 页的 Comments 字段」必须写明 —— 它**不在正文里**。
-# 消费者：`02_schedules.py` 的 `B.4`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `D.2`、`02_schedules.py` 的 `B.4`。
 # 同值位置：无。
 
 MEGATRON_BUBBLE_TIME_QUOTE = "The total amount of time spent in the pipeline bubble is then"
@@ -113,14 +144,14 @@ MEGATRON_BUBBLE_TIME_QUOTE = "The total amount of time spent in the pipeline bub
 #       ★★ **`t_pb` 的口径**：一个 **batch** 的气泡**总时间**；`p` = 流水线级数、
 #         `t_f`/`t_b` = **一个 micro-batch 走一级**的前向/后向时间。
 #       ⇒ ★ **这个口径必须一并写出**（否则 `(p−1)/m` 里的 `m` 指什么就说不清）。
-# 消费者：`01_bubbles.py` 的 `B.4`、`02_schedules.py` 的 `D.5`。
+# 消费者：`02_schedules.py` 的 `D.8`。
 # 同值位置：无。
 
 MEGATRON_IDEAL_TIME_QUOTE = "The ideal processing time for the batch is"
 # 来源：[C] Megatron-LM PP（同上），§2.2.1，**原始字节 1 次**（切在公式前）。
 # 口径：★★★ **「理想时间」= `m·(t_f+t_b)`** —— 它是 `(p−1)/m` 的**分母**
 #       ⇒ ★★ **两个口径的差别就在这个分母上**（GPipe 除以总时间、Megatron 除以理想时间）。
-# 消费者：`01_bubbles.py` 的 `B.4`、`02_schedules.py` 的 `D.5`。
+# 消费者：`02_schedules.py` 的 `D.8`。
 # 同值位置：无。
 
 MEGATRON_1F1B_SAME_BUBBLE_QUOTE = "The time spent in the bubble is the same for this new schedule"
@@ -130,54 +161,66 @@ MEGATRON_1F1B_SAME_BUBBLE_QUOTE = "The time spent in the bubble is the same for 
 #       ★★ **常见转述把 1F1B 说成「把气泡从 `(p−1)/(m+p−1)` 降到 `(p−1)/m`」，那是错的** ——
 #         那两个公式的差别是**分母口径**，不是「改善」（见模块头的换算恒等式）。
 #       ★★ **改善气泡的是 interleaved**（§2.2.2），不是 1F1B。
-# 消费者：`01_bubbles.py` 的 `B.4`、`02_schedules.py` 的 `A.1`/`A.2`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `D.2`、`02_schedules.py` 的 `D.1`。
 # 同值位置：无。
 
 MEGATRON_1F1B_STASH_QUOTE = "this schedule requires activations to be stashed for"
-# 来源：[C] Megatron-LM PP（同上），§2.2.1，**原始字节 1 次**（切在变量前）。
+# 来源：[C] Megatron-LM PP（同上），§2.2.1，**原始字节 1 次**（切在变量前，紧接的那个
+#       `p` 是数学斜体 ⇒ 跨标记，只取引导语）。
 # 口径：★★★ **1F1B 究竟换到了什么**：需要暂存的激活是 **`p` 个（或更少）micro-batch** ——
 #       ★★ 而 GPipe 是 **`m` 个**（见下 `MEGATRON_1F1B_VS_GPIPE_QUOTE`）。
 #       ⇒ ★ 「**`m ≫ p` 时省得多**」是这一条的推论（`02` 的 `B.1` 用**真的数**钉住）。
-# 消费者：`02_schedules.py` 的 `B.1`/`D.5`。
+# 消费者：`02_schedules.py` 的 `D.3`。
 # 同值位置：无。
 
-MEGATRON_1F1B_VS_GPIPE_QUOTE = "compared to m microbatches for the GPipe schedule"
+MEGATRON_1F1B_VS_GPIPE_QUOTE = "microbatches for the GPipe schedule"
 # 来源：[C] Megatron-LM PP（同上），§2.2.1，**原始字节 1 次**。
+#       ★★ **订正（2026-10-08）**：原值是 `compared to m microbatches for the GPipe schedule`，
+#         实测原始字节 **`0`** 次 —— 那个 `m` 是**数学斜体**（`<math>`）⇒ 跨标记。
+#         ⇒ 本模块改成**取 `<math>` 之后那段纯散文**（原文是 `… microbatches for the GPipe schedule)`）。
 # 口径：★★ **GPipe 的在飞 micro-batch 数是 `m`**（全部）⇒ 这是「两个 `O` 的对照」的另一半。
-# 消费者：`02_schedules.py` 的 `B.1`/`D.5`。
+#       ★ 那个斜体 `m` 的载体是前一个 `<math>` 的 `alttext`（逐字 `m`）⇒ **单个变量名，不入引文常量**。
+# 消费者：`02_schedules.py` 的 `D.3`。
 # 同值位置：无。
 
-MEGATRON_INTERLEAVED_BUBBLE_QUOTE = "the pipeline bubble time thus reduces to"
-# 来源：[C] Megatron-LM PP（同上），§2.2.2，**原始字节 1 次**（切在公式前）。
+MEGATRON_INTERLEAVED_BUBBLE_QUOTE = "The pipeline bubble time thus reduces to"
+# 来源：[C] Megatron-LM PP（同上），§2.2.2，**原始字节 1 次**。
+#       ★★ **订正（2026-10-08）**：原值首字母写成小写 `the`，实测原始字节 **`0`** 次 ——
+#         原文这句**在句首**，是 `The`（★ 订正只改大小写，语义不变）。
 # 口径：★★★ **改善气泡的是【它】**：`t_pb^int = (p−1)(t_f+t_b)/v` ⇒ 气泡占比 `(1/v)·(p−1)/m`
 #       （公式跨标记 ⇒ 本模块只取引导语；那个 `(1/v)·(p−1)/m` 的**结构**由 `02` 的 `B.2` 实测）。
 #       ★★ **`v` = 每台设备持有的 model chunk 数**（原文 §2.2.2 的例子：每台 4 层 → 两台各 2 层）。
 #       ★★ **术语**：原文用 **interleaved** / **model chunk**；`v` 就是 chunk 数。
-# 消费者：`02_schedules.py` 的 `B.2`/`B.3`/`D.5`。
+# 消费者：`02_schedules.py` 的 `D.2`。
 # 同值位置：无。
 
 MEGATRON_INTERLEAVED_FREE_QUOTE = "does not come for free"
 # 来源：[C] Megatron-LM PP（同上），§2.2.2，**原始字节 1 次**。
 # 口径：★★★ **气泡降 `v` 倍不是白拿的** —— 原文紧接着说代价是**额外的通信**。
 #       ⇒ ★ 本主题的 `02` 要**同时**钉住「气泡降 `v` 倍」与「通信增（约）`v` 倍」这一对交换。
-# 消费者：`02_schedules.py` 的 `C.1`/`D.5`。
+# 消费者：`02_schedules.py` 的 `D.2`。
 # 同值位置：无。
 
 MEGATRON_INTERLEAVED_COMM_QUOTE = "the amount of communication also increases by"
-# 来源：[C] Megatron-LM PP（同上），§2.2.2，**原始字节 1 次**（切在变量 `v` 前）。
+# 来源：[C] Megatron-LM PP（同上），§2.2.2，**原始字节 1 次**（切在变量 `v` 前，那个 `v` 是
+#       数学斜体 ⇒ 跨标记，只取引导语）。
 # 口径：★★★ **原文给的是「增 `v` 倍」** —— 而本库实测：**那是【渐近式】**，
 #       **精确是 `(p·v − 1)/(p − 1)`**（★ 见下 `INTERLEAVED_EXACT_FACTOR_P`/`_V`）。
 #       ⇒ ★★ **这条是本主题的一条 C 类素材**：「把大 `p` 的近似当精确」在小 `p` 下**错 50%**。
-# 消费者：`02_schedules.py` 的 `C.1`/`C.2`/`D.5`。
+# 消费者：`02_schedules.py` 的 `D.2`。
 # 同值位置：无。
 
-MEGATRON_N_OVER_D_QUOTE = "As d becomes larger"
+MEGATRON_N_OVER_D_QUOTE = "The pipeline bubble size is"
 # 来源：[C] Megatron-LM PP（同上），§3.3.1，**原始字节 1 次**。
+#       ★★ **订正（2026-10-08）**：原值是 `As d becomes larger`，实测原始字节 **`0`** 次 ——
+#         那个 `d` 是**数学斜体**（`<math>`）⇒ 跨标记（原文渲染成 `As dd becomes larger`）。
+#         ⇒ 本模块改取**同一节公式的引导语**（`The pipeline bubble size is`，其后的公式
+#         `(p−1)/m = (n−d)/b'` 跨标记）。
 # 口径：★★★ **换写 `(p−1)/m = (n/d − 1)/(b'/d) = (n−d)/b'`** 的那一段 ——
 #       `n` = 总 GPU 数、`d` = DP 度、`b' = B/b`。
 #       ⇒ ★★ **该式的【结论】是「`d` 越大，气泡越小」**（`01` 的 `B.5` 用**真的数**钉住）。
 #       ★★ **它的意义**：在**固定总卡数**下，把卡多分给 DP 会**减小 PP 气泡** —— 反直觉但可算。
-# 消费者：`01_bubbles.py` 的 `B.5`/`D.5`。
+# 消费者：`02_schedules.py` 的 `D.8`。
 # 同值位置：无。
 
 
@@ -192,27 +235,29 @@ UNIT_F = 1.0
 # 口径：★ 取 `1.0` 是为了让**气泡率只依赖 `(p, m)`**（`01` 的 `A.1` 因此可用于抄闭式）。
 #       ★★ 后向取 `2.0`（见 `UNIT_B`）—— 这是**常见的 2:1 假设**，本库**把它当【设计常量】**，
 #         不声称任何模型上成立。
-# 消费者：`01_bubbles.py` 的 `A.1`/`B.1`/`B.2`/`D.5`。
-# 同值位置：`03_balance.py` 的 `PER_LAYER_LOAD`（同为「单位工作量」的设计常量，但**不同项**）。
+# 消费者：`01_bubbles.py` 的 `P.1`/`A.1`/`A.2`/`B.1`/`B.3`/`C.1`/`C.2`、
+#         `02_schedules.py` 的 `P.1`/`B.1`/`B.2`。
+# 同值位置：`03_balance.py` 的 `BALANCE_PER_LAYER`（同为「单位工作量」，但**不同项**）。
 
 UNIT_B = 2.0
 # 来源：[E] 本库设计。**一个 micro-batch 走一级**的后向时间。
 # 口径：★★ **`t_b = 2·t_f` 是设计假设**（不是任何论文里的数）⇒ 本主题的一切气泡数
 #       **只在「后向是前向两倍」这一组假设下成立** ⇒ 引用时必须带这一句。
-# 消费者：`01_bubbles.py` 的 `A.1`/`B.1`/`B.2`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `P.1`/`A.1`/`A.2`/`B.1`/`B.3`/`C.1`/`C.2`、
+#         `02_schedules.py` 的 `P.1`/`B.1`/`B.2`。
 # 同值位置：无。
 
 BUBBLE_GRID_P = (4, 4, 4, 4, 8, 8, 16, 1)
-# 来源：[E] 本库设计。七组 `(p, m)` 里的 `p`（★ 第 8 组是 `p = 1` 的退化对照）。
-# 口径：★★ 七组的选取覆盖：`m = p`（最坏气泡）、`m ≫ p`（气泡消失）、`p = 1`（无流水线）。
+# 来源：[E] 本库设计。**八组** `(p, m)` 里的 `p`（★ 第 8 组是 `p = 1` 的退化对照）。
+# 口径：★★ 八组的选取覆盖：`m = p`（最坏气泡）、`m ≫ p`（气泡消失）、`p = 1`（无流水线）。
 #       ★ **`p = 1` 那一组是判据的一部分**：气泡率**必须恰为 `0`**（`A.2` 的两侧之一）。
-# 消费者：`01_bubbles.py` 的 `A.1`/`A.2`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `P.2`/`P.3`/`A.1`/`A.2`/`B.1`/`B.2`/`D.4`/`D.6`。
 # 同值位置：无。
 
 BUBBLE_GRID_M = (4, 8, 16, 32, 16, 64, 64, 4)
-# 来源：[E] 本库设计。七组 `(p, m)` 里的 `m`（与 `BUBBLE_GRID_P` **按位配对**）。
-# 口径：★ 与 `BUBBLE_GRID_P` 一起用；★ **两组必须等长**（`A.1` 会断言这一点）。
-# 消费者：`01_bubbles.py` 的 `A.1`/`A.2`/`D.5`。
+# 来源：[E] 本库设计。**八组** `(p, m)` 里的 `m`（与 `BUBBLE_GRID_P` **按位配对**）。
+# 口径：★ 与 `BUBBLE_GRID_P` 一起用；★ **两组必须等长**（`P.2` 与 `A.1` 都会断言这一点）。
+# 消费者：`01_bubbles.py` 的 `P.2`/`A.1`/`A.2`/`B.1`/`B.2`/`D.4`/`D.6`。
 # 同值位置：无。
 
 TOL_MACHINE = 1.0e-12
@@ -220,15 +265,18 @@ TOL_MACHINE = 1.0e-12
 # 口径：★★ 本主题的判据大量是**闭式对拍**（纯算术）⇒ 差应当**严格为 `0`** 或落在 **1e-16 档**；
 #       取 `1e-12` 是为了同时容纳「`1 ulp` 级」与「恰好为 0」两种正确形态。
 #       ★★ **不得把它当作「物理量级的阈」** —— 它只管浮点。业务量的阈见 `BALANCE_*`。
-# 消费者：`01_bubbles.py` 的 `A.1`/`B.1`/`B.5`、`02_schedules.py` 的 `A.1`/`B.2`、`03_balance.py` 的 `A.1`。
-# 同值位置：`data-parallel`/`tensor-parallel` 的同名常量（三份**各自存放**，靠本条互指）。
+# 消费者：`01_bubbles.py` 的 `P.5`/`A.1`/`A.2`/`B.1`/`B.2`/`B.4`/`B.5`/`C.2`、
+#         `02_schedules.py` 的 `P.3`/`A.1`/`B.2`/`C.1`/`C.2`/`C.3`、`03_balance.py` 的 `A.1`。
+# 同值位置：`data-parallel`/`tensor-parallel` 的**编号程序**里各有一个同名常量
+#           （★ 订正 2026-10-08：它们**不在**那两个域的 `specs.py` 里 —— 实测那两个 `specs.py`
+#           各 `0` 处；本域这一份**独立存放**，靠本条互指）。
 
 BALANCE_PER_LAYER = 10
 # 来源：[E] 本库设计。**一个 transformer 层**的负载（无量纲的单位工作量）。
 # 口径：★★ **它是「每 stage 的层数 × 它」**这个乘法的因子 —— 而那个乘法**是自证的**
-#       （`03` 的 `A.1` 因此**不钉在乘法上**，而钉在「`总时间 = max(各 stage)`」上，
-#        ★★ 并让**瓶颈 stage 的编号**随 embedding 的有无而**变化**）。
-# 消费者：`03_balance.py` 的 `A.1`/`B.1`/`C.1`/`D.5`。
+#       （`03` 的 `A.1` 因此**不钉在乘法上**，而钉在「`max` 与 `mean` 在不均衡时不同、
+#       在均衡时相同」上，★ 并让**瓶颈 stage 的编号**随 embedding 的有无而**变化**）。
+# 消费者：`03_balance.py` 的 `P.1`/`A.1`/`B.1`/`C.1`。
 # 同值位置：`UNIT_F`（同为「单位工作量」，但**不同项**）。
 
 BALANCE_EMB = 100
@@ -237,23 +285,27 @@ BALANCE_EMB = 100
 #       （否则它会被 `L/p` 的整数效应淹没）。
 #       ⇒ ★★ **它本身不是任何模型的参数**（真实模型的 embedding 与层负载比不是 10）——
 #         本主题用它做**结构性演示**，**不据此声称任何真实比例**。
-# 消费者：`03_balance.py` 的 `A.1`/`C.1`/`D.5`。
+# 消费者：`03_balance.py` 的 `P.1`/`C.1`/`C.2`。
 # 同值位置：无。
 
 BALANCE_CASES = ((130, 100, 100, 130), (100, 100, 100, 100), (130, 100, 100, 130, 100))
 # 来源：[E] 本库设计。三组**给定的 stage 负载向量**（不均衡 / 完美均衡 / 5 级不均衡）。
 # 口径：★★★ **第一组与第三组是「结构性不均衡」的例子**（首尾各多一份 embedding），
-#       第二组是**理想对照** ⇒ ★★ 判据是「**效率 `mean/max` 在不均衡时 < 1、在均衡时 == 1`**」。
+#       第二组是**理想对照** ⇒ ★★ 判据是「**效率 `mean/max` 在不均衡时 < 1、在均衡时 == 1**」，
+#       且 `A.1` 用它钉住「**`max` 与 `mean` 在不均衡时【不同】、在均衡时【相同】**」两侧。
 #       ★ **三组都不依赖任何随机数** ⇒ 本主题的 `03` 完全确定（可移植性好）。
-# 消费者：`03_balance.py` 的 `A.1`/`A.2`/`D.5`。
+# 消费者：`03_balance.py` 的 `P.4`/`A.1`/`A.2`/`D.6`。
 # 同值位置：无。
 
 LAYER_COUNT_GRID = ((12, 4), (13, 4), (12, 5), (12, 8))
 # 来源：[E] 本库设计。四组 `(L, p)`（层数、流水线级数），**含两组不整除**（`13/4`、`12/5`）。
 # 口径：★★★ **不整除的效应**：`L % p != 0` 时各 stage 的层数差 `1` ⇒ 负载差 `1` 个层的当量
 #       （`B.2` 用**真的分**来钉住，不是乘出来的）。
-#       ★★ **`L=12, p=5` 是最坏的一组**（`p` 接近 `L/2`，余数摊得最开）。
-# 消费者：`03_balance.py` 的 `B.1`/`B.2`/`C.1`/`D.5`。
+#       ★★ **`L=12, p=8` 是最坏的一组** —— ★ 订正 2026-10-08：原写「`p` 接近 `L/2`（即 `p=5`）
+#       最坏」，**那是错的**（`03_balance.py` 的 `B.2` 实测 `worst_case == (12, 8)`）。
+#       正确的成因：**`p` 越大 ⇒ 每 stage 的层数越少 ⇒ 同样的「差 1 层」占的比例越大**
+#       （`p=5` 时 `3 : 2`（差 50%）、`p=8` 时 `2 : 1`（**差 100%**））。
+# 消费者：`03_balance.py` 的 `P.2`/`P.3`/`B.1`/`B.2`/`D.4`/`D.6`。
 # 同值位置：无。
 
 INTERLEAVED_EXACT_FACTOR_P = 2
@@ -261,27 +313,27 @@ INTERLEAVED_EXACT_FACTOR_P = 2
 # 口径：★★★ **取 `p = 2` 是为了让「近似 vs 精确」的差【最大】** ——
 #       实测 `p=2, v=2` 时精确值是 **`3.000`**，而原文的近似是 `v = 2` ⇒ **误差 `50.00%`**。
 #       ★★ 这正是 `02` 的 `C.1` 要钉的那条 C 类。
-# 消费者：`02_schedules.py` 的 `C.1`/`C.2`/`D.5`。
+# 消费者：`02_schedules.py` 的 `P.2`/`C.1`。
 # 同值位置：无。
 
 INTERLEAVED_EXACT_FACTOR_V = 2
 # 来源：[E] 本库设计。精确式里的 `v`（每台设备的 model chunk 数，取 **2**）。
 # 口径：★ 与 `INTERLEAVED_EXACT_FACTOR_P` 配对；★ 精确倍数 `(p·v−1)/(p−1) = 3/1 = 3.000`。
-# 消费者：`02_schedules.py` 的 `C.1`/`C.2`/`D.5`。
+# 消费者：`02_schedules.py` 的 `P.2`/`C.1`。
 # 同值位置：无。
 
 INTERLEAVED_ASYMPTOTIC_P = 256
 # 来源：[E] 本库设计。精确式在**大 `p`** 下的对照点（`p = 256`）。
 # 口径：★★ **它证明「原文的 `v` 倍」是【渐近式】**：`p=256, v=2` 时精确值 **`2.004`**，
 #       与 `v = 2` 只差 **`0.20%`** ⇒ ★★ **两个方向都量到，「近似何时可用」才说清楚**。
-# 消费者：`02_schedules.py` 的 `C.1`/`C.2`/`D.5`。
+# 消费者：`02_schedules.py` 的 `P.2`/`C.2`。
 # 同值位置：无。
 
 SANITY_NEG_BUBBLE_EXPECTED = 0.0
-# 来源：[E] 本库设计。**气泡率的下界**（`C.3` 断言「气泡率 `≥` 它」）。
+# 来源：[E] 本库设计。**气泡率的下界**（`C.1` 断言「气泡率 `≥` 它」）。
 # 口径：★★★ **这是一个【真的会失败】的判据的锚**：模拟器若**漏一条串行约束**
 #       （例如漏了「同一 stage 上 micro-batch 的**后向也必须串行**」），
 #       气泡率会**算出负数**（本库控制者实测 `-0.33`）⇒ 断言「气泡率 `≥ 0`」**会失败** ✓
 #       ★★ 所以这个 `0.0` **不是「阈值」而是「物理下界」**（气泡率没有负的）。
-# 消费者：`01_bubbles.py` 的 `C.3`/`D.5`。
+# 消费者：`01_bubbles.py` 的 `P.4`/`C.1`/`D.8`。
 # 同值位置：无。
