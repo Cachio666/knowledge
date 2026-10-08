@@ -1,5 +1,54 @@
-# 110-communication/collectives · 运行要求
+# 110-communication/collectives · 运行依赖
 #
-# 本目录的编号程序只需要 **`python3` + `numpy`**（本机 3.13.5 / 2.4.4 已装）。
-# ★ **不 import 任何第三方框架**（`make lint` 用 AST 把关）。
+# ★ 只有 numpy。本域**任何第三方框架都不 import**（`CONTRIBUTING` §2「永不 import 目标框架」，
+#   原文的措辞比 torch 宽 —— 本域按宽的口径执行）。`make lint` 用 AST 把关。
+#
+# ★★ **本主题的三个程序【都要】numpy**：
+#   · `01_algorithm_family.py` —— 块是 `numpy` 整数数组（按块搬运、按块累加、逐位对拍）；
+#   · `02_stages_and_costs.py` —— 同上（两段的模拟器都驱动真实数据）；
+#   · `03_all_to_all_and_p2p.py` —— 同上（每对设备之间搬的是一块数组）。
+#   ⇒ ★★ **「单跑某个程序不需要 numpy」这句话在本主题【不成立】** ——
+#     `requirements.txt` 与 `Makefile` 的 `check-env` 按**三个程序的并集**要求它，
+#     而那个并集**恰好就是三个都要**。
+#     ★★★ **因此本文件不写「直接 `python3 0X_xxx.py` 不需要 numpy」这类措辞** ——
+#       那会是一条**照抄即失败的命令**（工程纪律）。
+#
+# ★★ **本主题的定位**（与 `Makefile` 抬头同一句，两处同步）：
+#   · **算法族**：ring / 递归倍增 / Bruck / 二项树 / halving-doubling（Rabenseifner）
+#     —— 各自**步数**与**每卡搬运量**；
+#   · **两段式**：reduce-scatter + all-gather 的**通信阶段划分**、四个原语的代价、
+#     以及 `2(N−1)/N × S` **为何是两段之和**；
+#   · **all-to-all 的【总搬运量口径】** 与 **P2P 原语**（`send` / `recv` / `sendrecv`）。
+#
+# ★★ **本主题的禁区**（本主题**一行都不重写**，只回链）：
+#   **`V(N) = 2(N−1)/N × S` 的推导与 `S` 的饱和** ⇒
+#     `10-foundations/performance-models/02-amdahl-and-scaling.md:147-155,209`；
+#   **bisection 下界 `t ≥ 2S/B`** · **all-to-all 的跨切口量 `N·V/4`** · **分层 all-reduce 三段式** ⇒
+#     `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
+#   **链路带宽的三种口径** ⇒ `interconnect/01-bandwidth-conventions.md`；
+#   **`algbw` vs `busbw` 与修正系数表** ⇒ `interconnect/04-measuring-bandwidth.md`。
+#
+# ★★ **四类数字纪律**（`CONTRIBUTING` §2）：
+#   · **规格值 / 引文** → `specs.py`（每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`）
+#     ★★ 本主题**只有一条来源**：Thakur / Rabenseifner / Gropp 2005（IJHPCA 19(1):49–66，
+#       **[C] 级，同行评审：是**，Crossref `10.1177/1094342005051521`）；
+#     ★★★ 它的公式在 `pdftotext -layout` 下有三种形态：**`dlg pe` = `⌈lg p⌉`** ·
+#       **`blg pc` = `⌊lg p⌋`** · **裸 `lg p` = 无取整** ⇒ **误判不会有任何报错**。
+#   · **推导值** → 由编号程序算出（可手算复核）⇒ ★ 按纪律**不进 `specs.py`**，
+#     写在断言里当**期望值**（例如各档的步数与元素数）。
+#   · **引用值** → 外部来源的实测 ⇒ ★ 本主题**没有引用值**（本机没有任何真网络）。
+#   · **本机实测值** → 本机真跑的数（**须写 python3 与 numpy 版本**）
+#     ★ **不得把推导写成实测**。
+#   ★★ 本域另加三条落法：**所有数值常量取到 `< 2^53`**（浮点变异是 `v + 1.0`）；
+#     **不做幂次字面量**（`_walk()` 不下钻 `BinOp`）；**字符串一律单行**
+#     （跨行字面量会被 `mutate.py` 的 `_patch()` 整条跳过）。
+#
+# ★★ **「本机无 GPU / 无真网卡」的限定语**：本机**没有多卡 / 没有 NCCL / 没有真实网络** ⇒
+#   一切数值都是 `python3` + `numpy` 的**玩具规模**真跑，验证的是**算法的代数**
+#   （步数、每卡搬运量、块索引、累加目标、载荷口径、P2P 的顺序），
+#   **不是**任何关于真实集群性能的结论。★ 强制限定语：**「不是 NCCL，也不是真机」**。
+#   ★★★ **判据里唯一的「物理」成分是整数相等**（步数 / 元素数 / 消息条数）
+#     —— 本主题**不需要** BLAS 标定，也**没有**浮点阈依赖。
+#
+# 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
 numpy>=2.0
