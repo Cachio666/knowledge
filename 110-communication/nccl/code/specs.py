@@ -11,7 +11,11 @@
 ★★★ **【本主题的定位】—— 它是全库证据强度最低的一章，必须如实写**：
   · ★★★ **全靠 `[B]` 级** —— 载体是 **NCCL 官方【产品文档】**（**不是规范**）；
   · ★★★ **本主题【没有 A 类】** —— 本机**无 GPU、无 NCCL、无真网卡** ⇒
-    「算法正确性」**无处可验**。按 `CONTRIBUTING` §2 的第三种形态【写明不可测】，
+    「算法正确性」**无处可验**。★ 本主题**跑在默认 `python3` 下、只用标准库**
+    ⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**（程序内断言）。
+    ★★ **如实点破一层**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而本主题**没有 A**
+    ⇒ 属「**第二种情形的【改写】**」（★ 不是 §2 里的任何一种**原样**形态）。
+    ★★ 而「**写明不可测**」是【另一条】纪律（**不是** §2 的任何一种编号形态）。
     **不得把「常量钉住」冒充 A 类**（那是 `P12` 的变体：判据看着在检查，其实只是把常量抄了一遍）。
     ⇒ 本主题的「钉住」**一律归 `D` 类**（照同域 `collectives` 的处置）。
 
@@ -76,14 +80,14 @@ NCCL_SYSERR_SOURCE_TAG = "v2.26.2-1"
 #       抓取日 2026-10-08。
 # 口径：★★★ **它是【源码】的版本，与 `NCCL_DOC_VERSION`（`2.32.3`）【不同】** ——
 #       两者**不是同一个工件**，**行号不保证相同** ⇒ 引用时必须分别写清。
-# 消费者：`03_failures_and_limits.py` 的 `C.2`/`D.6`。
+# 消费者：`03_failures_and_limits.py` 的 `C.2`/`D.3`。
 # 同值位置：无。
 
 NCCL_SYSERR_SOURCE_LOC = "src/init.cc:2198"
 # 来源：**[B'] 官方【源码】的位置**（文件 + 行号）—— 载体 = tag `v2.26.2-1`，抓取日 2026-10-08。
 # 口径：★ 它是 `F2` 的落点：那个字面串**在文档里 8 页 grep 0 命中**，**只在源码**里
 #       ⇒ ★★ **行号随版本漂移**，引用时必须同时写 tag。
-# 消费者：`03_failures_and_limits.py` 的 `D.6`。
+# 消费者：`03_failures_and_limits.py` 的 `C.2`/`D.3`。
 # 同值位置：无。
 
 
@@ -107,13 +111,13 @@ NCCL_ALGO_QUOTE_RAW_COUNT = 0
 # 口径：★★ **口径必须写清**：数的是**字面串**在**原始 HTML 字节**里的出现次数。
 #       ★★★ 它与 `NCCL_ALGO_QUOTE_PLAIN_COUNT` **不等**（0 对 1）⇒ **该句跨了一个 HTML 标记边界**
 #         ⇒ 把它当「逐字」引文时，**必须声明「这是去标记后的文本」**。
-# 消费者：`01_architecture_and_selection.py` 的 `B.2`/`D.8`。
+# 消费者：`01_architecture_and_selection.py` 的 `B.4`。
 # 同值位置：无。
 
 NCCL_ALGO_QUOTE_PLAIN_COUNT = 1
 # 来源：[B] —— 同一条引文在**去标记文本**里的 `count()`（研究者实测，抓取日 2026-10-08）。
 # 口径：★★ 与上一条**成对使用**；两条**一起**才构成「不跨标记」的判定。
-# 消费者：`01_architecture_and_selection.py` 的 `B.2`/`D.8`。
+# 消费者：`01_architecture_and_selection.py` 的 `B.4`。
 # 同值位置：无。
 
 NCCL_ALGO_NAMES = ("Ring", "Tree", "Collnet", "CollnetChain", "CollnetDirect", "NVLS", "NVLSTree", "PAT")
@@ -122,9 +126,27 @@ NCCL_ALGO_NAMES = ("Ring", "Tree", "Collnet", "CollnetChain", "CollnetDirect", "
 #         把整句存成一个串会让**元素级**变异漏网，`mutate.py` 的盲区⑧）。
 # 口径：★★★ 这是**官方暴露的可选值**；★ **它【不是】一张「什么时候用哪个」的表** ——
 #       默认是 `unset`（自动选，见 `NCCL_ALGO_DEFAULT_QUOTE`）。
-#       ★★ **大小写敏感**（文档写 `Ring` 不是 `ring`）⇒ 本常量照文档大小写存。
-# 消费者：`01_architecture_and_selection.py` 的 `B.1`/`C.1`/`D.4`。
+#       ★★★ **官方文档说取值【不】大小写敏感**（`env.html` 逐字 `(not case sensitive)`，
+#         见 `NCCL_ALGO_CASE_QUOTE`）⇒ ★ 本常量**照文档的拼写**存，但**不得**据它宣称
+#         「`Ring` 写成 `ring` 会失败」。
+#         ★★★ **本库实测记录**：官方 `(not case sensitive)` **就在同一句**里
+#         （`Comma-separated list of algorithms (not case sensitive) among:`），
+#         而本主题的**初稿把它反转成「大小写敏感」** —— 一次**编机制从句**的现场
+#         （★ 无数字可 grep，且**不在**实施者自列的禁写清单里）。
+# 消费者：`01_architecture_and_selection.py` 的 `B.1`/`C.1`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_ALGO_SINCE`（**同一个下标**）。
+
+NCCL_ALGO_CASE_QUOTE = "Comma-separated list of algorithms (not case sensitive) among:"
+# 来源：[B] NCCL 官方产品文档 `env.html`（`NCCL_ALGO` 的定义句），版本 2.32.3，抓取日 2026-10-08。
+#       ★★★ **逐字**：官方正文写的是 **`(not case sensitive)`** —— **算法与协议两处都有**
+#         （协议那句见 `NCCL_PROTO_CASE_QUOTE`）。
+# 口径：★★★ **本库实测记录**：官方**就在这同一句里**写了 `(not case sensitive)`，
+#       而本主题的**初稿把它反转成「大小写敏感」**（并据此**编了一条失败成因**：
+#       「`Ring` 写成 `ring` 会失败」）⇒ 这是一次**编机制从句**。
+#       ★★ 「逐字」这个标签要看 raw HTML 的计数（`B.4` 口径）；★ 本库**未取到**该页的
+#         raw/plain 计数 ⇒ **不**声称它跨不跨标记，只按**去标记文本逐字**引。
+# 消费者：`01_architecture_and_selection.py` 的 `B.5`。
+# 同值位置：`NCCL_PROTO_CASE_QUOTE`（**同一句式的另一处**）。
 
 NCCL_ALGO_SINCE = ("2.5+", "2.5+", "2.5–2.13", "2.14+", "2.14+", "2.17+", "2.18+", "2.23+")
 # 来源：[B] 同上一条的**同一张表**（`env.html` 的 since 列），版本 2.32.3，抓取日 2026-10-08。
@@ -136,14 +158,14 @@ NCCL_ALGO_SINCE = ("2.5+", "2.5+", "2.5–2.13", "2.14+", "2.14+", "2.17+", "2.1
 #         （`CollnetChain` / `CollnetDirect`）⇒ 读法是「Collnet 在 2.14 被拆成两条」，
 #         ★ **不是**「Collnet 还在、另外多了两条」。
 #       ★★ **两条必须逐元素钉住**（`01` 的 `D.4`）。
-# 消费者：`01_architecture_and_selection.py` 的 `B.1`/`C.2`/`D.4`。
+# 消费者：`01_architecture_and_selection.py` 的 `B.1`/`C.2`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_ALGO_NAMES`（**同一个下标**）。
 
 NCCL_ALGO_COUNT = 8
 # 来源：[B] —— 上一行那个取值表的**元素个数**（★ 逐条数出来的，不是估的）。
 # 口径：★★ 取它当常量而不是把 `8` 写死在断言里，是为了让 `mutate.py` 能看见它
 #       （★ 同时 `01` 的 `D.4` 用 `== 8` 逐字钉住）。
-# 消费者：`01_architecture_and_selection.py` 的 `B.1`/`D.4`。
+# 消费者：`01_architecture_and_selection.py` 的 `B.1`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_ALGO_NAMES`。
 
 NCCL_ALGO_DEFAULT_QUOTE = "The default is unset, which causes NCCL to automatically choose the available algorithms based on the node topology and architecture."
@@ -183,6 +205,15 @@ NCCL_PROTO_QUOTE = "The NCCL_PROTO variable defines which protocol(s) NCCL will 
 # 消费者：`01_architecture_and_selection.py` 的 `B.3`/`D.5`。
 # 同值位置：无。
 
+NCCL_PROTO_CASE_QUOTE = "(since 2.5) Comma-separated list of protocols (not case sensitive) among:"
+# 来源：[B] NCCL 官方产品文档 `env.html`（`NCCL_PROTO` 的取值句），版本 2.32.3，抓取日 2026-10-08。
+#       ★★★ **逐字**：与 `NCCL_ALGO_CASE_QUOTE` **同句式** —— 官方对**协议**取值同样写
+#         **`(not case sensitive)`**（★ 「不敏感」在**算法与协议两处都有**）。
+# 口径：★★★ 与本主题初稿的「大小写敏感」**相反** ⇒ 这一条是**同一处机制从句**的第二半。
+#       ★★ 同 `NCCL_ALGO_CASE_QUOTE`：本库**未取到**该页 raw/plain 计数 ⇒ 只按**去标记文本逐字**引。
+# 消费者：`01_architecture_and_selection.py` 的 `B.5`。
+# 同值位置：`NCCL_ALGO_CASE_QUOTE`。
+
 NCCL_PROTO_VALUES = ("LL", "LL128", "Simple")
 # 来源：[B] 同上 —— 文档逐字 `LL, LL128, and Simple.`，版本 2.32.3，抓取日 2026-10-08。
 # 口径：★★ 三个取值**逐元素钉住**；★ **本文件【不】登记它们的机制**
@@ -220,13 +251,13 @@ NCCL_ASYNC_DEVICE_RAW_COUNT = 1
 # 口径：★★ **与 `NCCL_ALGO_QUOTE_RAW_COUNT` 对照**：那条是 `0`（跨标记）、本条是 `1`（不跨）
 #       ⇒ ★★ 两条**一起**证明「**逐字**」这个标签**必须看 raw HTML 的计数**，
 #         只看去标记文本会把**跨标记的拼接**当成逐字。
-# 消费者：`01_architecture_and_selection.py` 的 `B.2`/`D.8`。
+# 消费者：`01_architecture_and_selection.py` 的 `B.4`。
 # 同值位置：无。
 
 NCCL_ASYNC_DEVICE_PLAIN_COUNT = 1
 # 来源：[B] —— 同一条引文在**去标记文本**里的 `count()`（抓取日 2026-10-08）。
 # 口径：★★ 与上一条相等 ⇒ 该句**不跨标记**。
-# 消费者：`01_architecture_and_selection.py` 的 `B.2`/`D.8`。
+# 消费者：`01_architecture_and_selection.py` 的 `B.4`。
 # 同值位置：无。
 
 NCCL_GROUP_NONBLOCK_QUOTE = "All subsequent calls to NCCL until ncclGroupEnd will not block due to inter-CPU synchronization."
@@ -272,7 +303,7 @@ NCCL_REMOVED_VARS = (("NCCL_TREE_THRESHOLD", "2.5"), ("NCCL_SINGLE_RING_THRESHOL
 #         TOC 里**仍列着它们**，**只有正文**才写 `removed` ⇒ ★★ **凡引「某变量存在/已移除」，
 #         去看【正文】而不是 TOC**。
 #       ★★ 元组**逐元素**钉住（每条含名字与版本，四个叶子）。
-# 消费者：`01_architecture_and_selection.py` 的 `B.2`/`C.2`/`D.7`。
+# 消费者：`01_architecture_and_selection.py` 的 `B.2`/`D.7`。
 # 同值位置：无。
 
 NCCL_REMOVED_COUNT = 2
@@ -297,7 +328,7 @@ NCCL_TOPO_HANDLES = ("NCCL_TOPO_FILE", "NCCL_DEBUG_SUBSYS=GRAPH", "NCCL_DEBUG_SU
 #       ★★ 前两条是**观测**（`GRAPH` / `TUNING` 是 `NCCL_DEBUG_SUBSYS` 的两个取值，
 #         语义见 `NCCL_DEBUG_SUBSYS_*`）；第三条是**检测的输入**（`NCCL_TOPO_FILE`）。
 #       ★★ 元组**逐元素**钉住。
-# 消费者：`02_topology_awareness.py` 的 `B.1`/`C.1`/`C.2`/`D.4`。
+# 消费者：`02_topology_awareness.py` 的 `B.1`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_TOPO_HANDLE_CAPS`（**同一个下标**）。
 
 NCCL_TOPO_HANDLE_CAPS = (("NCCL_TOPO_FILE", "INPUT"), ("NCCL_DEBUG_SUBSYS=GRAPH", "OBSERVE"), ("NCCL_DEBUG_SUBSYS=TUNING", "OBSERVE"))
@@ -309,7 +340,7 @@ NCCL_TOPO_HANDLE_CAPS = (("NCCL_TOPO_FILE", "INPUT"), ("NCCL_DEBUG_SUBSYS=GRAPH"
 #       ★★ **官方暴露的三条抓手【没有】一条的能力是「控制选路」** ——
 #         本元组的取值域**只有 `INPUT` 与 `OBSERVE`**（★ **没有** `ROUTE`）。
 #       ⇒ ★★ 这就是 `02` 的两条 C 类（`C.1`/`C.2`）的判据来源。
-# 消费者：`02_topology_awareness.py` 的 `B.1`/`C.1`/`C.2`/`D.4`。
+# 消费者：`02_topology_awareness.py` 的 `B.1`/`C.1`/`C.2`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_TOPO_HANDLES`（**同一个下标**）。
 
 NCCL_TOPO_HANDLE_COUNT = 3
@@ -329,7 +360,7 @@ NCCL_TOPO_FILE_QUOTE = "Path to an XML file to load before detecting the topolog
 NCCL_TOPO_FILE_SINCE = "2.6"
 # 来源：[B] NCCL 官方产品文档 `env.html`，版本 2.32.3，抓取日 2026-10-08（★ `NCCL_TOPO_FILE` 的 since）。
 # 口径：★★ 与 `NCCL_ALGO_SINCE` 是**同一类账**（★ 逐条可数、口径一致）。
-# 消费者：`02_topology_awareness.py` 的 `B.1`/`D.5`。
+# 消费者：`02_topology_awareness.py` 的 `D.5`。
 # 同值位置：`NCCL_TOPO_FILE_QUOTE`。
 
 NCCL_TOPO_DUMP_FILE = "NCCL_TOPO_DUMP_FILE"
@@ -337,24 +368,43 @@ NCCL_TOPO_DUMP_FILE = "NCCL_TOPO_DUMP_FILE"
 #       ★★ 计划 `§C.2` 把它与 `NCCL_TOPO_FILE` 并列为「拓扑感知」的两条变量名。
 # 口径：★★ 它是**导出**（dump）拓扑的变量 —— ★ **它的存在正是「观测 ≠ 控制」的旁证**：
 #       官方给了**看**的出口（`DUMP` / `GRAPH` / `TUNING`），而**选路**仍是 NCCL 自己算的。
-# 消费者：`02_topology_awareness.py` 的 `B.1`/`D.5`。
+# 消费者：`02_topology_awareness.py` 的 `D.5`。
 # 同值位置：无。
 
 NCCL_DEBUG_SUBSYS_GRAPH = "GRAPH"
-# 来源：[B] NCCL 官方产品文档 `troubleshooting/logging.html`（`NCCL_DEBUG_SUBSYS`），
-#       版本 2.32.3，抓取日 2026-10-08。★★ 计划 `§C.2` 逐字：`NCCL_DEBUG_SUBSYS=GRAPH` **看拓扑**。
-# 口径：★★ **非逐字**：`GRAPH` 的语义（看拓扑）是**计划 `§C.2` 记录的**，
-#       ★★ **本库未取到那半句的逐字原文** ⇒ 标 `[B]·非逐字`，**不得**当成引文。
-#       ★★ 但 `NCCL_DEBUG_SUBSYS` 这个**设施**是**有逐字依据**的（见 `NCCL_HANG_DIAG_QUOTE`）。
-# 消费者：`02_topology_awareness.py` 的 `B.1`/`C.2`/`D.5`。
+# 来源：[B] NCCL 官方产品文档 `troubleshooting/logging.html`（`NCCL_DEBUG_SUBSYS` 取值表），
+#       版本 2.32.3，抓取日 2026-10-08。
+# 口径：★★★ **逐字可引**（★ 不再是「非逐字」）—— 语义的**逐字**就在**本主题已引的那一页**
+#       `troubleshooting/logging.html` 的 `NCCL_DEBUG_SUBSYS` 取值表里，见 `NCCL_DEBUG_SUBSYS_GRAPH_QUOTE`。
+#       ★★★ **本库实测记录**：初稿说「**本库【未取到】那半句的逐字原文** ⇒ 不得当引文」——
+#         那是把**「没去找」当成「不存在」**（本库已记的形态：**读不到是方法问题，不是事实问题**），
+#         而**该页本来就在手上**（hang 诊断命令就是从同一页取的）。
+#       ★★ `NCCL_DEBUG_SUBSYS` 这个**设施**还另有逐字旁证（见 `NCCL_HANG_DIAG_QUOTE`）。
+# 消费者：`02_topology_awareness.py` 的 `B.1`/`D.5`。
 # 同值位置：`NCCL_TOPO_HANDLES` / `NCCL_DEBUG_SUBSYS_TUNING`。
 
 NCCL_DEBUG_SUBSYS_TUNING = "TUNING"
-# 来源：[B] 同上（`troubleshooting/logging.html`），版本 2.32.3，抓取日 2026-10-08。
-#       ★★ 计划 `§C.2` 逐字：`NCCL_DEBUG_SUBSYS=TUNING` **看算法/协议选择**。
-# 口径：★★ **非逐字**（同上一条的理由）。
+# 来源：[B] 同上（`troubleshooting/logging.html` 的 `NCCL_DEBUG_SUBSYS` 取值表），
+#       版本 2.32.3，抓取日 2026-10-08。
+# 口径：★★★ **逐字可引**（同 `NCCL_DEBUG_SUBSYS_GRAPH` 的理由）—— 见 `NCCL_DEBUG_SUBSYS_TUNING_QUOTE`。
 # 消费者：`02_topology_awareness.py` 的 `B.1`/`D.5`。
 # 同值位置：`NCCL_TOPO_HANDLES` / `NCCL_DEBUG_SUBSYS_GRAPH`。
+
+NCCL_DEBUG_SUBSYS_GRAPH_QUOTE = "Topology detection and graph search"
+# 来源：[B] NCCL 官方产品文档 `troubleshooting/logging.html`（`NCCL_DEBUG_SUBSYS` 取值表里
+#       `GRAPH` 那一条的说明），版本 2.32.3，抓取日 2026-10-08。★★★ **逐字**。
+# 口径：★★★ **它把「`GRAPH` = 看拓扑」从「语义」升为「逐字引文」** —— 载体是本主题**已引的**
+#       `logging.html`（★ 不是另找一页）。★★ 「逐字」这个标签要看 raw HTML 的计数（`B.4` 口径）；
+#       ★ 本库**未取到**该页的 raw/plain 计数 ⇒ **不**声称它跨不跨标记，只按**去标记文本逐字**引。
+# 消费者：`02_topology_awareness.py` 的 `D.5`。
+# 同值位置：`NCCL_DEBUG_SUBSYS_TUNING_QUOTE`。
+
+NCCL_DEBUG_SUBSYS_TUNING_QUOTE = "Algorithm and protocol selection"
+# 来源：[B] 同上（`troubleshooting/logging.html` 的 `NCCL_DEBUG_SUBSYS` 取值表里 `TUNING` 那一条），
+#       版本 2.32.3，抓取日 2026-10-08。★★★ **逐字**。
+# 口径：★★★ 同 `NCCL_DEBUG_SUBSYS_GRAPH_QUOTE`：把「`TUNING` = 看算法/协议选择」升为**逐字引文**。
+# 消费者：`02_topology_awareness.py` 的 `D.5`。
+# 同值位置：`NCCL_DEBUG_SUBSYS_GRAPH_QUOTE`。
 
 NCCL_TOPO_NO_ROUTE_CAP_NOTE = "★ NCCL 官方暴露的拓扑抓手（NCCL_TOPO_FILE / DEBUG_SUBSYS=GRAPH / =TUNING）里没有一条的能力是「控制选路」——感知拓扑 ≠ 能控制选路"
 # 来源：**[E] 本库的消歧记录**（★ **不是** NCCL 文档里的话）—— 依据是 `NCCL_TOPO_HANDLE_CAPS`
@@ -364,7 +414,7 @@ NCCL_TOPO_NO_ROUTE_CAP_NOTE = "★ NCCL 官方暴露的拓扑抓手（NCCL_TOPO_
 #       （`02` 的 `C.1` 判它）。
 #       ★★ 它**没有外部出处** ⇒ **不得**把它写成引文；它存在的理由是**可复核**
 #         （`02` 的 `D.6` 用 `==` 钉住它）。
-# 消费者：`02_topology_awareness.py` 的 `C.1`/`D.6`。
+# 消费者：`02_topology_awareness.py` 的 `D.6`。
 # 同值位置：无。
 
 
@@ -375,7 +425,10 @@ NCCL_TOPO_NO_ROUTE_CAP_NOTE = "★ NCCL 官方暴露的拓扑抓手（NCCL_TOPO_
 NCCL_OFFLOAD_SWITCHES = ("NCCL_NVLS_ENABLE", "NCCL_COLLNET_ENABLE")
 # 来源：[B] NCCL 官方产品文档 `env.html`，版本 2.32.3，抓取日 2026-10-08。
 #       ★★ 计划 `§C.2`：`NCCL_NVLS_ENABLE`（since 2.17，默认 `2`）·
-#         `NCCL_COLLNET_ENABLE`（默认 `0`，★ **计划未给 since**）。
+#         `NCCL_COLLNET_ENABLE`（默认 `0`）。
+#       ★★★ **修正**：`NCCL_COLLNET_ENABLE` 的 `since` 官方**逐字给了 `2.6`**
+#         （见 `NCCL_COLLNET_ENABLE_QUOTE`）—— ★ **不是**「官方未给」（那是初稿把
+#         「计划没记」当成了「官方没有」，见 `NCCL_PLAN_VS_DOC_NOTE`）。
 # 口径：★★ 这两条是**开关**（把某条 offload 路径打开/关掉）—— ★★ **与「选路」不同**：
 #       开关决定「**允许不允许**用某条路径」，★ **不决定**「**哪条路径承载哪笔消息**」。
 #       ★★ 元组**逐元素**钉住。
@@ -393,41 +446,70 @@ NCCL_OFFLOAD_DEFAULTS = ("2", "0")
 NCCL_NVLS_ENABLE_SINCE = "2.17"
 # 来源：[B] NCCL 官方产品文档 `env.html`，版本 2.32.3，抓取日 2026-10-08
 #       （★ `NCCL_NVLS_ENABLE` 的 since —— 计划 `§C.2` 逐字：since 2.17，默认 `2`）。
-# 口径：★★ 与 `NCCL_COLLNET_SINCE_UNSTATED` 成对：**这条有 `since`、那条没有** ⇒
-#       ★★ 两条并列才能看出「官方对开关的 `since` 记录【不是】齐的」。
+# 口径：★★ 与 `NCCL_COLLNET_ENABLE_SINCE` 并列：**两条开关的 `since` 都在官方文档里**。
 # 消费者：`02_topology_awareness.py` 的 `B.2`/`D.4`。
 # 同值位置：`NCCL_OFFLOAD_SWITCHES`（**同一个下标**）。
 
-NCCL_COLLNET_SINCE_UNSTATED = ""
-# 来源：**[E] 本库的「官方未给」占位** —— `NCCL_COLLNET_ENABLE` 的 `since` 在计划 `§C.2` 的
-#       记录里**没有出现** ⇒ ★★ **不得**替它填一个版本。
-# 口径：★★★ 空串表示「**官方文档【未】给出**」，★ **它不是一个版本号**
-#       （`mutate.py` 会把空串变成 `"X"`，`02` 的 `D.4` 用 `== ""` 钉住它）。
+NCCL_COLLNET_ENABLE_SINCE = "2.6"
+# 来源：[B] NCCL 官方产品文档 `env.html`（`NCCL_COLLNET_ENABLE`），版本 2.32.3，抓取日 2026-10-08。
+#       ★★★ **逐字**：官方该变量正文写 **`NCCL_COLLNET_ENABLE (since 2.6) Enable the use of the
+#         CollNet plugin.`** ⇒ ★★ **官方【给了】since = `2.6`**。
+# 口径：★★★ **本库实测记录（一条值得进正文的方法论）**：**「规划 `§C.2` 没记」≠「官方没有」**
+#       —— 本主题**初稿**把「计划没记」当成了「官方未给」，用**空串占位**并立了一条
+#       「**不得**替它填一个版本」的纪律 —— ★★ 那是本库的「**把外部工件当不会错的正典**」/
+#       「**自造真值**」形态（P11/P12 家族）。★ 修法：照官方**逐字**填 `2.6`。
 # 消费者：`02_topology_awareness.py` 的 `B.2`/`D.4`。
+# 同值位置：`NCCL_COLLNET_ENABLE_QUOTE` / `NCCL_TOPO_FILE_SINCE`（★ 同为「官方给了 since」的开关/变量）。
+
+NCCL_COLLNET_ENABLE_QUOTE = "NCCL_COLLNET_ENABLE (since 2.6) Enable the use of the CollNet plugin."
+# 来源：[B] NCCL 官方产品文档 `env.html`（`NCCL_COLLNET_ENABLE` 的定义句），版本 2.32.3，
+#       抓取日 2026-10-08。★★★ **逐字**（★ 存到该句句点为止；官方该句在此后继续给默认值
+#       `Default is 0`，那部分本库另记于 `NCCL_OFFLOAD_DEFAULTS`）。
+# 口径：★★★ 它是 `NCCL_COLLNET_ENABLE_SINCE`（`2.6`）的**逐字依据** ——
+#       官方**逐字**写了 `(since 2.6)` ⇒ ★ **不存在「官方未给」这回事**。
+#       ★★ 「逐字」这个标签要看 raw HTML 的计数（`B.4` 口径）；★ 本库**未取到**该页的 raw/plain
+#         计数 ⇒ **不**声称它跨不跨标记，只按**去标记文本逐字**引。
+# 消费者：`02_topology_awareness.py` 的 `D.5`。
+# 同值位置：`NCCL_COLLNET_ENABLE_SINCE`。
+
+NCCL_PLAN_VS_DOC_NOTE = "★「规划没记」≠「官方没有」——本库实测：NCCL_COLLNET_ENABLE 的 since 官方逐字给了 2.6，初稿却当成了「官方未给」"
+# 来源：**[E] 本库的引用纪律记录**（★ **不是**任何来源里的话）—— 依据是 `NCCL_COLLNET_ENABLE_SINCE`
+#       （官方逐字给了 `2.6`）与 `NCCL_COLLNET_ENABLE_QUOTE`（逐字原文）。
+# 口径：★★★ 它是一条**方法论**：**「规划 `§C.2` 没记」不等于「官方没有」** ——
+#       把外部规划当**不会错的正典**，会在官方**明明给了**的地方**自造**一个「未给」。
+#       ★★ 它**没有外部出处** ⇒ **不得**写成引文；存在理由是**可复核**（`02` 的 `D.6` 用 `==` 钉住它）。
+# 消费者：`02_topology_awareness.py` 的 `D.6`。
 # 同值位置：无。
 
 
 # ===========================================================================
-# 7. **错误码表与归因的可判定范围**（`api/types.html`，[B] 级）
+# 7. **错误码表与归因的可判定范围**（码表 = `api/types.html`；归因与异步段 = `usage/communicators.html`，[B] 级）
 # ===========================================================================
 
 NCCL_ERROR_CODES = (("ncclUnhandledCudaError", 1), ("ncclSystemError", 2), ("ncclInternalError", 3), ("ncclInvalidArgument", 4), ("ncclInvalidUsage", 5), ("ncclRemoteError", 6), ("ncclInProgress", 7))
 # 来源：[B] NCCL 官方产品文档 `api/types.html`，版本 2.32.3，抓取日 2026-10-08。
 #       ★★ 计划 `§C.2` 逐字：`ncclUnhandledCudaError (1)` … `ncclInProgress (7)`。
 # 口径：★★★ **这是错误码表的【全表】**（7 个）—— ★ 元组**逐元素**钉住（14 个叶子）。
+#       ★★ **注意（官方原表另有第 8 项）**：官方 `api/types.html` 的 `Possible values are:`
+#         共列 **8** 项，**多的一项**是 `ncclSuccess (0)`；★ **它不是「错误」**（是成功码）
+#         ⇒ **本文不计它**，「全表」一律指**这 7 个错误码**。
 #       ★★ **注意**：**「有错误码」不等于「官方给了归因」** ——
 #         归因只覆盖其中一个子集（见 `NCCL_ATTRIBUTED_CODES`）。
-# 消费者：`03_failures_and_limits.py` 的 `B.1`/`C.1`/`D.5`。
+# 消费者：`03_failures_and_limits.py` 的 `B.1`/`C.1`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_ERROR_CODE_COUNT`。
 
 NCCL_ERROR_CODE_COUNT = 7
 # 来源：[B] —— 上一行错误码表的**元素个数**（★ 逐条数出来的：`1`…`7`）。
 # 口径：★ 取它当常量是为了让 `mutate.py` 能看见它（`03` 的 `D.5` 用 `== 7` 钉住）。
-# 消费者：`03_failures_and_limits.py` 的 `B.1`/`D.5`。
+# 消费者：`03_failures_and_limits.py` 的 `B.1`/`C.1`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_ERROR_CODES`。
 
 NCCL_ERROR_ATTRIBUTION_QUOTE = "ncclUnhandledCudaError and ncclSystemError indicate that a call NCCL made to an external component failed, which caused the NCCL operation to fail. The error message should explain which component the user should look at and try to fix"
-# 来源：[B] NCCL 官方产品文档 `api/types.html`，版本 2.32.3，抓取日 2026-10-08。
+# 来源：[B] NCCL 官方产品文档 **`usage/communicators.html`**，版本 2.32.3，抓取日 2026-10-08。
+#       ★★★ **载体页修正**：本主题**初稿**把它标成 `api/types.html` —— ★ 那句归因**不在** `api/types.html`
+#         （`grep -c "external component"` = **0**），而在 **`usage/communicators.html`**
+#         （★ 全站 44 页只有该页命中）。★ `api/types.html` 的**错误码表本身是对的**（该页确有 `1`–`7`）
+#         —— **错的只是「载体页」**。
 #       ★★ 计划 `§C.2` 记录的逐字形态到 `…should look at and try to fix …`（结尾的 `…` 是计划自己的
 #         省略标记）⇒ ★ 本常量存到 `try to fix` 为止，**不**补全后面。
 # 口径：★★★ **本条给出了「归因的可判定范围」**：
@@ -435,20 +517,20 @@ NCCL_ERROR_ATTRIBUTION_QUOTE = "ncclUnhandledCudaError and ncclSystemError indic
 #         且给的是「**调外部组件失败**」这一条归因。
 #       ⇒ ★★★ **它【不是】一条通用规律** —— 7 个错误码里只有 2 个被归因
 #         ⇒ **把归因当通用规律**是 `03` 的 `C.1` 判的错法。
-# 消费者：`03_failures_and_limits.py` 的 `B.1`/`C.1`/`D.6`。
+# 消费者：`03_failures_and_limits.py` 的 `B.1`/`B.2`/`D.5`。
 # 同值位置：`NCCL_ATTRIBUTED_CODES`。
 
 NCCL_ATTRIBUTED_CODES = ("ncclUnhandledCudaError", "ncclSystemError")
 # 来源：[B] —— 从 `NCCL_ERROR_ATTRIBUTION_QUOTE` 里**点名的那两个**码（★ 是**读**出来的，不是猜的）。
 # 口径：★★★ **把它单列成常量**是为了让「归因覆盖了哪几个」**可数**（2 个 / 共 7 个）。
 #       ★★ 元组**逐元素**钉住。
-# 消费者：`03_failures_and_limits.py` 的 `B.1`/`C.1`/`D.6`。
+# 消费者：`03_failures_and_limits.py` 的 `B.1`/`C.1`/`D.3b`/`D.4`。
 # 同值位置：`NCCL_ERROR_ATTRIBUTION_QUOTE`。
 
 NCCL_ATTRIBUTED_CODE_COUNT = 2
 # 来源：[B] —— 上一条的**元素个数**（★ 逐条数出来的）。
 # 口径：★★ 与 `NCCL_ERROR_CODE_COUNT`（7）**并置**才构成「可判定范围」：`2 / 7`。
-# 消费者：`03_failures_and_limits.py` 的 `B.1`/`C.1`/`D.6`。
+# 消费者：`03_failures_and_limits.py` 的 `B.1`/`D.4`。
 # 同值位置：`NCCL_ATTRIBUTED_CODES`。
 
 NCCL_ATTRIBUTION_SCOPE_NOTE = "★ 官方对错误码的归因只覆盖 ncclUnhandledCudaError 与 ncclSystemError 两个（共 7 个码）⇒ 不得把它当成通用规律"
@@ -461,8 +543,10 @@ NCCL_ATTRIBUTION_SCOPE_NOTE = "★ 官方对错误码的归因只覆盖 ncclUnha
 # 同值位置：无。
 
 NCCL_ASYNC_ERROR_API = "ncclCommGetAsyncError"
-# 来源：[B] NCCL 官方产品文档 `api/types.html`（`ncclCommGetAsyncError` 段），版本 2.32.3，
-#       抓取日 2026-10-08。★ 计划 `§C.2`：异步错误**经它报出**。
+# 来源：[B] NCCL 官方产品文档 **`usage/communicators.html`**（`ncclCommGetAsyncError` 段），
+#       版本 2.32.3，抓取日 2026-10-08。★ 计划 `§C.2`：异步错误**经它报出**。
+#       ★★★ **载体页修正**：初稿误标 `api/types.html` —— ★ 这段**不在** `api/types.html`
+#         （`grep -c "external component"` = 0；★ 全站只有 `usage/communicators.html` 命中）。
 # 口径：★★ **错误有两条报出通道** —— **同步**的是返回值（那 7 个码）、
 #       **异步**的（内核里跑出来的）**不走返回值**，而是**查询这个接口**。
 #       ⇒ ★★ 别把「返回值非 0」当成 NCCL 出错的**唯一**信号。
@@ -471,8 +555,9 @@ NCCL_ASYNC_ERROR_API = "ncclCommGetAsyncError"
 # 同值位置：无。
 
 NCCL_ASYNC_ERROR_QUOTE = "will usually not progress and never complete"
-# 来源：[B] NCCL 官方产品文档 `api/types.html`（`ncclCommGetAsyncError` 段），版本 2.32.3，
-#       抓取日 2026-10-08。★ 计划 `§C.2` 记录的形态是 `…will usually not progress and never complete.`
+# 来源：[B] NCCL 官方产品文档 **`usage/communicators.html`**（`ncclCommGetAsyncError` 段），
+#       版本 2.32.3，抓取日 2026-10-08（★ 同 `NCCL_ASYNC_ERROR_API` 的载体页修正）。
+#       ★ 计划 `§C.2` 记录的形态是 `…will usually not progress and never complete.`
 #       —— 首尾的 `…` 与句点标注是**计划自己的省略标记** ⇒ 本常量存**核心子句**。
 # 口径：★★ **异步错误**【不是**靠返回值报的**】：官方给了 `ncclCommGetAsyncError` 这个出口。
 # 消费者：`03_failures_and_limits.py` 的 `B.2`/`D.6`。
@@ -483,7 +568,7 @@ NCCL_HANG_DIAG_QUOTE = "If your application hangs during NCCL initialization: NC
 # 口径：★★★ **hang 的诊断入口** —— 官方给的是一条**命令行**（开 `INIT,BOOTSTRAP,NET` 三个子系统）。
 #       ★★★ **官方【没有】给出 hang 的单一归因**：只有「**开这些子系统看**」这一条入口
 #         （`03` 的 `B.1` 判它）⇒ ★ **不得**给 hang 编一个归因。
-# 消费者：`03_failures_and_limits.py` 的 `B.1`/`D.6`。
+# 消费者：`03_failures_and_limits.py` 的 `B.1`/`D.5`。
 # 同值位置：无。
 
 NCCL_SYSERR_SOURCE_QUOTE = 'case ncclSystemError : return "unhandled system error (run with NCCL_DEBUG=INFO for details)";'
@@ -492,7 +577,7 @@ NCCL_SYSERR_SOURCE_QUOTE = 'case ncclSystemError : return "unhandled system erro
 # 口径：★★★ **`F2` 的落点**：那个字面串 `unhandled system error` 在**用户指南 8 页 grep 0 命中**
 #       ⇒ ★★ **要引它必须注明「官方源码」**并标 `[B']`，**不得**写「NCCL 文档说……」。
 #       ★★★ **版本不同**：源码 tag `v2.26.2-1` ≠ 文档 `2.32.3` ⇒ **行号不保证相同**。
-# 消费者：`03_failures_and_limits.py` 的 `C.2`/`D.6`。
+# 消费者：`03_failures_and_limits.py` 的 `D.5`。
 # 同值位置：`NCCL_SYSERR_SOURCE_TAG` / `NCCL_SYSERR_SOURCE_LOC`。
 
 NCCL_SYSERR_SOURCE_NOTE = "★「unhandled system error」的载体是官方【源码】(v2.26.2-1, src/init.cc:2198)，不是 NCCL 2.32.3 的文档"
@@ -516,10 +601,12 @@ NCCL_SYSERR_SOURCE_NOTE = "★「unhandled system error」的载体是官方【�
 #     ⇒ 会全部记成**漏网**（本库实测：只用于打印的模块级常量表制造过漏网）；
 #     ★★ **而【空元组本身】有消费者**：三个编号程序各用 `specs.UNSOURCED == ()` 钉住它
 #       （★ 0 个叶子 ⇒ 不产生变异体）。
-#   · 本主题的两处「未核到」已经**写在正文常量自己的 `# 来源：` 里**，不欠一条记录：
-#     ① **`NCCL_DEBUG_SUBSYS=GRAPH` / `=TUNING` 的逐字语义** —— 计划 `§C.2` 记录了语义
-#        （「看拓扑」/「看算法选择」）但**未给逐字原文** ⇒ 已在
-#        `NCCL_DEBUG_SUBSYS_GRAPH` / `NCCL_DEBUG_SUBSYS_TUNING` 的 `# 来源：` 标 `[B]·非逐字`；
-#     ② **`NCCL_COLLNET_ENABLE` 的 `since`** —— 计划**未给** ⇒ 已在
-#        `NCCL_COLLNET_SINCE_UNSTATED` 记「官方未给」，**不替它填一个版本**。
+#   · ★★★ **本主题【此刻没有】「未核到」项**（★ 两处初稿以为「未核到」的，验收都已查实为
+#     **官方逐字给了**，故**不是** UNSOURCED）：
+#     ① **`NCCL_DEBUG_SUBSYS=GRAPH` / `=TUNING` 的语义** —— 初稿标 `[B]·非逐字`（「本库未取到」），
+#        ★ 实为**逐字就在**本主题**已引的** `troubleshooting/logging.html`
+#        ⇒ 已升为逐字（`NCCL_DEBUG_SUBSYS_GRAPH_QUOTE` / `NCCL_DEBUG_SUBSYS_TUNING_QUOTE`）；
+#     ② **`NCCL_COLLNET_ENABLE` 的 `since`** —— 初稿记「官方未给」并立了「不得替它填」的纪律，
+#        ★ 实为官方**逐字给了 `2.6`** ⇒ 已照填（`NCCL_COLLNET_ENABLE_SINCE` /
+#        `NCCL_COLLNET_ENABLE_QUOTE`；★ 根因「规划没记 ≠ 官方没有」，见 `NCCL_PLAN_VS_DOC_NOTE`）。
 UNSOURCED = ()

@@ -20,8 +20,8 @@ updated: 2026-10-08
 # NCCL 的报错归因与它的边界
 
 > **报错时你能从官方拿到多少信息？——比你以为的少。**
-> 本文给出**错误码表的全表（7 个）**，说清**官方【只给其中 2 个】归因**，
-> 并指出 **hang 连归因都没有**（只有一条诊断入口）。
+> 本文给出**错误码表的全表（7 个）**（★ 官方原表另有 `ncclSuccess (0)`，**它不是错误**，本文不计），
+> 说清**官方【只给其中 2 个】归因**，并指出 **hang 连归因都没有**（只有一条诊断入口）。
 > ★★★ **本层是【实现层】**：讲的是**真实库怎么报错、官方文档写到哪一步**。
 > ★★ **本主题【全靠 `[B]` 级】**（另有**一条 `[B']`** 来自**官方源码**）；
 > 版本 `NCCL 2.32.3`，出处 `docs.nvidia.com/deeplearning/nccl/user-guide/docs/`，抓取日 `2026-10-08`。
@@ -56,15 +56,22 @@ updated: 2026-10-08
 `ncclUnhandledCudaError (1)` · `ncclSystemError (2)` · `ncclInternalError (3)` ·
 `ncclInvalidArgument (4)` · `ncclInvalidUsage (5)` · `ncclRemoteError (6)` · `ncclInProgress (7)`。
 
+★★ 官方该页的 `Possible values are:` **共列 8 项** —— 多的一项是 **`ncclSuccess (0)`**，
+★ **它不是「错误」**（是成功码）⇒ **本文不计**，「全表」一律指**这 7 个错误码**。
+
 ★★ 本文 `code/` 的 `D.4` 把**全表逐元素**钉住（7 对 = 14 个叶子）。
 ★★★ **注意第 7 项**：`ncclInProgress` **不是**「一个错误」——
 它是**异步操作还没完成**的状态（与 1–6 的语义**不同类**）⇒ ★ **别把 7 个码当成「7 种错误」**。
 
 ### 1.2 ★★★ 归因的**可判定范围**：官方只点名 2 个
 
-★★★ 官方逐字（`[B]`，`api/types.html`）：
+★★★ 官方逐字（`[B]`，**`usage/communicators.html`**）：
 
 > `ncclUnhandledCudaError and ncclSystemError indicate that a call NCCL made to an external component failed, which caused the NCCL operation to fail. The error message should explain which component the user should look at and try to fix`
+
+★★★ **载体页修正**：本主题**初稿**把它标成 `api/types.html` —— ★ 这句归因**不在** `api/types.html`
+（`grep -c "external component"` = **0**），而在 **`usage/communicators.html`**（★ 全站只有该页命中）。
+★ `api/types.html` 的**错误码表本身是对的**（该页确有 `1`–`7`）—— **错的只是「载体页」**。
 
 ★★★ **逐字读出来的三件事**：
 
@@ -94,8 +101,8 @@ updated: 2026-10-08
 
 ### 1.4 ★★ 异步错误的报出通道：**返回值不是唯一信号**
 
-★★ 官方（`[B]`，`api/types.html`）：**内核里跑出来的错误**经 **`ncclCommGetAsyncError`** 报出
-（★ 计划 `§C.2` 给的输出通道），逐字：
+★★ 官方（`[B]`，**`usage/communicators.html`**）：**内核里跑出来的错误**经 **`ncclCommGetAsyncError`** 报出
+（★ 计划 `§C.2` 给的输出通道；★★ 同 §1.2 的**载体页修正**，★ 这段不在 `api/types.html`），逐字：
 
 > `will usually not progress and never complete`（★ 计划记录的首尾 `…` 与句点标注是**计划自己的省略标记**）
 
@@ -129,8 +136,14 @@ updated: 2026-10-08
 > ★★ 本机**无 GPU、无 NCCL、无真网卡**；本文与配套程序里的**每一个字**都**抄自官方工件**。
 > ★ 强制限定语：**「不是 NCCL，也不是真机」**。
 > ★★ 载体版本 `NCCL 2.32.3`，出处 `https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/`
-> （`api/types.html` / `troubleshooting/logging.html`），抓取日 **2026-10-08**；
+> （`api/types.html`（码表）/ `usage/communicators.html`（归因与异步段）/ `troubleshooting/logging.html`），
+> 抓取日 **2026-10-08**；
 > ★★★ **另有**一条 `[B']`：**官方源码** `v2.26.2-1` 的 `src/init.cc:2198`（★ **与文档版本不同**）。
+
+★★ **本文的「形态」一句话**：编号程序**跑在默认 `python3` 下、只用标准库**
+⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**（**程序内断言**）。
+★★★ **点破一层**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而**本主题没有 A**
+⇒ 属「**第二种情形的【改写】**」。★ 而「**把不可测的那一档写明**」是【另一条】纪律。
 
 ## 3. 实现与演进
 
@@ -244,7 +257,8 @@ updated: 2026-10-08
 
 - **NCCL 官方产品文档**，版本 **2.32.3** —— ★★★ **`[B]` 级（产品文档，不是规范）**。
   出处 `https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/`
-  （`api/types.html` · `troubleshooting/logging.html`），抓取日 **2026-10-08**。
+  （`api/types.html`（错误码表）· `usage/communicators.html`（归因句与异步段）·
+  `troubleshooting/logging.html`），抓取日 **2026-10-08**。
 - ★★★ **NCCL 官方源码**，tag **`v2.26.2-1`**，`src/init.cc:2198` —— **`[B']` 级**。
   ★★ **它与上一条【不是同一个工件】**（源码 tag `v2.26.2-1` ≠ 文档 `2.32.3`）**行号不保证相同**；
   ★★ 引 `unhandled system error` **必须注明它是官方源码**（`F2`）。

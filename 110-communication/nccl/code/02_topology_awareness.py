@@ -7,7 +7,11 @@ r"""02_topology_awareness.py —— **NCCL 的拓扑感知**：官方暴露了�
 ★ 三类断言**全部在本程序内部**，失败时以**非零退出码**结束；**没有 `verify.py`**。
 
 ★★★ **本主题【没有 A 类】**：本机**无 GPU、无 NCCL、无真网卡** ⇒「算法正确性」**无处可验**。
-  按 `CONTRIBUTING` §2 的**第三种形态**：**把不可测的那一档写明**，
+  ★ 本程序**跑在默认 `python3` 下、只用标准库** ⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**
+  （**程序内断言**）。
+  ★★ **如实点破一层**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而本主题**没有 A**
+  ⇒ 属「**第二种情形的【改写】**」（★ 不是 §2 里任何一种**原样**形态）。
+  ★★ 而「**把不可测的那一档写明**」是【另一条】纪律（**不是** §2 的任何一种编号形态）。
   ★★★ **不得把「常量钉住」冒充 A 类**（那是 `P12` 的变体）⇒ ★★ 本程序的一切钉住归 `D` 类。
   ★ `D.0` **机械地**证明「本文件里一条 A 类判据都没有」（AST 扫自己）。
 
@@ -117,7 +121,10 @@ def part_A():
     print("=" * 78)
     print("  ★★★ 「NCCL 到底怎么感知拓扑、感知到拓扑之后怎么选」**无处可验**：")
     print("      本机既没有 NCCL 也没有 GPU、更没有一张真网卡。")
-    print("      ⇒ 按 `CONTRIBUTING` §2 的**第三种形态**：把不可测的那一档**写明**。")
+    print("      ⇒ 本程序**跑在默认 `python3` 下** ⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**")
+    print("        （**程序内断言**）；★ 而「**把不可测的那一档写明**」是【另一条】纪律（不是 §2 的形态）。")
+    print("      ★★ **如实点破**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而本主题**没有 A**")
+    print("        ⇒ 属「**第二种情形的【改写】**」（★ 不是 §2 里任何一种**原样**形态）。")
     print("  ★★★ **不得把「常量钉住」冒充 A 类**（`P12` 的变体）⇒ ★★ 钉住一律归 `D` 类。")
     print("  ★★ 本程序只守一件事：**官方暴露的抓手有哪几条、各自的能力标签对不对**。")
     print()
@@ -181,19 +188,23 @@ def part_B():
     print()
     print("  ── B.2 ★★ **offload 开关**与它们的**默认值** ──")
     for i, nm in enumerate(specs.NCCL_OFFLOAD_SWITCHES):
-        since = specs.NCCL_NVLS_ENABLE_SINCE if i == 0 else specs.NCCL_COLLNET_SINCE_UNSTATED
-        print("     %-22s 默认 = `%s` · since = %s"
-              % (nm, specs.NCCL_OFFLOAD_DEFAULTS[i], ("`%s`" % since) if since else "**官方未给**"))
+        since = specs.NCCL_NVLS_ENABLE_SINCE if i == 0 else specs.NCCL_COLLNET_ENABLE_SINCE
+        print("     %-22s 默认 = `%s` · since = `%s`"
+              % (nm, specs.NCCL_OFFLOAD_DEFAULTS[i], since))
     print("     ★★ 读法：默认 `0`（`COLLNET` 关闭）与默认 `2`（`NVLS` 允许）**都不是 `unset`**")
     print("       ⇒ ★★ **与 `NCCL_ALGO` 的默认（`unset`）形态不同** —— 别把两类变量的默认混为一谈。")
     print("     ★★ 这两条是**开关**（允许不允许用某条路径），★ **不决定**哪条路径承载哪笔消息。")
+    print("     ★★★ **修正**：`NCCL_COLLNET_ENABLE` 的 `since` 官方**逐字给了 `2.6`** ——")
+    print("       `%s`" % specs.NCCL_COLLNET_ENABLE_QUOTE)
+    print("       ★ 初稿把它当成「**官方未给**」（空串占位）⇒ ★★ 那是把**「规划没记」当成"
+          "「官方没有」**。")
     check("B.2", specs.NCCL_OFFLOAD_SWITCHES == ("NCCL_NVLS_ENABLE", "NCCL_COLLNET_ENABLE")
           and specs.NCCL_OFFLOAD_DEFAULTS == ("2", "0")
           and specs.NCCL_NVLS_ENABLE_SINCE == "2.17"
-          and specs.NCCL_COLLNET_SINCE_UNSTATED == "",
+          and specs.NCCL_COLLNET_ENABLE_SINCE == "2.6",
           "★★ **判据成立**：两条 offload 开关（`NCCL_NVLS_ENABLE` 默认 `2`，since `2.17`；"
-          "`NCCL_COLLNET_ENABLE` 默认 `0`，★ **since 官方未给**）—— "
-          "★★ **默认都不是 `unset`**（与 `NCCL_ALGO` 形态不同）",
+          "`NCCL_COLLNET_ENABLE` 默认 `0`，since `2.6`）—— "
+          "★★ **默认都不是 `unset`**（与 `NCCL_ALGO` 形态不同）；★ 两条的 `since` 官方**都给了**",
           "**offload 开关或默认值被动过**")
 
 
@@ -308,9 +319,9 @@ def preflight():
           and specs.NCCL_OFFLOAD_SWITCHES == ("NCCL_NVLS_ENABLE", "NCCL_COLLNET_ENABLE")
           and specs.NCCL_OFFLOAD_DEFAULTS == ("2", "0")
           and specs.NCCL_NVLS_ENABLE_SINCE == "2.17"
-          and specs.NCCL_COLLNET_SINCE_UNSTATED == "",
+          and specs.NCCL_COLLNET_ENABLE_SINCE == "2.6",
           "★★★ **逐元素钉住**：抓手表（3 档）· 能力表（3 对）· 抓手计数 · offload 开关（2 档）· "
-          "默认值（2 档）· `NVLS` 的 since · **`COLLNET` 的「官方未给 since」占位（空串）**\n"
+          "默认值（2 档）· 两条开关的 since（`NVLS` = `2.17` · `COLLNET` = `2.6`）\n"
           "        —— ★ 只钉「整体」会让**元素级**变异漏网",
           "**抓手表 / 能力表 / offload 开关被动过**")
     return len(FAILS) == before
@@ -332,14 +343,21 @@ def part_D():
           and specs.NCCL_TOPO_FILE_SINCE == "2.6"
           and specs.NCCL_TOPO_DUMP_FILE == "NCCL_TOPO_DUMP_FILE"
           and specs.NCCL_DEBUG_SUBSYS_GRAPH == "GRAPH"
-          and specs.NCCL_DEBUG_SUBSYS_TUNING == "TUNING",
+          and specs.NCCL_DEBUG_SUBSYS_TUNING == "TUNING"
+          # ★★★ A3 修正：`GRAPH` / `TUNING` 的语义**逐字就在** `logging.html`（★ 不再是「非逐字」）
+          and specs.NCCL_DEBUG_SUBSYS_GRAPH_QUOTE == "Topology detection and graph search"
+          and specs.NCCL_DEBUG_SUBSYS_TUNING_QUOTE == "Algorithm and protocol selection"
+          # ★★★ A2 修正：`NCCL_COLLNET_ENABLE` 的 since 官方逐字给了 `2.6`（★ 不是「官方未给」）
+          and specs.NCCL_COLLNET_ENABLE_QUOTE
+          == "NCCL_COLLNET_ENABLE (since 2.6) Enable the use of the CollNet plugin.",
           "★★ **`NCCL_TOPO_FILE` 的引文逐字钉住**（含默认路径 "
           "`/var/run/nvidia-topologyd/virtualTopology.xml`）+ since `2.6` + "
           "`NCCL_TOPO_DUMP_FILE` + `GRAPH` / `TUNING`\n"
           "        ★★ 载体 = `env.html` / `troubleshooting/logging.html`（版本 %s，抓取日 %s），"
           "★ 全部标 `[B]`\n"
-          "        ★★ **`GRAPH` / `TUNING` 的语义是 `[B]·非逐字`**"
-          "（计划 `§C.2` 记录了语义、**未给逐字原文**；★ 本库未取到 ⇒ **不得**当引文）"
+          "        ★★★ **`GRAPH` / `TUNING` 的语义【逐字可引】**（载体 = `logging.html`）—— "
+          "初稿标 `[B]·非逐字`（「本库未取到」）是**把「没去找」当成「不存在」**，"
+          "★ 而**该页本来就在手上**；★★ `NCCL_COLLNET_ENABLE` 的 since 官方**逐字给了 `2.6`**"
           % (specs.NCCL_DOC_VERSION, specs.NCCL_FETCH_DATE),
           "**拓扑抓手的引文被动过**")
 
@@ -347,9 +365,12 @@ def part_D():
     check("D.6", specs.NCCL_TOPO_NO_ROUTE_CAP_NOTE
           == ("★ NCCL 官方暴露的拓扑抓手（NCCL_TOPO_FILE / DEBUG_SUBSYS=GRAPH / =TUNING）"
               "里没有一条的能力是「控制选路」——感知拓扑 ≠ 能控制选路")
+          and specs.NCCL_PLAN_VS_DOC_NOTE
+          == ("★「规划没记」≠「官方没有」——本库实测：NCCL_COLLNET_ENABLE 的 since 官方"
+              "逐字给了 2.6，初稿却当成了「官方未给」")
           and specs.UNSOURCED == (),
-          "★★★ **消歧记录逐字钉住**：**感知拓扑 ≠ 能控制选路**（★ 它是 `[E]` 本库记录，"
-          "**不是**引文）；★ `UNSOURCED == ()` 一并钉住\n"
+          "★★★ **两条 `[E]` 记录逐字钉住**：**感知拓扑 ≠ 能控制选路**（★ 不是引文）＋ "
+          "**「规划没记」≠「官方没有」**（★ A2 的方法论，不是引文）；★ `UNSOURCED == ()` 一并钉住\n"
           "        ★★ 注意 `NCCL_HANG_DIAG_QUOTE`（`C.2` 用的逐字旁证）在 `03` 里钉住 —— "
           "★ 同一条常量**只在一处钉**，避免「整体钉住代替不了元素钉住」的反面（重复钉）",
           "**消歧记录被动过**")

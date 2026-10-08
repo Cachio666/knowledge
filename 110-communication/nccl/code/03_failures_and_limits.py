@@ -7,7 +7,11 @@ r"""03_failures_and_limits.py —— **NCCL 的报错归因与它的边界**：�
 ★ 三类断言**全部在本程序内部**，失败时以**非零退出码**结束；**没有 `verify.py`**。
 
 ★★★ **本主题【没有 A 类】**：本机**无 GPU、无 NCCL、无真网卡** ⇒「算法正确性」/「真实报错行为」
-  **无处可验**。按 `CONTRIBUTING` §2 的**第三种形态**：**把不可测的那一档写明**，
+  **无处可验**。★ 本程序**跑在默认 `python3` 下、只用标准库** ⇒ 落在 `CONTRIBUTING` §2 表的
+  **第二种情形**（**程序内断言**）。
+  ★★ **如实点破一层**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而本主题**没有 A**
+  ⇒ 属「**第二种情形的【改写】**」（★ 不是 §2 里任何一种**原样**形态）。
+  ★★ 而「**把不可测的那一档写明**」是【另一条】纪律（**不是** §2 的任何一种编号形态）。
   ★★★ **不得把「常量钉住」冒充 A 类**（那是 `P12` 的变体）⇒ ★★ 本程序的一切钉住归 `D` 类。
   ★ `D.0` **机械地**证明「本文件里一条 A 类判据都没有」（AST 扫自己）。
 
@@ -128,7 +132,10 @@ def part_A():
     print("A · ★★★ 【本主题没有 A 类】—— 本机无 GPU / 无 NCCL / 无真网卡")
     print("=" * 78)
     print("  ★★★ 「NCCL 报什么错、为什么报」**无处可验**：本机既没有 NCCL 也没有 GPU。")
-    print("      ⇒ 按 `CONTRIBUTING` §2 的**第三种形态**：把不可测的那一档**写明**。")
+    print("      ⇒ 本程序**跑在默认 `python3` 下** ⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**")
+    print("        （**程序内断言**）；★ 而「**把不可测的那一档写明**」是【另一条】纪律（不是 §2 的形态）。")
+    print("      ★★ **如实点破**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而本主题**没有 A**")
+    print("        ⇒ 属「**第二种情形的【改写】**」（★ 不是 §2 里任何一种**原样**形态）。")
     print("  ★★★ **不得把「常量钉住」冒充 A 类**（`P12` 的变体）⇒ ★★ 钉住一律归 `D` 类。")
     print("  ★★ 本程序只守一件事：**官方归因覆盖到哪几个码、覆盖之外有几条入口**。")
     print()
@@ -162,7 +169,8 @@ def part_B():
     print("=" * 78)
     print("B · `[B]` 级的账：**归因的【可判定范围】**（2 / 7）· 异步错误的通道")
     print("=" * 78)
-    print("  ★★ 载体 = NCCL 官方产品文档 `api/types.html` / `troubleshooting/logging.html`，")
+    print("  ★★ 载体 = NCCL 官方产品文档 `api/types.html`（码表）/ `usage/communicators.html`"
+          "（归因与异步段）/ `troubleshooting/logging.html`，")
     print("      版本 **%s**，抓取日 **%s**。" % (specs.NCCL_DOC_VERSION, specs.NCCL_FETCH_DATE))
 
     # ── B.1 ★★★ 归因的【可判定范围】＋ hang 没有单一归因 ─────────────────
@@ -174,6 +182,8 @@ def part_B():
     att, unat = attributed_codes(), unattributed_codes()
     print("     ★★ **全表 %d 个码** · **被归因 %d 个** · **未给归因 %d 个**"
           % (specs.NCCL_ERROR_CODE_COUNT, len(att), len(unat)))
+    print("     ★★ 注：官方 `api/types.html` 原表**共 8 项**，多的一项 `ncclSuccess (0)` **不是错误**")
+    print("        ⇒ **本文不计它**，「全表」一律指这 **7 个错误码**。")
     print("     ★★★ 那条归因（逐字）：%s" % specs.NCCL_ERROR_ATTRIBUTION_QUOTE)
     print()
     print("     ★★★ **hang 的处置不同**：官方**没有**给出单一归因 —— 只给了「**开这些子系统看**」：")
@@ -203,7 +213,7 @@ def part_B():
           and specs.NCCL_ASYNC_ERROR_QUOTE == "will usually not progress and never complete"
           and specs.NCCL_ASYNC_ERROR_API != specs.NCCL_ERROR_ATTRIBUTION_QUOTE,
           "★★ **判据成立**：异步错误经 `%s` 报出（★ **返回值不是唯一信号**）——"
-          "载体 = `api/types.html`（版本 %s，抓取日 %s）"
+          "载体 = `usage/communicators.html`（版本 %s，抓取日 %s）"
           % (specs.NCCL_ASYNC_ERROR_API, specs.NCCL_DOC_VERSION, specs.NCCL_FETCH_DATE),
           "**异步错误的接口或引文被动过**")
 
@@ -364,7 +374,7 @@ def part_D():
           and specs.NCCL_SYSERR_SOURCE_QUOTE
           == ('case ncclSystemError : return "unhandled system error (run with NCCL_DEBUG=INFO '
               'for details)";'),
-          "★★ **三条引文逐字钉住**：归因句（`api/types.html`）· hang 入口"
+          "★★ **三条引文逐字钉住**：归因句（`usage/communicators.html`）· hang 入口"
           "（`troubleshooting/logging.html`）· `[B']` 源码串（`v2.26.2-1` 的 `src/init.cc:2198`）\n"
           "        ★★★ **归因句给出的范围**：只有 `ncclUnhandledCudaError` / `ncclSystemError` "
           "两个（★ 那正是 `C.1` 的依据）\n"

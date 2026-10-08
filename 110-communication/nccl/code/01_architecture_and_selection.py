@@ -8,7 +8,11 @@ r"""01_architecture_and_selection.py —— **NCCL 的算法取值与协议取�
 
 ★★★ **本主题【没有 A 类】—— 这是本程序的第一条事实，不是遗漏**：
   本机**无 GPU、无 NCCL、无真网卡** ⇒ NCCL 的「**算法正确性**」**无处可验**。
-  按 `CONTRIBUTING` §2 的**第三种形态**处理：**把不可测的那一档写明**，
+  ★ 本程序**跑在默认 `python3` 下、只用标准库** ⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**
+  （**程序内断言**）。
+  ★★ **如实点破一层**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而本主题**没有 A**
+  ⇒ 属「**第二种情形的【改写】**」（★ 不是 §2 里任何一种**原样**形态）。
+  ★★ 而「**把不可测的那一档写明**」是【另一条】纪律（**不是** §2 的任何一种编号形态）。
   ★★★ **不得把「常量钉住」冒充 A 类** —— 那是 `P12` 的变体
   （**判据看着在检查，其实只是把常量抄了一遍**）。
   ⇒ ★★ 本程序的一切「钉住」**一律归 `D` 类**（照同域 `collectives` 的做法）。
@@ -40,6 +44,8 @@ r"""01_architecture_and_selection.py —— **NCCL 的算法取值与协议取�
   · `B.3`  ★★ `NCCL_PROTO` 三个取值 + **官方劝阻**（含 `data corruption` 的理由）；
   · `B.4`  ★★ **「不跨标记」计数**：`NCCL_ALGO` 那句 **raw=0 / plain=1**（跨标记）、
     `usage/streams.html` 那句 **raw=1 / plain=1**（不跨）；
+  · `B.5`  ★★★ **官方说取值【不】大小写敏感**：`NCCL_ALGO` 与 `NCCL_PROTO` **两处**都逐字写
+    `(not case sensitive)` ⇒ ★ 不得把「`Ring` 写成 `ring` 会失败」当失败成因；
   · `C.1`  ★★★ **编一个不存在的 `NCCL_ALGO` 取值**必须被拒；
   · `C.2`  ★★★ **把 `since` 版本记错**必须被版本账拒绝；
   · `D.0`  ★★★ **机械证明「本文件没有 A 类判据」**（AST 扫自己的源码）；
@@ -101,7 +107,13 @@ def check(name, cond, detail="", detail_fail=None):
 #      这里放它们，是为了让 `C` 类的**反例**（编造的取值 / 记错的版本）有一个**可判定的**判据。
 # ===========================================================================
 def algo_value_known(name):
-    """`name` 是否是 `NCCL_ALGO` 文档列出的取值（★ **大小写敏感** —— 文档写 `Ring` 不是 `ring`）。"""
+    """`name` 是否**照文档的拼写**落在 `NCCL_ALGO` 列出的取值里（★ 逐字比对）。
+
+    ★★★ **官方文档说取值【不】大小写敏感**（`env.html` 逐字 `(not case sensitive)`，
+      见 `specs.NCCL_ALGO_CASE_QUOTE`）⇒ ★ **本函数是一个「照文档拼写」的校验器**：
+      **它判 `False` 不等价于「NCCL 会拒绝」**。★ 真正会被 NCCL 拒的是**根本不存在**的名字
+      （如 `RingAllReduce`）—— ★ **不是**「`Ring` 写成 `ring`」（那会**被接受**）。
+    """
     return name in specs.NCCL_ALGO_NAMES
 
 
@@ -132,7 +144,10 @@ def predict_algo_by_threshold(_msg_bytes, _n_dev):
 
     ★★★ 官方**没有公开**算法选择的阈值规则（`NCCL_TREE_THRESHOLD` / `NCCL_SINGLE_RING_THRESHOLD`
       **都已移除**）⇒ 任何「按消息大小分档」的表都是**编的** ⇒ 本函数**只**返回 `"unknown"`。
-      ★ `C.2` 判「谁要是把它写成一张表，那条断言必须失败」。
+    ★★★ **本函数是一个 `[E]` 组织性自检，【不是判据】**：它的**函数体就是 `return "unknown"`
+      ⇒ `predict_algo_by_threshold(...) == "unknown"` 是【定义级恒真】的**，**抓不到任何东西**
+      （`§1.3.2b` / `T70` 的形态：一条**恒真的从句冒充判据**）⇒ ★ **不放进任何 `check()`**；
+      只作为「**不许用阈值表回答**」这条语义的**可读示范**打印出来（见 `B.2` 的那行 `[E]`）。
     """
     return "unknown"
 
@@ -145,7 +160,10 @@ def part_A():
     print("A · ★★★ 【本主题没有 A 类】—— 本机无 GPU / 无 NCCL / 无真网卡")
     print("=" * 78)
     print("  ★★★ NCCL 的**算法正确性**【无处可验】：本机既没有 NCCL 也没有 GPU。")
-    print("      ⇒ 按 `CONTRIBUTING` §2 的**第三种形态**：把不可测的那一档**写明**。")
+    print("      ⇒ 本程序**跑在默认 `python3` 下** ⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**")
+    print("        （**程序内断言**）；★ 而「**把不可测的那一档写明**」是【另一条】纪律（不是 §2 的形态）。")
+    print("      ★★ **如实点破**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而本主题**没有 A**")
+    print("        ⇒ 属「**第二种情形的【改写】**」（★ 不是 §2 里任何一种**原样**形态）。")
     print("  ★★★ **不得把「常量钉住」冒充 A 类** —— 那是 `P12` 的变体：")
     print("      判据**看着在检查**，其实只是把常量**抄了一遍**（`abs(2V − 2V) == 0`）。")
     print("      ⇒ ★★ 本程序的「钉住」**一律归 `D` 类**（见下面的 `D.*`）。")
@@ -224,12 +242,19 @@ def part_B():
     print("     ★★ **复核陷阱**：**只看文档 TOC 会误判「那两个变量还在用」**"
           "（TOC 里**仍列着**，**正文**才写 `removed`）")
     print("       ⇒ ★★ **凡引「某变量存在/已移除」，去看【正文】而不是 TOC**。")
+    # ★★★ [E] 组织性自检（**不是判据**）：示范「不许用阈值表回答」（★ 恒真的从句不进 `check()`）
+    print("     ★★ **[E] 组织性自检（不是判据）**：`predict_algo_by_threshold(1048576, 8)` = **%r**"
+          % predict_algo_by_threshold(1048576, 8))
+    print("       ⇒ 该函数体**就是** `return \"unknown\"` ⇒ 这一条**定义级恒真**，**不计入判据**")
+    print("         （`§1.3.2b` / `T70`：恒真的从句抓不到任何东西）。")
     check("B.2", specs.NCCL_ALGO_DEFAULT_QUOTE.startswith("The default is unset")
           and specs.NCCL_REMOVED_COUNT == 2
           and is_removed_var("NCCL_TREE_THRESHOLD") and is_removed_var("NCCL_SINGLE_RING_THRESHOLD")
-          and predict_algo_by_threshold(1048576, 8) == "unknown",
+          # ★ 对【表内容】的真判定（可被变异抓住）：两个已移除的阈值变量【不在】当前取值表里
+          and all(rv not in specs.NCCL_ALGO_NAMES for rv, _v in specs.NCCL_REMOVED_VARS),
           "★★★ **判据成立**：默认是 **`unset`**（⇒ NCCL **自动选**）、"
-          "`NCCL_TREE_THRESHOLD` 与 `NCCL_SINGLE_RING_THRESHOLD` **都已移除** ⇒ "
+          "`NCCL_TREE_THRESHOLD` 与 `NCCL_SINGLE_RING_THRESHOLD` **都已移除**"
+          "（★ 且**不在**当前取值表里）⇒ "
           "★ **官方没有阈值表** ⇒ 任何「按大小分档」的表都是**编的**（`F3`）",
           "**默认句或移除账被动过** —— ★ 那会让「官方没有阈值表」这条结论失去依据（`F3`）")
 
@@ -268,6 +293,26 @@ def part_B():
           "（`NCCL_ALGO` 被 `<code><span class=\"pre\">` 包裹 ⇒ **跨标记**）；"
           "而 `usage/streams.html` 那句 **raw=1 / plain=1**（**不跨标记**）",
           "**引文的标记计数被动过** —— ★ 那会让「逐字」的判定失去依据")
+
+    # ── B.5 ★★★ 官方说取值【不】大小写敏感（算法与协议**两处**）───────────
+    print()
+    print("  ── B.5 ★★★ 官方说取值 **`(not case sensitive)`**（算法与协议**两处**）──")
+    print("     `NCCL_ALGO`  ：%s" % specs.NCCL_ALGO_CASE_QUOTE)
+    print("     `NCCL_PROTO` ：%s" % specs.NCCL_PROTO_CASE_QUOTE)
+    print("     ★★★ 读法：官方**逐字**写 `(not case sensitive)` ⇒ ★ **取值【不】大小写敏感**")
+    print("       ⇒ ★★ **不得**把「`Ring` 写成 `ring` 会失败」当失败成因 ——")
+    print("         真正会失败的是**根本不存在**的名字（如 `Ringg` / `RingAllReduce`，见 `C.1`）。")
+    print("     ★★ 本库实测记录：`(not case sensitive)` **就在同一句**里，而初稿把它反转成了")
+    print("        「大小写敏感」（★ 一次**编机制从句**，**无数字可 grep**）。")
+    check("B.5", specs.NCCL_ALGO_CASE_QUOTE
+          == "Comma-separated list of algorithms (not case sensitive) among:"
+          and specs.NCCL_PROTO_CASE_QUOTE
+          == "(since 2.5) Comma-separated list of protocols (not case sensitive) among:"
+          and "(not case sensitive)" in specs.NCCL_ALGO_CASE_QUOTE
+          and "(not case sensitive)" in specs.NCCL_PROTO_CASE_QUOTE,
+          "★★★ **判据成立**：官方对 `NCCL_ALGO` 与 `NCCL_PROTO` **两处**取值都逐字写了 "
+          "`(not case sensitive)` ⇒ ★ **取值【不】大小写敏感**（★ 与初稿的「大小写敏感」**相反**）",
+          "**大小写口径的逐字句被动过** —— ★ 那会让「取值不敏感」这条结论失去依据")
 
 
 # ===========================================================================

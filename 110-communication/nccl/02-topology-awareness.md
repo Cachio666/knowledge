@@ -84,10 +84,15 @@ updated: 2026-10-08
 **② `NCCL_DEBUG_SUBSYS=GRAPH`（`OBSERVE`）** —— **看拓扑**；
 **③ `NCCL_DEBUG_SUBSYS=TUNING`（`OBSERVE`）** —— **看算法/协议选择**。
 
-★★ **这两条的语义是 `[B]·非逐字`**：计划 `§C.2` 记录了它们的语义（「看拓扑」/「看算法选择」），
-★ **但本库【未取到】那半句的逐字原文** ⇒ ★★ **不得**当引文引（只当**语义**用）。
-★★ 而 `NCCL_DEBUG_SUBSYS` **这个设施**是**有逐字依据**的 —— 它在 `troubleshooting/logging.html`
-的 hang 诊断命令里逐字出现（★ 用法是**开子系统【看】**）：
+★★★ **这两条的语义【逐字可引】**（★ 不再是「非逐字」）：它们的**逐字**就在
+`troubleshooting/logging.html` 的 `NCCL_DEBUG_SUBSYS` **取值表**里 ——
+`GRAPH` → `Topology detection and graph search`、`TUNING` → `Algorithm and protocol selection`
+（★ 载体就是**本文下面 `C.2` 用的那一页**；见 `specs.py` 的 `NCCL_DEBUG_SUBSYS_GRAPH_QUOTE` /
+`NCCL_DEBUG_SUBSYS_TUNING_QUOTE`）。
+★★★ **一条修正记录**：初稿说「**本库【未取到】那半句的逐字原文** ⇒ 不得当引文」——
+那是把**「没去找」当成「不存在」**（★ 本库已记的形态：**读不到是方法问题，不是事实问题**），
+而**该页本来就在手上**（下面的 hang 诊断命令就是从**同一页**取的）。
+★★ 而 `NCCL_DEBUG_SUBSYS` **这个设施**另有逐字旁证（★ 用法是**开子系统【看】**）：
 
 > `If your application hangs during NCCL initialization: NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=INIT,BOOTSTRAP,NET ./my_app`
 
@@ -101,7 +106,7 @@ updated: 2026-10-08
 | 开关 | 默认 | since |
 |---|---|---|
 | `NCCL_NVLS_ENABLE` | `2` | `2.17` |
-| `NCCL_COLLNET_ENABLE` | `0` | ★ **官方未给** |
+| `NCCL_COLLNET_ENABLE` | `0` | `2.6` |
 
 ★★★ **两条要读出来的东西**：
 
@@ -110,8 +115,14 @@ updated: 2026-10-08
 2. ★★ **它们是「开关」**（**允许不允许**用某条 offload 路径），
    ★ **不决定**「**哪条路径承载哪笔消息**」⇒ ★ **仍然不是「控制选路」**。
 
-★ **`NCCL_COLLNET_ENABLE` 的 `since` 官方未给** —— ★★ 本库**不替它填一个版本**
-（`specs.py` 里用**空串占位**并写明是「官方未给」，★ 不是一个版本号）。
+★★★ **修正（A2）**：初稿说「**`NCCL_COLLNET_ENABLE` 的 `since` 官方未给**」，还用**空串占位**、
+立了一条「**不得替它填一个版本**」的纪律 —— ★★ **那是错的**：官方**逐字给了 `2.6`**：
+
+> `NCCL_COLLNET_ENABLE (since 2.6) Enable the use of the CollNet plugin.`
+
+★★★ **▶ 一条方法论（写给读者）**：**「规划 `§C.2` 没记」≠「官方没有」** ——
+把外部规划当成**不会错的正典**，会在官方**明明给了**的地方**自造**一个「未给」
+（★ 本库的「**自造真值**」/「**把外部工件当正典**」形态）。★★ **凡断言「官方未给」，先去看官方本身。**
 
 ## 2. 执行映射
 
@@ -150,6 +161,11 @@ updated: 2026-10-08
 > ★★ 载体版本 `NCCL 2.32.3`，出处 `https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/`
 > （`env.html` / `troubleshooting/logging.html`），抓取日 **2026-10-08**。
 
+★★ **本文的「形态」一句话**：编号程序**跑在默认 `python3` 下、只用标准库**
+⇒ 落在 `CONTRIBUTING` §2 表的**第二种情形**（**程序内断言**）。
+★★★ **点破一层**：§2 的第二种情形**名义上要求 A/B/C 缺一不可**，而**本主题没有 A**
+⇒ 属「**第二种情形的【改写】**」。★ 而「**把不可测的那一档写明**」是【另一条】纪律。
+
 ## 3. 实现与演进
 
 ### 3.1 能力的三层（★ 这是本文的组织方式，标 `[E]` 本库的组织）
@@ -157,7 +173,7 @@ updated: 2026-10-08
 | 能力 | 含义 | 官方抓手 | 逐字依据 |
 |---|---|---|---|
 | **`INPUT`** | **喂进去**一张拓扑图 | `NCCL_TOPO_FILE` | ★ 有（`load before detecting the topology`） |
-| **`OBSERVE`** | **看**探测结果 / 选择结果 | `NCCL_DEBUG_SUBSYS=GRAPH` / `=TUNING` / `NCCL_TOPO_DUMP_FILE` | ★★ **语义有、逐字半句无**（非逐字） |
+| **`OBSERVE`** | **看**探测结果 / 选择结果 | `NCCL_DEBUG_SUBSYS=GRAPH` / `=TUNING` / `NCCL_TOPO_DUMP_FILE` | ★★★ **逐字有**（`logging.html`：`Topology detection and graph search` / `Algorithm and protocol selection`） |
 | **`ROUTE`** | **指定**某对设备走哪条路 | ★★★ **没有** | —— |
 
 ★★★ **`[E]` 的声明**：这张「能力分层」是**本库的组织**（不是文档里的表）——
@@ -166,7 +182,7 @@ updated: 2026-10-08
 
 ### 3.2 ★★ 从「不知道」到「能观测」的演进
 
-| 阶段 | 你能做什么 | 抓手 |
+| 演进阶段 | 你能做什么 | 抓手 |
 |---|---|---|
 | **朴素** | 什么也不知道（黑盒） | —— |
 | **喂图** | 把**已知的**拓扑告诉它 | `NCCL_TOPO_FILE`（`2.6`） |
@@ -211,13 +227,17 @@ updated: 2026-10-08
 - **规避**：★★★ **见到 `NCCL_DEBUG_*` 开头的变量，先假设它只影响输出** ——
   ★★ 要断言「它改变了行为」，**必须**有一条**载体**（★ 本库**没有**取到这样的载体）。
 
-### 4.3 ★★ 把「非逐字」的语义当引文（引文层）
+### 4.3 ★★★ 把「没去找」当成「不存在」（引文层，**A3**）
 
-- **现象**：正文用引号写「NCCL 文档说 `=GRAPH` 会打印拓扑」；
-- **成因**：★★★ **那半句本库【未取到】逐字原文** —— 计划 `§C.2` 记录了**语义**，
-  ★ 而**语义 ≠ 逐字引文**；
-- **规避**：★★ `specs.py` 给这两条标 **`[B]·非逐字`**（★ 与有逐字依据的 `NCCL_TOPO_FILE_QUOTE`
-  分开存放）；★★ 凡是**非逐字**的，正文**不得**用引号包它（★ 本文 §1.2 就是这么写的）。
+- **现象**：正文写「`=GRAPH` 的逐字原文**本库未取到**」⇒ 于是把一条**本可逐字引**的东西
+  降格成「语义」/「非逐字」—— ★ **读起来很保守**（像是对自己严格），**不报错**；
+- **成因**：★★★ **那半句的逐字就在** `troubleshooting/logging.html` 的 `NCCL_DEBUG_SUBSYS`
+  **取值表**里 —— 而**该页本来就在手上**（下面的 hang 诊断命令就是从**同一页**取的）；
+- **本机实测**（`code/` 的 `D.5`）：`GRAPH` / `TUNING` 的语义**逐字钉住**
+  （`Topology detection and graph search` / `Algorithm and protocol selection`）；
+- **规避**：★★★ **「本库没取到」是一个【方法】陈述，不是【事实】陈述** ——
+  在把它当成「官方没有」之前，**先去看那个你已经在引的载体**
+  （★ 本库已记的形态：**读不到是方法问题，不是事实问题**）。
 
 ## 5. 判据表
 
@@ -226,11 +246,11 @@ updated: 2026-10-08
 | 问「官方暴露了几条拓扑抓手」 | ★★ **3 条**（`NCCL_TOPO_FILE` / `NCCL_DEBUG_SUBSYS=GRAPH` / `=TUNING`）（`B.1`） |
 | 见到 `NCCL_TOPO_FILE` | ★ 能力 = **`INPUT`**（检测的输入）；★★ 默认路径 `/var/run/nvidia-topologyd/virtualTopology.xml`；since `2.6`（`B.1`/`D.5`） |
 | 见到「用 `NCCL_TOPO_FILE` 指定走哪条路」 | ★★★ **不成立** —— 它是检测的**输入**，**不是**路由控制（`C.1`） |
-| 见到 `NCCL_DEBUG_SUBSYS=GRAPH` | ★ 能力 = **`OBSERVE`**（看拓扑）；★★ 语义是 **`[B]·非逐字`**（`B.1`/`D.5`） |
+| 见到 `NCCL_DEBUG_SUBSYS=GRAPH` | ★ 能力 = **`OBSERVE`**（看拓扑）；★★★ 语义**逐字可引**（`logging.html`：`Topology detection and graph search`）（`B.1`/`D.5`） |
 | 见到「用 `DEBUG_SUBSYS` 改选路」 | ★★★ **不成立** —— 它控制**打印什么**，不是**算成什么**（`C.2`） |
 | 问「`NCCL_TOPO_DUMP_FILE` 干什么」 | ★★ **导出**探测到的拓扑 —— ★ 又一条**观测**出口（§1.2） |
 | 见到 `NCCL_NVLS_ENABLE` / `NCCL_COLLNET_ENABLE` | ★★ 是**开关**（默认 `2` / `0`，★ **都不是 `unset`**）；★ **不决定哪条路径承载哪笔消息**（`B.2`） |
-| 见到 `NCCL_COLLNET_ENABLE` 的 `since` | ★★★ **官方未给** —— ★ **不得**替它填一个版本（`B.2`） |
+| 见到 `NCCL_COLLNET_ENABLE` 的 `since` | ★★★ 官方**逐字给了 `2.6`**（`NCCL_COLLNET_ENABLE (since 2.6) …`）—— ★ **不是**「官方未给」（`B.2`/`D.5`） |
 | 问「NCCL 怎么选算法」 | ★★ 默认 `unset` ⇒ **自动选** —— ★ 抓手只让你**看**（`TUNING`），不让你**改**（见 `01`） |
 
 ## 6. 小结与延伸
@@ -243,7 +263,8 @@ updated: 2026-10-08
 1. ★★★ **抓手【恰好三条】**，能力只有 `INPUT` 与 `OBSERVE` —— **`ROUTE` 在官方暴露面上不存在**；
 2. ★★ **offload 开关是「开/关」不是「选路」**，且它们的默认值**不是 `unset`**
    （★ 与 `NCCL_ALGO` 形态不同，别混）；
-3. ★★ **`GRAPH` / `TUNING` 的语义是 `[B]·非逐字`** —— ★ 「语义」不得当引文引。
+3. ★★★ **`GRAPH` / `TUNING` 的语义【逐字可引】**（载体 = `troubleshooting/logging.html` 的
+   `NCCL_DEBUG_SUBSYS` 取值表）—— ★ 初稿误标「`[B]·非逐字`」，见 §4.3。
 
 **延伸**：
 
@@ -260,7 +281,9 @@ updated: 2026-10-08
   出处 `https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/`
   （`env.html` · `troubleshooting/logging.html`），抓取日 **2026-10-08**。
   ★ 本文用到的逐字引文全部注册在 `code/specs.py` 的 `# 来源：` 里；
-  ★★ **`GRAPH` / `TUNING` 的语义标 `[B]·非逐字`**（本库未取到那半句原文）。
+  ★★★ **`GRAPH` / `TUNING` 的语义逐字可引**（载体 = `troubleshooting/logging.html` 的
+  `NCCL_DEBUG_SUBSYS` 取值表）—— ★★ `NCCL_COLLNET_ENABLE` 的 `since` 也**逐字给了 `2.6`**
+  （载体 = `env.html`）。
 - 本仓库 `20-gpu-architecture/interconnect/03-collectives-on-topology.md:243-249`、
   `110-communication/nccl/01-architecture-and-selection.md`、
   [03-failures-and-limits](03-failures-and-limits.md)。

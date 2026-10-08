@@ -67,7 +67,7 @@ r"""mutate.py —— **非编号诊断工具**：叶子级变异测试（`make m
   `NCCL_ALGO_QUOTE` 在**原始 HTML 上 `count()==0`**、去标记文本上 `1`（**跨标记**），
   而 `usage/streams.html` 那句 **raw=1 / plain=1**（**不跨**）。
   ★★ 这两个计数（`NCCL_ALGO_QUOTE_RAW_COUNT` / `PLAIN_COUNT` / `NCCL_ASYNC_DEVICE_*`）
-  是**四个整数叶子** ⇒ ★ 都要有 `==` 钉住（`01` 的 `B.4`/`D.7`）——
+  是**四个整数叶子** ⇒ ★ 都要有 `==` 钉住（`01` 的 `B.4`）——
   ★★ 否则「逐字」这个标签的**判据**会被静默改掉。
 
 用法：`make mutate`（= `python3 mutate.py`）。
