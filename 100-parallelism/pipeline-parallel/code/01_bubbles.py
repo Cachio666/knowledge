@@ -66,7 +66,6 @@ r"""01_bubbles.py —— PP 的**微批与气泡率**，以及★★★ **气泡
   · `D.*`  口径常量逐个钉住 + **失败标记自检**。
 """
 import collections
-import os
 import sys
 
 import specs
