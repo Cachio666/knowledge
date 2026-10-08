@@ -146,21 +146,22 @@ def cf_exposed(C, T, K):
 
 
 def cf_lit(C, T, K):
-    """★ **[E] 级（本库对文献的化简）**：把 `Weave`（`specs.WEAVE_TOTAL_TEX` + `specs.WEAVE_TAIL_TEX`）
-    在 **`α = 0`（尾项完全不被藏）且忽略 dispatch** 下化简成 `max(C + T/K, T)`。
+    r"""★ **[E] 级（本库对文献的化简）**：把 `Weave`（`specs.WEAVE_TOTAL_TEX` + `specs.WEAVE_TAIL_TEX`）
+    在 **`α = 0`（尾项完全不被藏）、忽略 dispatch、且 `eff_chunk(K) = 1`（分块吞吐 == 不分块）**
+    下化简成 `max(C + T/K, T)`。
 
     ★★★ **它不是一条【引文】** —— 它是**本库的化简**，用来做**形态对照**（`B.2`）。
-    ★★ 化简的**两个假设逐条写在上面**（`α = 0`、忽略 dispatch）⇒ 引用它**必须带这两条**。
+    ★★ 化简的**三条假设**逐条写在上面（`α = 0`、忽略 dispatch、`eff_chunk(K) = 1`）
+      ⇒ 引用它**必须带这三条**。
+    ★★★ **第三条最容易漏**（★ 本轮补上）：Weave 的计算项**显式依赖 `K`** —— 原文（`alttext` 逐字）：
+      `T_{\text{comp}}(c,K)=\frac{W_{\text{comp}}}{\text{TFLOPS}(N{-}c)\cdot\text{eff}_{\text{chunk}}(K)},`
+      且 `where eff_chunk(K)\in(0,1] is the ratio of chunked GEMM throughput to the unchunked case`。
+      ⇒ ★ 把 `T_comp(c,K)` 写成与 `K` 无关的常数 `C`，**就额外假设了 `eff_chunk(K) = 1`**
+        （★ 这使 `C` 成为**与 `K` 无关的常数**）。
+    ★★ **范围声明**：这条 `alttext` 逐字**随本假设写在 docstring 里、未注册进 `specs.py`** ——
+      ★ 它只服务于「说清第三条假设」，**不作为引文常量**（★ 本库「有对照」不等于「有出处」）。
     """
     return max(Fraction(C) + Fraction(T, K), Fraction(T))
-
-
-def passes_guards(f, C, T, k_grid, tol=Fraction(1, 100)):
-    """★★★ **三条免费守卫**（`P35`）：`K = 1` ⇒ 无重叠；`K → ∞` ⇒ 下界；中间值 ≥ 下界。"""
-    g1 = (f(C, T, 1) == cf_no_overlap(C, T))
-    g2 = abs(f(C, T, specs.K_INF) - cf_lower_bound(C, T)) <= tol
-    g3 = all(f(C, T, K) >= cf_lower_bound(C, T) for K in k_grid)
-    return g1 and g2 and g3
 
 
 # ===========================================================================
@@ -184,8 +185,8 @@ def part_A():
         print("     (C,T)=%-9s `K=1` 模拟 %-6s == `C+T` %-6s（**逐位**）= %s"
               % ("(%d,%d)" % (C, T), got, exp, got == exp))
     print("     ★★★ 它的物理含义：**不开分块就没有重叠** —— ★ 这是**任何**流水模型都必须满足的锚点。")
-    check("A.1", ok1 and specs.HIDE_C_T_GRID == ((12, 4), (4, 12), (7, 7), (1, 20)),
-          "★★★ **判据成立**：`HIDE_C_T_GRID` 四档上 **`K = 1` 的模拟值【逐位】等于 `C + T`**"
+    check("A.1", ok1 and specs.HIDE_C_T_GRID == ((12, 4), (4, 12), (7, 7), (1, 20), (4, 7)),
+          "★★★ **判据成立**：`HIDE_C_T_GRID` 五档上 **`K = 1` 的模拟值【逐位】等于 `C + T`**"
           "（★ 期望值是**独立表达式** `cf_no_overlap`，不是被测函数自己）",
           "**守卫①不成立** —— ★ `K = 1` 居然不等于无重叠值 ⇒ 模型的锚点错了")
 
@@ -238,7 +239,7 @@ def part_A():
     print("        · **通信比计算长**（`T > C`）⇒ 可藏上限 **= `C`**（**只能藏住「计算那么多」**）——")
     print("          ★★ 剩下的 `T − C` **永远暴露在外**（见 `C.1`）。")
     check("A.4", ok4,
-          "★★★ **判据成立**：四档上 **`K → ∞` 时可藏 = `min(C,T)`**（容差 `1/100`，数值替身）—— "
+          "★★★ **判据成立**：五档上 **`K → ∞` 时可藏 = `min(C,T)`**（容差 `1/100`，数值替身）—— "
           "★★ **它的物理含义**：能藏住的上限**由【较短的那条时间轴】决定** —— "
           "★★★ 这就是「**能藏多少**」的全部内容",
           "**可藏上限被动过** —— ★ 先查 `cf_hidden` / `cf_hidden_ceiling`")
@@ -287,26 +288,45 @@ def part_B():
     print("        `%s`" % specs.WEAVE_TAIL_TEX)
     print("     它的读法（散文逐字）：`%s`" % specs.WEAVE_PROSE_QUOTE)
     print()
-    print("     ★★★ **本库把它化成可比的形态**（★ **[E] 级化简，两条假设写在函数 docstring 里**）：")
-    print("        `max(C + T/K, T)`  ← 文献侧（`α = 0`、忽略 dispatch）")
+    print("     ★★★ **本库把它化成可比的形态**（★ **[E] 级化简，三条假设写在函数 docstring 里**）：")
+    print("        `max(C + T/K, T)`  ← 文献侧（`α = 0`、忽略 dispatch、`eff_chunk(K) = 1`）")
     print("        `max(C,T) + min(C,T)/K`  ← 本库（`[E]`）")
-    print("     ★★★ **差异的【具体形态】**（本程序真的算出来）：")
-    print("        `%-10s %-8s %-10s %-10s %-10s %-10s" % ("(C,T)", "K", "本库", "文献侧", "差", "= min/K ?"))
+    print("     ★★★ **差异的【具体形态】**（本程序真的算出来，★ **分段**）：")
+    print("        %-10s %-8s %-10s %-10s %-10s %-6s %s"
+          % ("(C,T)", "K", "本库", "文献侧", "差", "分段对", "落在哪一段"))
     ok_b2 = True
     for (C, T) in specs.HIDE_C_T_GRID:
         for K in (2, 8):
             ours, lit = cf_pipeline(C, T, K), cf_lit(C, T, K)
             diff = ours - lit
-            pred = (Fraction(min(C, T), K) if T > C else Fraction(0))
+            # ★★★ **分段形态**（`K >= 2`；`K = 1` 时恒为 `0`）—— 差**只在 `T > C` 时为正**，
+            #   且**分两段**：靠近 `T ≈ C` 的中间段**小于** `min(C,T)/K`。
+            if T <= C:                                   # 计算主导 / 平衡：两式完全相同
+                pred, seg = Fraction(0), "T<=C ⇒ 差 = 0"
+            elif Fraction(T) < Fraction(C * K, K - 1):   # 中间段：差 = (T−C)(1 − 1/K)
+                pred = (Fraction(T) - C) * Fraction(K - 1, K)
+                seg = "C<T<C·K/(K-1) ⇒ (T−C)(1−1/K)"
+            else:                                        # 通信【远】长于计算：差 = min(C,T)/K
+                pred, seg = Fraction(min(C, T), K), "T>=C·K/(K-1) ⇒ min(C,T)/K"
             ok_b2 = ok_b2 and (diff == pred) and (ours >= lit)
-            print("        %-10s %-8d %-10s %-10s %-10s %s"
-                  % ("(%d,%d)" % (C, T), K, ours, lit, diff, diff == pred))
-    print("     ★★★ **结论（差异的形态，一句话）**：")
-    print("        **`本库 − 文献侧 = min(C,T)/K`，且【只在 `T > C` 时为正】；`T <= C` 时两者【完全相同】。**")
+            print("        %-10s %-8d %-10s %-10s %-10s %-6s %s"
+                  % ("(%d,%d)" % (C, T), K, ours, lit, diff, diff == pred, seg))
+    print("     ★★★ **结论（差异的形态，【分段】一句话）**：")
+    print("        · `T <= C` ⇒ **差 = 0**（两式【完全相同】）；")
+    print("        · `C < T < C·K/(K-1)` ⇒ **差 = (T−C)·(1 − 1/K)**（**中间段**，★ 只在这里才【不是】`min/K`）；")
+    print("        · `T >= C·K/(K-1)` ⇒ **差 = min(C,T)/K**（★ `K=2` 时门槛是 `2C`、`K=8` 时是 `8C/7`）；")
+    print("        ★★ 且 **`本库 >= 文献侧` 恒成立**。")
+    print("     ★★★ **为什么原表会「全绿却绕开反例」**（★ 本库 `P6` 的现场）：")
+    print("        原先的 `HIDE_C_T_GRID` 里两个通信主导档 `(4,12)` / `(1,20)` **恰好都落在")
+    print("        `T >= C·K/(K-1)` 的【成立区间】内** ⇒ 「差 = `min(C,T)/K`」看着处处成立。")
+    print("        ★★ **本轮把 `(4,7)` 补进网格**（★ 它在 `K=2` 时落进中间段 `C<T<2C`）")
+    print("           ⇒ **那一档的差是 `3/2`，不是 `min/K = 2`** ⇒ 断言**真的会有反例**。")
     print("     ★★ **物理读法**（★ 本库的读法，不是文献的声称）：")
     print("        ★ 文献形态是 `max(计算工作量 + 尾项, 通信工作量)` —— 它是一个**资源界**；")
     print("        ★ 本库的形态**多了【首项】`min(C,T)/K`** —— 那是**「第一块的通信要等它的计算」**的价格；")
-    print("        ★★ 两式**在计算主导时重合**（首项被 `min` 选到通信侧、恰好等于文献的 `T/K` 项）。")
+    print("        ★★ **`T <= C` 时两式重合**（首项被 `min` 选到通信侧、恰好等于文献的 `T/K` 项）；")
+    print("        ★★★ **`T > C` 时并不【总是】差 `min(C,T)/K`** —— 靠近 `T ≈ C` 的**中间段**")
+    print("             差得更少（`(T−C)·(1−1/K)`），要等 `T` 跨过 `C·K/(K−1)` 才取到 `min(C,T)/K`。")
     print("     ★★★ **一条【未取到】的对照**（如实登记，**不冒充**）：")
     print("        ★ 计划 `§C.5` 的 `F8` 还列了 **Ultra-Scale Playbook（附录 A3）** 与**经典延迟容忍界**；")
     print("        ★ **本环境取不到前者**：`huggingface.co` 的 space 页与 `raw` / `resolve` 两种 `.md`")
@@ -319,8 +339,9 @@ def part_B():
           and specs.WEAVE_ID == "2609.21483"
           and specs.WEAVE_URL == "https://arxiv.org/abs/2609.21483"
           and specs.NOT_QUOTED == ("Ultra-Scale Playbook 附录 A3 的 overlap 公式",),
-          "★★★ **判据成立**：**差异的具体形态 = `min(C,T)/K`，且只在 `T > C` 时为真**；"
-          "`T <= C` 时本库与文献侧**完全相同**；★ 且 **`ours >= lit` 恒成立** —— "
+          "★★★ **判据成立**：**差异的【分段】形态**（★ 分段**真的被测到**——网格含 `(4,7)` 这个"
+          "`C<T<C·K/(K−1)` 的**反例档**）：`T<=C` ⇒ `0`；`C<T<C·K/(K−1)` ⇒ `(T−C)(1−1/K)`；"
+          "`T>=C·K/(K−1)` ⇒ `min(C,T)/K`；★ 且 **`ours >= lit` 恒成立** —— "
           "★★★ 这就是计划点出、而**本轮第一次算出形态**的那件事",
           "**差异的形态被动过** —— ★ 先查 `cf_lit` 的化简假设与两条式子的展开")
 
@@ -343,8 +364,13 @@ def part_C():
     print("        「总时间 = `C`」**落在下界以下**（`P35` 的同型错法，换到 `T > C` 这一侧）。")
     ok_rejected = True
     for (C, T) in specs.HIDE_C_T_GRID:
-        if T <= C:
-            print("        (C,T)=%-9s 计算主导 ⇒ 不在本判据的射程内（如实跳过）" % ("(%d,%d)" % (C, T)))
+        if T < C:
+            print("        (C,T)=%-9s **计算主导**（`T < C`）⇒ 不在本判据的射程内（如实跳过）"
+                  % ("(%d,%d)" % (C, T)))
+            continue
+        if T == C:
+            print("        (C,T)=%-9s **平衡**（`T == C`）⇒ 不在本判据的射程内（如实跳过）"
+                  % ("(%d,%d)" % (C, T)))
             continue
         claim = (sim_makespan(C, T, 2) == Fraction(C))     # 错读法：总时间 == C
         exposed = cf_exposed(C, T, 2)
@@ -359,9 +385,12 @@ def part_C():
     check("C.1", ok_rejected
           and (sim_makespan(4, 12, 2) != Fraction(4))
           and cf_exposed(4, 12, 2) >= Fraction(8)
+          and (sim_makespan(4, 7, 2) != Fraction(4))
+          and cf_exposed(4, 7, 2) >= Fraction(3)
           and cf_exposed(1, 20, 2) >= Fraction(19),
-          "★★★ **判据成立**：`T > C` 的两档上，错读法「**总时间 = `C`**」**一律被拒**"
-          "（★ 它落在物理下界以下）；★ 真实暴露量 **≥ 不可约下限 `T − C`**（`8` 与 `19`）"
+          "★★★ **判据成立**：`T > C` 的**三档**（含补进来的 `(4,7)`）上，错读法"
+          "「**总时间 = `C`**」**一律被拒**（★ 它落在物理下界以下）；"
+          "★ 真实暴露量 **≥ 不可约下限 `T − C`**（`8` · `3` · `19`）"
           "⇒ ★★ **「能用分块把通信全藏起来」在 `T > C` 时是错的**",
           "**错读法没被拒** —— ★★ 说明「总时间不低于 `max(C,T)`」这条守卫失效（`P35` 复发）")
 
@@ -436,6 +465,13 @@ def part_D():
     print("=" * 78)
 
     # ── D.5 ★★★ Weave 的两条式 + 一句散文（**LaTeX 提取形态**）────────────
+    # ── D.4 ★★ `eff_chunk(K)` 的逐字（★ 它支撑 `cf_lit` 化简的【第三条假设】）─────────
+    check("D.4", specs.WEAVE_EFF_CHUNK_TEX == 'T_{\\text{comp}}(c,K)=\\frac{W_{\\text{comp}}}{\\text{TFLOPS}(N{-}c)\\cdot\\text{eff}_{\\text{chunk}}(K)},'
+          and specs.WEAVE_EFF_CHUNK_PROSE == "where eff_chunk(K)\\in(0,1] is the ratio of chunked GEMM throughput to the unchunked case",
+          "★★ 判据成立：`eff_chunk(K)` 的**公式逐字**与**散文逐字**都在（★ 原文显式依赖 `K` ⇒ "
+          "本库化简成常数 `C` 时**多了一条假设**，已记进 `§1.4`）",
+          "**`eff_chunk(K)` 的逐字被动过** —— ★ 先查 `WEAVE_EFF_CHUNK_TEX` / `_PROSE`")
+
     check("D.5", specs.WEAVE_TOTAL_TEX
           == 'T_{\\text{total}}(c,K)=\\max\\!\\big(T_{\\text{comp}}(c,K)+T_{\\text{tail}}(c,K),\\;T_{\\text{comm}}(c)\\big).'
           and specs.WEAVE_TAIL_TEX
@@ -456,14 +492,14 @@ def part_D():
           "**`NOT_QUOTED` 被动过**")
 
     # ── D.7 ★★★ 逐元素钉住 ───────────────────────────────────────────────
-    check("D.7", specs.HIDE_C_T_GRID == ((12, 4), (4, 12), (7, 7), (1, 20))
+    check("D.7", specs.HIDE_C_T_GRID == ((12, 4), (4, 12), (7, 7), (1, 20), (4, 7))
           and specs.HIDE_K_GRID == (1, 2, 3, 8, 16)
           and specs.P35_WRONG_CASE == (3, 10, 4)
           and specs.P35_LOWER_BOUND == 10
           and specs.K_INF == 1000000
           and specs.MIN_VALID_C == 1
           and specs.UNSOURCED == (),
-          "★★★ **两个元组逐元素**（`HIDE_C_T_GRID` 八个数 + `HIDE_K_GRID` 五个数）+ **四个标量**钉住；"
+          "★★★ **两个元组逐元素**（`HIDE_C_T_GRID` 十个数 + `HIDE_K_GRID` 五个数）+ **四个标量**钉住；"
           "★★ `UNSOURCED == ()` 一并钉住（★ 0 个叶子）",
           "**元组的元素或某个标量被动过**")
 
