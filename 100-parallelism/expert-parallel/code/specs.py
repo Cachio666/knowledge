@@ -41,6 +41,20 @@
       （★★ 本模块因此**只登记 `All-to-All` 这个词本身**、**不登记那个句子**）。
       凡引言 **一律以 `… of size` / `… cores.` 这类词收尾**，**绝不把宾语公式或编号写进常量**。
 
+★★★ **【数不到】与【不存在】是两件事**（本主题 Chunk 5 的**实测教训**：
+    本模块的 02 曾据此写下一条**错的**否定性断言，见 `SWITCH_DROPPED_RATE_QUOTE`）：
+    `raw.count(x) == 0` **只能**得出「**在这个载体上、用这个片段**数不到 `x`」——
+    ★★★ **要断言「不存在」，必须【换锚点、换窗口、换载体】再试**。
+    ★ 实例：本主题曾用 **`capacity`** 当锚点在两篇正文里数 `%`、各得 **0** 次，据此写下
+      「本库在任何载体上都没有取到任何来源的丢弃率数字」—— ★★★ **那句话是错的**：
+      Switch §2.2 **逐字**就有 `… the number of tokens dropped (typically <1%)`
+      （见 `SWITCH_DROPPED_RATE_QUOTE` / `SWITCH_DROPPED_RATE_ALT`）。
+      ★ 错因是**锚点选错**：那句话的锚点是 **`dropped tokens`**，而 `capacity` 与它附近那个 `%`
+      **相距 694 字节**（2026-10-08 在 ar5iv 正文上实测）。
+    ⇒ ★★ **凡写「本库在任何载体上都没有取到 X」，先自问：我换过锚点吗？换过窗口吗？换过载体吗？**
+      ★ 三层错叠加的先例：本条曾同时出现「**假否定**」（数不到当成不存在）
+      + 「**据假否定立的禁用规则**」（「引任何来源的丢弃率数字 ⇒ 不行」）—— 两条一起撤。
+
 ★★ **三类真值来源必须分开标注**：
     ① **外部规格值**：论文原文（**C 级，须注明是否确认同行评审**）、厂商/产品文档（A/B 级）
        ⇒ **本模块存放的就是这一类**。
@@ -72,7 +86,12 @@
 
 ★ **本主题的禁区**（细节见 `requirements.txt` 与域 README 的「本域不做什么」表）：
     **容量因子的定义与语义**（定义式、取整口径、dropping vs No-Token-Left-Behind、丢弃率口径）
-      ⇒ 正文在 `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**，已逐字让渡）
+      ⇒ 正文在 `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）。
+      ★★★ **让渡的方向**：是**本域把这几样让渡给该篇**（★ 该篇自己接住的是
+        `00-meta/glossary.md:240` 与 `40-kernels/moe-kernels/*` 的让渡，**不是本域**）
+        ⇒ ★ **不得写成「该篇已逐字让渡给本域」** —— 实测该篇全篇里
+        `EP` / `expert parallel` / `100-parallelism` / `all-to-all` / `并行` / `设备` / `通信`
+        **各 0 次**（2026-10-08 实测）⇒ 它**根本没有**把任何东西让渡给本域。
       ★★ 本主题**一个字都不写**它们，只写**它对 EP 的影响**。
     **aux loss 的式子 / 路由 gating 的机制** ⇒ `80-model-architectures/moe/01-gating-and-routing.md`、
       `03-balance-and-granularity.md`。
@@ -117,7 +136,7 @@ SWITCH_SECTION54_QUOTE = "Next we describe the partitioning strategy for expert 
 # 口径：★ §5.4 讲的是**专家并行**（EP）—— 原文把 EP 与 DP **合在一节里**讲。
 #       ★★ 这一点**必须写明**：本域把 EP 单独成篇，是**本库的组织选择**，
 #       **不是**原文的结构 ⇒ ★ 不得据此说「原文把 EP 当独立的一维」。
-# 消费者：`01_expert_sharding.py` 的 `D.2`。
+# 消费者：`01_expert_sharding.py` 的 `D.5`。
 # 同值位置：无。
 
 SWITCH_DISPATCH_ALLTOALL_QUOTE = "Because each core has its own expert, we do an all-to-all communication of size"
@@ -127,7 +146,7 @@ SWITCH_DISPATCH_ALLTOALL_QUOTE = "Because each core has its own expert, we do an
 #       它的宾语是一个**尺寸** `[E, C, d_model]`（★ 那个方括号在 `<math>` 里 ⇒
 #       **本模块只取到 `of size` 为止，绝不把那个尺寸写进常量**）。
 #       ★★ 原文紧接着的一句给了**第二次**的方向（`SWITCH_COMBINE_QUOTE`）⇒ 两句必须成对引。
-# 消费者：`01_expert_sharding.py` 的 `D.3`、`B.1` 的说明文案。
+# 消费者：`01_expert_sharding.py` 的 `D.5`、`B.1` 的说明文案。
 # 同值位置：无。
 
 SWITCH_COMBINE_QUOTE = "in the forward pass to analogusly receive the tokens from each expert located on different cores."
@@ -142,7 +161,7 @@ SWITCH_COMBINE_QUOTE = "in the forward pass to analogusly receive the tokens fro
 #       ★★ 原文这一句说的是 `additional communication costs`，**并没有**把这次也叫
 #         `all-to-all` ⇒ ★ **本主题不声称「原文把两次都叫 all-to-all」**；
 #         两次的**名字**依据在附录 F 的伪码注释里（见 `SWITCH_ALLTOALL_COUNT`）。
-# 消费者：`01_expert_sharding.py` 的 `D.3`、`B.1` 的说明文案。
+# 消费者：`01_expert_sharding.py` 的 `D.5`、`B.1` 的说明文案。
 # 同值位置：无。
 
 SWITCH_ALLTOALL_TERM = "All-to-All"
@@ -153,17 +172,17 @@ SWITCH_ALLTOALL_TERM = "All-to-All"
 # 口径：★★★ **「两次 all-to-all」这个名字的逐字依据** —— 两处注释各一次。
 #       ★★ **这是【计数】，不是【定义】**：本模块说的是「这个串在原始字节上出现 2 次」，
 #       **不是**「原文说 EP 有两次 all-to-all」这个更强的断言（后者由 §5.4 的两句散文支撑）。
-# 消费者：`01_expert_sharding.py` 的 `D.3`。
+# 消费者：`01_expert_sharding.py` 的 `D.6`、`02_load_imbalance.py` 的 `D.5`。
 # 同值位置：无。
 
 SWITCH_ALLTOALL_COUNT = 2
 # 来源：[C] Switch Transformer 附录 F —— 上一行那个词在**原始字节**上的实测次数。
 # 口径：★★ 取它当**常量**而不是把 `2` 写死在断言里，是为了让 `mutate.py` 能看见它
-#       （★ 同时 `D.3` 用 `== 2` 逐字钉住）。
+#       （★ 同时 `01` 的 `D.6` 用 `== 2` 逐字钉住）。
 #       ★★★ 它是**本主题最容易出错的地方**：同域 `sequence-context-parallel` 的前车之鉴是
 #         「把散文里的一个词当成可计数的串」⇒ 在原始字节上计到 `0`。本模块的 `2` 是
 #         **真的 `count()` 出来的**，且**只对着 `SWITCH_ALLTOALL_TERM` 那个串**。
-# 消费者：`01_expert_sharding.py` 的 `D.3`。
+# 消费者：`01_expert_sharding.py` 的 `D.6`、`02_load_imbalance.py` 的 `D.5`。
 # 同值位置：无。
 
 SWITCH_HYPHENATED_VERB_COUNT = 3
@@ -172,8 +191,43 @@ SWITCH_HYPHENATED_VERB_COUNT = 3
 #       小写 `all-to-all` 3 次（散文里用的**动词性**说法，含 §5.4 那句），
 #       大写 `All-to-All` 2 次（**伪码注释**里的名字）。**同名不同指**的近亲：**同词不同形**。
 #       ★★ 把两者合并成一个常量就抹掉了「散文用词 / 伪码注释名」这个区别本身。
-# 消费者：`01_expert_sharding.py` 的 `D.3`（★ 与 `SWITCH_ALLTOALL_COUNT` **分别**钉住）。
+# 消费者：`01_expert_sharding.py` 的 `D.6`（★ 与 `SWITCH_ALLTOALL_COUNT` **分别**钉住）。
 # 同值位置：`SWITCH_ALLTOALL_COUNT`（同为「两次 all-to-all」这一件事的**另一个串**）。
+
+
+SWITCH_DROPPED_RATE_QUOTE = "Throughout our experiments we didn’t notice any dependency on the number of experts for the number of tokens dropped"
+# 来源：[C] Switch Transformer，**§2.2**（★ 不是 §5.4：它在讲负载均衡损失那一节）。
+#       载体 = ar5iv 正文（`2101.03961`），**原始字节 1 次**（抓取日 2026-10-08 实测）。
+#       ★★★ **本主题 02 原来那条「两篇正文里没有任何丢弃率数字」是【假否定】，这一条就是反例**：
+#         原句逐字是 `Empirically we find ensuring lower rates of dropped tokens are important
+#         for the scaling of sparse expert-models. Throughout our experiments we didn’t notice
+#         any dependency on the number of experts for the number of tokens dropped (typically …)`
+#         ⇒ ★ 本模块**只取到 `tokens dropped` 为止**（紧跟的 `(typically <1%)` 里那个数
+#         在 `<math>` 里，**另立一条**见 `SWITCH_DROPPED_RATE_ALT`）。
+# 口径：★★★ **它是「数不到 ≠ 不存在」这条教训的实物**（见模块抬头）：
+#       当初用 `capacity` 当锚点数 `%` 得到 0 次 ⇒ 误判成「没有」；
+#       ★ 这一句的锚点是 **`dropped tokens`** —— `capacity` 距该处最近的 `%` **694 字节**。
+#       ★★ **不跨标记**：本段全是散文，`didn’t` 里的 `’` 是 **U+2019**（★ 不是 ASCII `'`，
+#         换成 ASCII 会在原始字节上计到 `0`）。
+# 消费者：`02_load_imbalance.py` 的 `D.5`。
+# 同值位置：无。
+
+SWITCH_DROPPED_RATE_ALT = "&lt;1\\%"
+# 来源：[C] Switch Transformer，**§2.2** —— 上一条末尾那个丢弃率**经验值** `<1%` 的载体形态。
+#       载体 = ar5iv 正文，**原始字节 2 次**（抓取日 2026-10-08 实测）。
+#       ★★★ **它不是散文，是一个 `<math>` 元素的序列化形态**：原文那一处是
+#         `(typically <math id="S2.SS2.p2.m1" class="ltx_Math" alttext="&lt;1\%" …>…</math>)`
+#         ⇒ ★ 本模块按**【原始字节】登记**（HTML 转义 `&lt;` + LaTeX 的 `\%`）。
+#       ★★★ **那「2 次」【不是两处出处】** —— 两次来自**同一个** `<math>` 元素的
+#         `alttext` 与 `annotation`（`application/x-tex`）⇒ ★ **把口径写明**，
+#         否则「2 次」会被读成「两个独立的出处」（本库的「同名不同指」教训的近亲）。
+# 口径：★★★ **本模块【不】把这一条当【引文】**（本模块的引文一律不跨标记）——
+#       它是**那个数的载体形态**，登记它是为了让「Switch 给过一个丢弃率经验值」这件事
+#       **可被一条断言钉住**，而不是只听转述。★ 渲染后的形态是 `<1%`。
+#       ★★ **它是一条【外部事实】**，**不是**「容量因子的定义与语义」
+#         （后者仍全在 `80-model-architectures/moe/02-capacity-factor.md`）。
+# 消费者：`02_load_imbalance.py` 的 `D.5`。
+# 同值位置：无。
 
 
 # ===========================================================================
@@ -191,7 +245,7 @@ GSHARD_ALLTOALL_TERM = "AllToAll"
 # 口径：★★★ **本主题 01 的一条【否定性】结论的依据**：GShard 用的是
 #       **一个词 `AllToAll`**（没有连字符），与 Switch 的 `all-to-all` **写法不同**。
 #       ⇒ ★★ **写两篇论文的对比时必须写出这个字形差异**，否则会把它当成同一个措辞。
-# 消费者：`01_expert_sharding.py` 的 `D.4`。
+# 消费者：`01_expert_sharding.py` 的 `D.9`、`02_load_imbalance.py` 的 `D.5`。
 # 同值位置：无。
 
 GSHARD_ALLTOALL_COUNT = 15
@@ -201,7 +255,7 @@ GSHARD_ALLTOALL_COUNT = 15
 #       ★★★ 因此 **本主题绝不从它推出「GShard 做了几次 all-to-all」**：
 #         原文**没有**给出次数（它只区分 `dispatch` 与 `combine` 两件事，用词是 `AllToAll`）。
 #         ⇒ **不得给 GShard 编「2 次」**（那会是「编数字」）。
-# 消费者：`01_expert_sharding.py` 的 `D.4`。
+# 消费者：`01_expert_sharding.py` 的 `D.9`。
 # 同值位置：无。
 
 GSHARD_HYPHEN_COUNT = 0
@@ -210,7 +264,7 @@ GSHARD_HYPHEN_COUNT = 0
 #       「一个词 `AllToAll` 15 次、带连字符的 `all-to-all` **0 次**」
 #       ⇒ 这是「两篇论文的措辞不同」的**可复核形式**（★ 光说「写法不同」不可复核）。
 #       ★★ 同一次 `count()` 里 `all to all`（空格）与 `alltoall`（全小写无分隔）也各 **0** 次。
-# 消费者：`01_expert_sharding.py` 的 `D.4`。
+# 消费者：`01_expert_sharding.py` 的 `D.9`。
 # 同值位置：无。
 
 GSHARD_COLLECTIVE_QUOTE = "communication operators in the MoE model are"
@@ -222,7 +276,7 @@ GSHARD_COLLECTIVE_QUOTE = "communication operators in the MoE model are"
 #       **`AllReduce` 与 `AllToAll`** —— 即 **all-to-all 不是 MoE 唯一的通信**。
 #       ⇒ ★★ 写「EP 的通信 = 两次 all-to-all」时**必须限定范围**（那是 Switch 的 EP 方案），
 #         **不得**说成「MoE 只有 all-to-all」。
-# 消费者：`01_expert_sharding.py` 的 `D.4`。
+# 消费者：`01_expert_sharding.py` 的 `D.9`、`02_load_imbalance.py` 的 `D.5`。
 # 同值位置：无。
 
 
@@ -244,7 +298,7 @@ EP_MOE_README_PATH = "megatron/core/transformer/moe/README.md"
 #       （那一份 663 字节、只 `{include}` 这一份）—— 抓取日 2026-10-08 实测路径。
 # 口径：★★ 本模块**把路径也登记成常量**，因为「载体指错地方」正是本域的头号错误模式
 #       （B 级当 A 级）的**前一步**：**先要指对文件**。
-# 消费者：`03_ep_and_other_axes.py` 的 `D.9`。
+# 消费者：`03_ep_and_other_axes.py` 的 `D.5`/`D.8`/`D.9`。
 # 同值位置：无。
 
 EP_MOE_README_QUOTE = "Prior MoE frameworks constrain **EP ≤ DP** (Expert Parallelism must be a sub-group of Data Parallelism), which severely limits scalability."
@@ -258,7 +312,8 @@ EP_MOE_README_QUOTE = "Prior MoE frameworks constrain **EP ≤ DP** (Expert Para
 #         ★★ 任务书的转述把它写成了不带 `**` 的形式 ⇒ **本模块实测其原始形态与之不同**，
 #           这里按实测形态登记（★ 去掉 `**` 的写法在原始字节上计到 **0**）。
 #       ★★ 那个 `≤` 是 **U+2264**（不是 ASCII 的 `<=`）—— ★ 换成 ASCII 也计到 **0**。
-# 消费者：`03_ep_and_other_axes.py` 的 `D.8`、`C.2` 的说明文案。
+# 消费者：`03_ep_and_other_axes.py` 的 `D.8`、`C.1` 的说明文案（`part_C()` 的打印）。
+#         ★★ 原文写的是 `C.2` —— **`03` 只有 `C.1`，没有 `C.2`**（Chunk 5 修）。
 # 同值位置：无。
 
 EP_MOE_README_SUBQUOTE = "Expert Parallelism must be a sub-group of Data Parallelism"
@@ -266,17 +321,17 @@ EP_MOE_README_SUBQUOTE = "Expert Parallelism must be a sub-group of Data Paralle
 # 口径：★★ 上一条里**不含任何标记**的那一段（★ 它**不跨 `**`**）⇒
 #       即使有人把粗体标记的处置搞错了，这一条仍然在原始字节上计得到。
 #       ★★ 它把「EP 组是 DP 组的子组」这件事**用散文**说了一遍。
-# 消费者：`03_ep_and_other_axes.py` 的 `D.8`。
+# 消费者：`03_ep_and_other_axes.py` 的 `D.5`、`C.1` 的说明文案（`part_C()` 的打印）。
 # 同值位置：`EP_MOE_README_QUOTE`（同一句话的另一种取法：一段 / 完整一句）。
 
 EP_MOE_README_A2A_QUOTE = "NCCL-based All-to-All communication for token exchange"
 # 来源：[B] Megatron-LM MoE README（活文档，抓取日 2026-10-08），**原始字节 1 次**。
 # 口径：★★★ **实现文档侧对 EP 通信的原话**：**token exchange**（即 dispatch/combine）
 #       用的是 **`All-to-All`**。★ 它给出的是**机制名**，**不给次数、也不给尺寸**
-#       ⇒ ★★ **不得从它推出通信量**（那是 `110-communication/collectives` 的正文）。
+#       ⇒ ★★ **不得从它推出通信量**（那是 `110-communication/collectives`（**未建成**）的正文）。
 #       ★★ 注意这里用的是**带连字符的大写形**`All-to-All` —— 与 GShard 的
 #         `AllToAll`（一个词）**不同形**（见 `GSHARD_ALLTOALL_TERM`）。
-# 消费者：`03_ep_and_other_axes.py` 的 `D.8`。
+# 消费者：`03_ep_and_other_axes.py` 的 `D.5`。
 # 同值位置：`SWITCH_ALLTOALL_TERM`（同一个名字的另一处出处）。
 
 EP_NOT_FOUND_NOTE = "no source found for a constraint between the expert count and the expert-parallel degree"
@@ -288,7 +343,8 @@ EP_NOT_FOUND_NOTE = "no source found for a constraint between the expert count a
 #         `EP_MOE_README_QUOTE`），★★★ **不写任何「专家数必须不少于 EP 度」这类断言**。
 #       ★ **把它登记成常量而不是只写在注释里**：注释会被忽略，
 #       而这条记录**有一个真消费者**（`03` 的 `D.9`）⇒ 它**不是**一条无消费者的漏网候选。
-# 消费者：`03_ep_and_other_axes.py` 的 `D.9`（★ 与 `UNSOURCED == ()` 同一条）。
+# 消费者：`01_expert_sharding.py` 的 `D.10`、`03_ep_and_other_axes.py` 的 `D.9`
+#         （★ 与 `UNSOURCED == ()` 同一条）、`03` 的 `B` 类说明文案（`part_B()` 的打印）。
 # 同值位置：无。
 
 
@@ -302,8 +358,10 @@ EP_DEV_GRID = (2, 4, 8)
 #       （`8/2`、`8/4`、`8/8`）⇒ **每设备摊到的专家数恰好是 `E/EP`**，没有余数。
 #       ★★ 第 1 档 `EP = 2` 是**退化对照**（每设备 4 个专家 ⇒ 负载波动被平均掉最多）；
 #         `EP = 8` 时每设备 **1** 个专家 ⇒ 波动**完全不**被平均 —— 这就是 02 的 B 类要量的东西。
-#       ★★ **本元组必须逐元素钉住**（`02` 的 `D.7`）—— 只钉「整体」会让元素级变异漏网。
-# 消费者：`01_expert_sharding.py` 的 `D.7`、`02_load_imbalance.py` 的 `A.1`/`B.1`/`D.7`。
+#       ★★ **本元组必须逐元素钉住**（`01`/`02` 的 `D.7`）—— 只钉「整体」会让元素级变异漏网。
+# 消费者：`01_expert_sharding.py` 的 `B.2`/`D.7`、`02_load_imbalance.py` 的 `B.2`/`D.7`/`D.8`；
+#         ★★ **另作 `01`/`02`/`03` 三程序 A/B/C 类循环的【输入】**（`03` 的 `A.1`/`A.2` 也依赖它
+#         —— 它不在 `03` 任何一条 `check()` 的**实参**里，但改它会改变 `03` 报出的档位）。
 # 同值位置：无。
 
 EP_SHARD_CASES = ((8, 3), (8, 5))
@@ -313,7 +371,7 @@ EP_SHARD_CASES = ((8, 3), (8, 5))
 #       ★ ★ 取 `3` 与 `5` 而不是 `4`/`2`，是因为**后者整除、量不出余数**。
 #       ★★ **嵌套元组必须逐元素钉住**（`01` 的 `D.7`）：`_walk()` 会给它们
 #          `[0][0]` / `[0][1]` 这样的后缀，★ 只钉外层会让**四个**内层叶子全部漏网。
-# 消费者：`01_expert_sharding.py` 的 `A.1`/`D.7`。
+# 消费者：`01_expert_sharding.py` 的 `D.7`；★ 另作 `A.1`/`A.1g`/`A.2g` 的【输入】（`for e_num, ep in …`）。
 # 同值位置：无。
 
 EP_DISPATCH_SHAPE = (32, 8, 4, 2)
@@ -325,7 +383,8 @@ EP_DISPATCH_SHAPE = (32, 8, 4, 2)
 #         ★ 本模块**刻意不照抄它的数**：尺寸不同 ⇒ 差值的**具体数**不同
 #         （★★ 这正是域 README 说的「**可引用的是『形状依赖』这个性质，某组具体形状给 `0` 的清单本身不可引用**」）。
 #       ★★ **本元组必须逐元素钉住**（`01` 的 `D.7`）。
-# 消费者：`01_expert_sharding.py` 的 `C.1`/`C.2`/`D.5`/`D.7`。
+# 消费者：`01_expert_sharding.py` 的 `D.3b`/`D.7`；★ 另作 `make_inputs()` 的输入
+#         （`A`/`C`/`D.4` 三类的数据都由它造）。
 # 同值位置：无。
 
 EP_A2A_DIM = (4, 8, 16)
@@ -338,7 +397,7 @@ EP_A2A_DIM = (4, 8, 16)
 #         ★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡**了它。
 #         ⇒ 本主题**只声明张量的尺寸**，**不声明任何「通信量 ∝ 什么」的结论**。
 #       ★★ **本元组必须逐元素钉住**（`01` 的 `D.7`）。
-# 消费者：`01_expert_sharding.py` 的 `B.1`/`B.2`/`D.7`。
+# 消费者：`01_expert_sharding.py` 的 `D.3b`/`D.7`；★ 另作 `B.1`/`B.2` 的输入（`part_B()`）。
 # 同值位置：无。
 
 EP_IMB_SEEDS = (3, 7, 11, 13, 42, 100, 991, 2026)
@@ -350,7 +409,7 @@ EP_IMB_SEEDS = (3, 7, 11, 13, 42, 100, 991, 2026)
 #          可观察后果，所以**不**进 `specs.py`）。
 #       ★★★ **口径必须与数一起报**：脱离这八个种子，`02` 的 B 类数**不可复核**
 #          （`50-performance` 的「判据的小 n 稳定性」纪律）。
-# 消费者：`02_load_imbalance.py` 的 `A.1`/`B.1`/`B.2`/`D.7`。
+# 消费者：`02_load_imbalance.py` 的 `D.3b`/`D.7`/`D.8`；★ 另作 `A.1`/`A.1g`/`B.1`/`C.1` 的输入。
 # 同值位置：无。
 
 EP_IMB_MODEL = (256, 8, 2)
@@ -364,7 +423,8 @@ EP_IMB_MODEL = (256, 8, 2)
 #         ★★ **换一种初始分布（例如均匀随机选 `top_k` 个）会给出不同的比值**
 #         ⇒ 报「接收不均」的数时**必须写明初始分布**，否则两个数**不可比**。
 #       ★★ **本元组必须逐元素钉住**（`02` 的 `D.7`）。
-# 消费者：`02_load_imbalance.py` 的 `A.1`/`B.1`/`B.2`/`C.1`/`D.7`。
+# 消费者：`02_load_imbalance.py` 的 `D.6`/`D.7`/`D.8`；★ 另作 `01` 的 `A.1g`/`A.2` 与
+#         `02` 的 A/B/C 三类的输入。
 # 同值位置：无。
 
 EP_CAP_LIMIT = 64
@@ -378,7 +438,7 @@ EP_CAP_LIMIT = 64
 #         上限**恰好压在平均负载上** ⇒ 「有的超、有的不超」**都量得到**
 #         （★ **本库只声明这一点**：它是一个**让两侧都可观测**的取值；
 #         ★★ **「上限该由 token 数与专家数怎么算出」不是本库的话** —— 那是回链那一篇的正文）。
-# 消费者：`02_load_imbalance.py` 的 `C.1`/`D.7`。
+# 消费者：`02_load_imbalance.py` 的 `D.3b`/`D.6`；★ 另作 `C.1` 的输入（`part_C()`）。
 # 同值位置：无。
 
 EP_TP_GRID = (1, 2, 4)
@@ -387,7 +447,7 @@ EP_TP_GRID = (1, 2, 4)
 #       ★★ 另外两档是**改变了求值顺序**的那一支（专家的 `W1` 按**行**切 ⇒ 求和顺序变了）
 #         ⇒ ★★★ 这正是域 README 说的「**A 类判据只在『切分改变了求值顺序』的地方才有信息量**」。
 #       ★★ **本元组必须逐元素钉住**（`03` 的 `D.7`）。
-# 消费者：`03_ep_and_other_axes.py` 的 `A.1`/`A.2`/`B.1`/`D.7`。
+# 消费者：`03_ep_and_other_axes.py` 的 `D.7`；★ 另作 `A.1`/`A.1g`/`A.2` 的输入。
 # 同值位置：无。
 
 EP_AXIS_SHAPE = (32, 8, 8, 2)
@@ -396,7 +456,8 @@ EP_AXIS_SHAPE = (32, 8, 8, 2)
 #       ⇒ 行/列切都在**整除**处发生（★ 补齐的代价**不是** 03 的题目，那是
 #       `sequence-context-parallel/03` 的正文）；`E = 8` 要被 EP 的三档整除。
 #       ★★ **本元组必须逐元素钉住**（`03` 的 `D.7`）。
-# 消费者：`03_ep_and_other_axes.py` 的 `A.1`/`A.2`/`B.1`/`B.2`/`C.1`/`C.2`/`D.7`。
+# 消费者：`03_ep_and_other_axes.py` 的 `D.6`/`D.7`；★ 另作 `make_layer()`/`part_B()` 的输入
+#         （`A`/`B`/`C` 三类的数据都由它造）。★ 原文还写着 `C.2` —— **`03` 没有 `C.2`**。
 # 同值位置：无。
 
 EP_OVER_GRID = (16, 32)
@@ -408,7 +469,7 @@ EP_OVER_GRID = (16, 32)
 #       ★★ 取 `16` 与 `32` 的理由：`ceil(EP/E)` = `2` 与 `4` ⇒ **因子翻倍看得见**
 #         （★ `8`/`4`/`2` 那三档已经落在 `EP_DEV_GRID` 里，因子都是 `1`）。
 #       ★★ **本元组必须逐元素钉住**（`03` 的 `D.7`）。
-# 消费者：`03_ep_and_other_axes.py` 的 `B.1`/`B.2`/`D.7`。
+# 消费者：`03_ep_and_other_axes.py` 的 `B.2`/`D.6`/`D.7`；★ 另作 `B.1` 的输入。
 # 同值位置：无。
 
 EP_AXIS_PAIR = (2, 2)
@@ -416,7 +477,7 @@ EP_AXIS_PAIR = (2, 2)
 # 口径：★★ 取 `(2, 2)` 的理由：**两个轴都不为 `1`**（否则「组划分」无从谈起），
 #       且 `EP * DP = 4` 小到**每一组都能逐个打印出来复核**。
 #       ★★ **本元组必须逐元素钉住**（`03` 的 `D.7`）。
-# 消费者：`03_ep_and_other_axes.py` 的 `C.1`/`D.7`。
+# 消费者：`03_ep_and_other_axes.py` 的 `D.3b`/`D.7`；★ 另作 `C.1` 的输入（`part_C()`）。
 # 同值位置：无。
 
 TOL_MACHINE = 1.0e-12
@@ -428,8 +489,9 @@ TOL_MACHINE = 1.0e-12
 #       ★★★ 本主题**另有两条**与它并列的**内容级**阈，写在编号程序内部（**不进本模块**）：
 #         · `1e-6`：`01` 的 C 类是**内容级**错法 ⇒ 用它区分「错法真的错了」与「舍入」；
 #         · `1e-9`：`03` 的 A.1 是「几 ulp」档 ⇒ 用它区分「搬运/求和顺序」与「真的算错」。
-# 消费者：`01_expert_sharding.py` 的 `A.1`/`D.6`、
-#         `02_load_imbalance.py` 的 `A.1`/`D.6`、`03_ep_and_other_axes.py` 的 `A.1`/`D.6`。
+# 消费者：`01`/`02`/`03` **各自**的 `D.3`（`preflight()`，先跑）与 `D.6`。
+#         ★★★ 原文写的是「三个程序的 `A.1`/`D.6`」—— **三个 `A.1` 一个都不消费它**
+#           （A 类是**精确等式**与**比值**，不用机器精度阈）⇒ Chunk 5 修正。
 #         （★ `EP_OVER_GRID` 与 `EP_AXIS_PAIR` 的消费者见各自条目 —— 它们**在上面的 [E] 节**。）
 # 同值位置：`data-parallel`/`tensor-parallel`/`pipeline-parallel`/`sequence-context-parallel`
 #           的**编号程序**里各有一个同名常量（★ 它们**不在**那四个域的 `specs.py` 里）；
@@ -449,11 +511,21 @@ TOL_MACHINE = 1.0e-12
 #   —— 理由有两条，**都是实测教训**：
 #   · **每一项的字符串都会成为 `make mutate` 的叶子**，而它们**没有消费者**
 #     ⇒ 会全部记成**漏网**（`80` 实测「只用于打印的模块级常量表」制造过 2 条）。
+#     ★★ **而【空元组本身】有消费者**：`01` 的 `D.10` 与 `03` 的 `D.9` 各用
+#       `specs.UNSOURCED == ()` 逐位钉住它（★ 0 个叶子 ⇒ 不产生变异体）。
 #   · 本主题的两处「未核到」已经**写在正文常量自己的 `# 来源：` 里**，不欠一条记录：
 #     ① 「**专家数与 EP 度之间的约束**」在任何载体上**未取到** ⇒ 已登记为
 #        `EP_NOT_FOUND_NOTE` 常量（★ 它**有**消费者：`03` 的 `D.9`）；
-#     ② 任何来源给出的**丢弃率数字**在 Switch / GShard 的正文与 abs 页上**未取到**
-#        （★ 两篇论文里 `capacity` 附近 `%` 各 **0** 次）⇒ 见 `02_load_imbalance.py` 的
-#        `C.1` 说明文案（★ **不给任何来源的丢弃率数字** —— ★ 连「某论文说它低于某个数」
-#        这种**看起来像背景陈述**的句子**也算编来源**，因为**没有载体支撑它**）。
+#     ② **丢弃率的数字** —— ★★★ **本条在 Chunk 5 修正；原写法是一条【假否定】**。
+#        原写法：「任何来源给出的丢弃率数字在 Switch / GShard 的正文与 abs 页上**未取到**
+#        （★ 两篇论文里 `capacity` 附近 `%` 各 **0** 次）」。★★★ **半对半错**：
+#        · ★ **GShard 那一半【对】** —— 复核（抓取日 2026-10-08，ar5iv 正文）：
+#          剥离标签后 `%` **12 处**，逐条看**全在** FLOPS / roofline / 重算占比 / 执行时间占比；
+#          `drop` **5 处**全在 `dropout`、「**收益下降**」（`this drop in gains`）等处
+#          ⇒ ★★ **GShard 确实不给任何丢弃率数字**。
+#        · ★★★ **Switch 那一半【错】** —— §2.2 逐字给了 `typically <1%`
+#          （见 `SWITCH_DROPPED_RATE_QUOTE` / `SWITCH_DROPPED_RATE_ALT`）。
+#        ★ 错因 = **锚点选错**（用 `capacity` 而不是 `dropped tokens`）⇒ 见模块抬头那条教训。
+#        ⇒ ★★★ **本元组仍留空**（丢弃率**不再**是一条「未取到」），并**撤掉**由这条假否定
+#          立起来的禁用规则（原文是「引任何来源的丢弃率数字 ⇒ **不行**」—— **该规则已作废**）。
 UNSOURCED = ()

@@ -237,11 +237,11 @@ updated: 2026-10-08
 | `E % EP != 0` | 恒等式 `E//EP*EP + E%EP == E` 成立；**余 `E % EP` 个专家没有设备可放**（`A.1`） |
 | 见到「EP 切分 == 单卡 ⇒ 实现对了」 | ★★★ **不合格**：本组形状下它**恰为 `0.000e+00`**，**恒真**（§4.3、`D.4`） |
 | 要验证 EP 的搬运对不对 | ★★ **改 C 类**：放置错位 ⇒ `2.472807`、不做 combine ⇒ `2.811856`（两条都**不报错**） |
-| 报「EP 有几次 all-to-all」 | ★★ **两次**（dispatch / combine）—— 依据是 Switch §5.4 两句散文 **+** 附录 F 的 `All-to-All` **2 次**（`D.3`） |
+| 报「EP 有几次 all-to-all」 | ★★ **两次**（dispatch / combine）—— 依据是 Switch §5.4 两句散文（`D.5`）**+** 附录 F 的 `All-to-All` **2 次**（`D.6`） |
 | 引 GShard 说通信次数 | ★★★ **不行**：GShard 用**一个词** `AllToAll`（**15** 次是**字符串**次数）、**不给次数**（`D.9`） |
 | 说「MoE 的通信就是 all-to-all」 | ★★★ **不成立**：GShard §5.3 逐字说关键算子**是 `AllReduce` 与 `AllToAll`** |
 | 报「两次 all-to-all 的载荷」 | ★★ 尺寸 = `[E, C, d_model]`（**每次**）⇒ 两次 = 两倍；★★ **尺寸与 `EP` 无关**（`B.2`） |
-| 由载荷尺寸推「通信量 ∝ …」 | ★★★ **越界**：通信量分析在 `110-communication/collectives`（`moe-kernels/01:243` 已逐字让渡） |
+| 由载荷尺寸推「通信量 ∝ …」 | ★★★ **越界**：通信量分析在 `110-communication/collectives`（**未建成**）—— `moe-kernels/01:243` 已逐字让渡给它 |
 | 路由里带上 gating 权重 | ★★ **本文不带**（等权 `1/top_k`）；gating 的正文在 `80-model-architectures/moe/01,03` |
 
 ## 6. 小结与延伸

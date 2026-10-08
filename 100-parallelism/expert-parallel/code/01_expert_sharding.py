@@ -326,8 +326,8 @@ def part_A():
 
 # ===========================================================================
 # 3. B 类：两次 all-to-all 的**载荷尺寸**（`B.1` / `B.2`）
-#    ★★★ **本域只给尺寸，不给通信量** —— 通信量分析的正文在 `110-communication/collectives`
-#      （未建成）与 `20-gpu-architecture/interconnect/03`；`40-kernels/moe-kernels/01:243`
+#    ★★★ **本域只给尺寸，不给通信量** —— 通信量分析的正文在 `110-communication/collectives`（**未建成**）
+#      与 `20-gpu-architecture/interconnect/03`；`40-kernels/moe-kernels/01:243`
 #      **逐字让渡**了它。★ 本节的「每设备发出的元素数」是**本库的记账模型**，不是原文的话。
 # ===========================================================================
 def part_B():
@@ -363,7 +363,8 @@ def part_B():
     print("     ★★ **这条是本域最容易写错的地方之一**：**EP 度不改每个张量的大小**，")
     print("        它改的是**张量里哪一块属于我**（all-to-all 把 `E` 维换成了被切分的那一维）。")
     print("     ★★★ **本域【不】由此推出任何通信量结论** —— 那是 `110-communication/collectives`")
-    print("        与 `20-gpu-architecture/interconnect/03` 的正文；★ `40-kernels/moe-kernels/01:243`")
+    print("        （**未建成**）与 `20-gpu-architecture/interconnect/03` 的正文；")
+    print("        ★ `40-kernels/moe-kernels/01:243`")
     print("        已**逐字让渡**。")
     same = all(e_num * cap * d_model == payload for _ in specs.EP_DEV_GRID)
     check("B.2", same and len(specs.EP_DEV_GRID) == 3,
@@ -401,7 +402,7 @@ def part_C():
     print("     `max|diff|` = **%.6f**" % d_c1)
     print("     ★★★ **它【不报错】**：张量的形状、类型、算术全都对 ——")
     print("        错的是「**哪个专家在算**」，而这件事**没有任何运行时检查**会发现它。")
-    check("C.1", d_c1 > 1e-6 and np.isfinite(d_c1),
+    check("C.1", d_c1 > 1e-6,
           "★★★ **判据成立**：专家放置错位（每个专家换了邻居）⇒ `max|diff|` = **%.6f**"
           "（≫ 内容级阈 `1e-6`）⇒ ★ **不报错、结果错**" % d_c1,
           "**错位没有让结果变** —— ★ 那说明参照与分片版共用了一段代码（自证）")
@@ -415,7 +416,7 @@ def part_C():
     print("     `max|diff|` = **%.6f**" % d_c2)
     print("     ★★★ **它【不报错】**：第二次 all-to-all 干脆没做 —— 索引、形状全都合法，")
     print("        只是**大部分 token 的贡献根本没回来**。★ 这是「两次里少一次」的写错面。")
-    check("C.2", d_c2 > 1e-6 and np.isfinite(d_c2) and abs(d_c2 - d_c1) > 1e-6,
+    check("C.2", d_c2 > 1e-6 and abs(d_c2 - d_c1) > 1e-6,
           "★★★ **判据成立**：不做 combine ⇒ `max|diff|` = **%.6f**（≫ `1e-6`），"
           "且它与 `C.1` 的 **%.6f** **不同** ⇒ ★★ 两条错法是**两种**不同的失败" % (d_c2, d_c1),
           "**不做 combine 没有让结果变**，或它与 `C.1` 给同一个数（★ 两条错法可能是同一个）")
@@ -504,7 +505,6 @@ def part_D():
     for ep in specs.EP_DEV_GRID[:2]:
         got = sharded(x, we, sel, top_k, e_num, ep)
         rows.append((ep, float(np.abs(got - ref).max())))
-    worst = max(v for _ep, v in rows)
     allzero = all(v == 0.0 for _ep, v in rows)
     print()
     print("  ── D.4 ★★★ **恒真性自检**：正确的「dispatch + combine」在本组形状下的 `max|diff|` ──")
@@ -524,7 +524,7 @@ def part_D():
     print("     ★ 口径提示：`probes/probe_100f.py` 用 `T=256, E=8`、`probe_100h.py` 的 `H3` 用")
     print("        `T=64, D=16`，**本程序用 `%s`** ⇒ ★★ **三处的数不可互推**。"
           % str(tuple(specs.EP_DISPATCH_SHAPE)))
-    check("D.4", allzero and all(np.isfinite(v) for _ep, v in rows) and len(rows) == 2,
+    check("D.4", allzero and len(rows) == 2,
           "★★★ **自检成立（报告）**：正确搬运在 `EP_DEV_GRID` 的**前两档**下 `max|diff|` "
           "**都是 `0.000e+00`** ⇒ ★★ **这条判据恒真** ⇒ **本程序的 A 类不钉在这里**"
           "（上方两条**内容级**对照才是它的意义所在）",

@@ -31,14 +31,24 @@ r"""02_load_imbalance.py —— ★★★ **EP 的负载账**：**发出量均�
   报出的比值就会差出可观的一截 ⇒ ★ 任何「某某处测得 `1.84`」的说法，
   **没有初始分布就不能复核**。
 
-★★★ **贯穿本程序的一条【否定性】纪律（关于一切「丢弃」的数）**：
-  ★ **本模块在任何载体上都【没有】取到** Switch Transformer / GShard 给出的
-  **丢弃率数字**（实测：两篇论文的正文里 `capacity` 附近出现 `%` 各 **0** 次；
-  GShard 的 `drop` 上下文全在讲 dropout 或「收益下降」）。
-  ⇒ ★★ **本程序一律不给任何来源的丢弃率数字** ——
-    **无来源的数字比不写更糟**（本库 `P` 家族的头一条）；
-    ★★ 而且**「某论文说丢弃率低于某个数」这种句子照样是「编来源」**：
-    它看起来像背景陈述，但它**没有被任何一个载体支撑** ⇒ **取不到就不写**。
+★★★ **贯穿本程序的一条纪律（关于一切「丢弃」的数）—— ★ Chunk 5 已【修正方向】**：
+  ★★★ **本程序【自己】不给任何丢弃率数字**：本程序的数是**某一个种子下的【计数】**，
+    不是丢弃率 ⇒ ★★ **不得**把它们与任何来源的丢弃率比较
+    （口径先在 `80-model-architectures/moe/02-capacity-factor.md` §3.3 对齐）。
+  ★★ **但「某来源给过丢弃率经验值」是一条【取到过】的外部事实**（★ 这**不再**是
+    「未取到」的否定性断言 —— 原说法是一条**假否定**，见 `specs.py` 抬头）：
+    · ★★★ **Switch Transformer §2.2 逐字**（`specs.SWITCH_DROPPED_RATE_QUOTE`，
+      散文，**原始字节 1 次**）：`… the number of tokens dropped`；紧接着的 `typically <1%`
+      **在 `<math>` 里** ⇒ 单独登记为 `specs.SWITCH_DROPPED_RATE_ALT`
+      （**原始字节 2 次**；★ 那 2 次来自**同一个** `<math>` 元素的 `alttext` 与 `x-tex` 注解，
+      **不是两处出处**）。
+    · ★★ **GShard 侧【确实没有】**：复核（2026-10-08，ar5iv 正文）—— 剥离标签后 `%` **12 处**
+      **全在** FLOPS / roofline / 重算占比 / 执行时间占比，`drop` **5 处**全在 `dropout`
+      或「**收益下降**」（`this drop in gains`）⇒ **GShard 不给丢弃率**。
+  ★★★ **一条必须先说的教训**（与 `specs.py` 抬头同）：**「数不到」与「不存在」是两件事** ——
+    本程序曾用 **`capacity`** 当锚点在两篇正文里数 `%`、各得 **0** 次，据此写下
+    「本库在任何载体上都没有取到丢弃率数字」—— ★★★ **那句话是假的**：
+    Switch 那一句的锚点是 **`dropped tokens`**，而 `capacity` 距它最近的 `%` **694 字节**。
 
 ★★★ **一条判据性的自查**（计划 §1.3.3，放在每个 `code/` 的头部）：
   > **问：如果我把「被测的那段逻辑」删掉，这条断言还会通过吗？**
@@ -55,7 +65,9 @@ r"""02_load_imbalance.py —— ★★★ **EP 的负载账**：**发出量均�
 ★★★ **本主题的禁区（回链，一行都不重写）**：
   · ★★★ **容量因子的定义与语义**（**定义式** / **取整口径** /
     **dropping vs No-Token-Left-Behind** / **丢弃率口径**）→
-    `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**，已逐字让渡）。
+    `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）
+    —— ★★ **方向是【本域让渡给该篇】**（★ 该篇自己接住的是 `glossary` 与 `moe-kernels`
+    的让渡；实测它全篇里 `EP` / `all-to-all` / `并行` / `设备` / `通信` **各 0 次**）。
     ⇒ ★★ **本程序一个字都不写那四样**：这里的「上限」是 `specs.EP_CAP_LIMIT`
     **直接给定的一个整数**（本库设计），**不是**从任何公式算出来的；
     超了**怎么办**（丢 / 重路由）本程序**不表态**，只数「**超过上限的条目数**」。
@@ -75,6 +87,9 @@ r"""02_load_imbalance.py —— ★★★ **EP 的负载账**：**发出量均�
   · `A.1`  ★★★ **发出量是【恒等式】**：每个种子 × 每档 EP 下**每源设备的发出量
     恒等于 `T·top_k/EP`** ⇒ `max/min` **恰为 `1.000000`**（★ 不是「大约均衡」）；
   · `A.1g` ★★★ **一条守卫**：把「发出量」换成「**接收量**」⇒ 恒等性**立刻不成立**；
+  · `A.2`  ★★★ **「专家→设备」的映射是【连续的一段】**（单调不减 + 与等价的块写法逐元素相等）
+    —— ★★ 它是 `B`/`C` 两节**所有数**的基础，而 `A.1` **钉不住它**
+    （发出量与「走到哪台设备」无关）⇒ ★ **换成跨步映射 `e % EP` 时本判据当场失败**；
   · `B.1`  ★★★ **接收量的不均随 EP 单调恶化**：`EP_IMB_SEEDS` 的**八个种子**下
     **均值严格递增**，且 **8/8 个种子逐个**都严格递增（★ 报**范围**，不只报均值）；
   · `B.2`  ★★ **成因**：每设备的专家数 `E/EP` 随 EP 严格减少（`4 → 2 → 1`）—— 这就是
@@ -158,19 +173,40 @@ def route_topk(seed, t_tok, e_num, top_k):
     return np.argsort(-scores, axis=1)[:, :top_k]
 
 
+def device_of_expert(e, E, EP):
+    """**目的设备的编号口径**：专家 `e` 落在哪台设备上 = `e * EP // E`（**均摊口径**）。
+
+    ★★ 它与 `01` 的 `device_of_expert` 是**同一个映射**（域级探测脚本口径）。
+    ★★★ **本程序 `B`/`C` 两节报出的每一个数都建在它上面** ⇒ `A.2` 专门钉它。
+    ★★ 它**总是**给出 `0 <= dev < EP`，且**每设备拿【连续的一段】专家**
+      （设备 `d` 拿 `[d*E//EP, (d+1)*E//EP)`）—— ★ 这正是 `A.2` 钉的两个不变量。
+    """
+    return e * EP // E
+
+
+def device_of_token(t, T, EP):
+    """**源设备的编号口径**：token `t` 由哪台设备发 = `t * EP // T`（**均摊口径**）。
+
+    ★★ 与目的设备用**同一个**口径（同一段算术、同一台设备的「连续块」约定）。
+    """
+    return t * EP // T
+
+
 def move_matrix(sel, t_tok, e_num, top_k, EP):
     """**搬运量矩阵** `M[s][d]` = 「源设备 `s` 发往目的设备 `d`」的条目数。
 
-    · **源设备**：`owner(t) = t * EP // T`（token 按块分给 EP 台设备）；
-    · **目的设备**：`dest(e) = e * EP // E`（专家按块分给 EP 台设备）——
-      ★★ 它与 `01` 的 `device_of_expert` 是**同一个映射**（探测脚本口径）。
+    · **源设备**：`device_of_token(t, T, EP)`；
+    · **目的设备**：`device_of_expert(e, E, EP)`。
+    ★★★ **两处都调【具名函数】**（而不是就地写算式）——
+      ★ 就地写算式会让 `A.2` 变成「对自己重写一遍公式」的**自证**
+        （本库 Chunk 5 实测：那样把映射改成 `e % EP` 时 `A.2` 照样通过）。
     """
     t_tok_local = sel.shape[0]
     m = np.zeros((EP, EP), dtype=int)
     for t in range(t_tok_local):
-        s = t * EP // t_tok
+        s = device_of_token(t, t_tok, EP)
         for e in sel[t]:
-            m[s, e * EP // e_num] += 1
+            m[s, device_of_expert(e, e_num, EP)] += 1
     return m
 
 
@@ -247,6 +283,53 @@ def part_A():
           "`max/min` 都 **> 1**（最坏 **%.6f**）⇒ ★★ 「发出量恒等」这条判据**真的会失败**，"
           "**不是**无条件成立的伪断言 ✓" % max(w for _ep, w in gaps),
           "**守卫失效** —— 接收量也恒等（那说明这台机器上路由退化了）")
+
+
+    # ── A.2 ★★★ 两张【设备编号表】（★ `B`/`C` 两节报的**每一个数**都建在它们上面）──
+    print()
+    print("  ── A.2 ★★★ **设备编号口径**：`device_of_expert(e) = e*EP//E`（**专家→设备**）")
+    print("     与 `device_of_token(t) = t*EP//T`（**token→设备**）⇒ 每台拿**连续的一段** ──")
+    map_rows = []
+    ok_map = True
+    for ep in specs.EP_DEV_GRID:
+        dest = [device_of_expert(e, e_num, ep) for e in range(e_num)]
+        srcs = [device_of_token(t, t_tok, ep) for t in range(t_tok)]
+        sizes_e = [dest.count(d) for d in range(ep)]
+        sizes_t = [srcs.count(d) for d in range(ep)]
+        mono_e = all(dest[i] <= dest[i + 1] for i in range(e_num - 1))
+        mono_t = all(srcs[i] <= srcs[i + 1] for i in range(t_tok - 1))
+        block_e = (dest == [e // (e_num // ep) for e in range(e_num)])
+        block_t = (srcs == [t // (t_tok // ep) for t in range(t_tok)])
+        ok_row = mono_e and mono_t and block_e and block_t \
+            and sizes_e == [e_num // ep] * ep and sizes_t == [t_tok // ep] * ep \
+            and dest[0] == 0 and dest[-1] == ep - 1
+        ok_map = ok_map and ok_row
+        map_rows.append((ep, sizes_e, sizes_t, ok_row))
+        print("     EP=%-2d ⇒ 专家→设备 %s · token→设备（前 %d 个）%s ⇒ **两张表都是连续块 = %s**"
+              % (ep, sizes_e, t_tok // ep, sizes_t[:t_tok // ep],
+                 "是" if ok_row else "否 ✗"))
+    print("     ★★★ **为什么这一条必须单独立一条**：本程序在 `B`/`C` 两节报出的**全部**数")
+    print("        （接收量 `max/min`、被削平的比值、丢弃条数）**都建在「专家→设备」这张表上** ——")
+    print("        ★★ 而 `A.1`（发出量）**钉不住它**：发出量只数「每个 token 走了几条路」，")
+    print("           与「它走到**哪台**设备」**无关**。")
+    print("     ★★★ **一条具体的错法**：把 `e*EP//E` 换成 `e % EP`（**跨步**）——")
+    print("        ★ 每设备**专家数仍然相等** ⇒ `A.1`/`A.1g`/`B.1`/`B.2` **全部照旧通过**，")
+    print("          但每台设备拿到的是**一组同余类**而不是连续的一段。")
+    print("        ★★ 它**会改掉**接收量的那三个头条数（均值 `1.0593 → 1.0851` 等）")
+    print("           ⇒ ★★★ **没有本判据，头条的三个数就没有任何断言保护**。")
+    print("     ★★ 本判据读到的是**具名函数**的返回值（不是就地重写一遍公式）⇒")
+    print("        ★ 改函数体，本判据**真的会失败**（★ 这是它与「对自己重写公式」的分界）。")
+    print("     ★★ 用的是**两个不变量**：**① 单调不减**（= 连续的一段）**+**")
+    print("        ② 与 `x // (N//EP)` 这个**等价的块写法**逐元素相等。")
+    check("A.2", ok_map and len(map_rows) == 3,
+          "★★★ **判据成立**：`EP_DEV_GRID` **三档**下两张设备编号表**都是连续块**"
+          "（**单调不减**、且与**等价的块写法** `x // (N//EP)` 逐元素相等）、"
+          "且**每台设备拿到的个数相等**（专家 `E/EP` 个、token `T/EP` 个）"
+          " ⇒ ★★ **`B`/`C` 两节所有数所依赖的那个映射被钉住了**"
+          "（★ 换成 `e % EP` 这种跨步映射 ⇒ 本判据**当场失败**）",
+          "**设备编号口径被动过** —— ★ 它是 `B`/`C` 两节**所有数**的基础；"
+          "★ 先查 `device_of_expert()` 是不是还给出**连续的一段**专家（`e*EP//E`），"
+          "★ 而不是一组同余类（`e % EP`）")
 
 
 # ===========================================================================
@@ -346,20 +429,30 @@ def part_C():
     sd0 = specs.EP_IMB_SEEDS[-1]
     sel = route_topk(sd0, t_tok, e_num, top_k)
     load = np.bincount(sel.ravel(), minlength=e_num)
-    per = e_num // ep8
-    recv_raw = np.array([load[d * per:(d + 1) * per].sum() for d in range(ep8)])
-    kept = np.array([int(np.minimum(load[d * per:(d + 1) * per], cap).sum()) for d in range(ep8)])
-    over = np.array([int(np.maximum(load[d * per:(d + 1) * per] - cap, 0).sum()) for d in range(ep8)])
+    # ★★ 每台设备上的**是哪些专家**由 `device_of_expert()` 决定（★ 不写死「连续块」的切片）
+    #    ⇒ ★ 本节报出的数也**跟着那个映射走**（`A.2` 钉的就是它）。
+    members = [[e for e in range(e_num) if device_of_expert(e, e_num, ep8) == d] for d in range(ep8)]
+    recv_raw = np.array([int(load[members[d]].sum()) for d in range(ep8)])
+    kept = np.array([int(np.minimum(load[members[d]], cap).sum()) for d in range(ep8)])
+    over = np.array([int(np.maximum(load[members[d]] - cap, 0).sum()) for d in range(ep8)])
+    # ★★★ **比值前先钉住【分母】**（本库 Chunk 4 的纪律：不给「不可能出 `nan`」的地方加护栏）：
+    #   这里**确实**有一个可失败的**前置条件** —— `rate()` 是 `max/min`，`min == 0` 时
+    #   Python **抛 `ZeroDivisionError`**（**不是**返回 `inf`/`nan`）⇒ 要守的是**分母非零**，
+    #   **不是**「结果有限」。★ 原写法是 `np.isfinite(rate(...))`，理由写「`min` 可能为 `0`」
+    #   —— ★★★ 那是一条**编机制从句**（结论对得上、机制是编的）⇒ Chunk 5 改成守分母。
+    den_ok = int(recv_raw.min()) > 0 and int(kept.min()) > 0
+    r_raw = rate(recv_raw) if den_ok else float("inf")
+    r_kept = rate(kept) if den_ok else float("inf")
     print("     一个种子（`EP_IMB_SEEDS` 的最后一个 = **%d**）、`EP=%d`（每设备 1 个专家）："
           % (sd0, ep8))
     print("        每设备的专家负载      = %s" % list(map(int, load)))
     print("        **不加上限时收下的**  = %s ⇒ `max/min` = **%.4f**"
-          % (list(map(int, recv_raw)), rate(recv_raw)))
+          % (list(map(int, recv_raw)), r_raw))
     print("        **加上限 `cap=%d` 后收下的** = %s ⇒ `max/min` = **%.4f**"
-          % (cap, list(map(int, kept)), rate(kept)))
+          % (cap, list(map(int, kept)), r_kept))
     print("        **超过上限的条数**    = %s" % list(map(int, over)))
     print("     ★★★ **两件事同时发生**：①「收下的」被**削平**（`max/min` 由 **%.4f** 降到 **%.4f**）；"
-          % (rate(recv_raw), rate(kept)))
+          % (r_raw, r_kept))
     print("        ② 但**不均没有消失** —— 它**转移**到「超过上限的条数」上：")
     print("        **%d 台设备丢了、%d 台一台没丢**（丢的条数 %d..%d）"
           % (int((over > 0).sum()), int((over == 0).sum()), int(over[over > 0].min()),
@@ -367,17 +460,20 @@ def part_C():
     print("     ★★ **这就是「EP 下负载不均的可观测形态」**：它不会因为加了一个上限就消失，")
     print("        只会从「某台设备忙」变成「**某台设备上的 token 被算了一半就没了**」。")
     print("     ★★★ **一个种子的值**：上面的每一个数都只对种子 **%d** 成立 ——" % sd0)
-    print("        **不得**把它当成「典型值」；★★★ **更不得**把它与任何来源的丢弃率比较 ——")
-    print("        ★ 本模块**没有在任何载体上取到** Switch / GShard 给出的丢弃率数字")
-    print("        （见模块抬头那条否定性纪律）。")
-    check("C.1", rate(kept) < rate(recv_raw) and int((over > 0).sum()) > 0
-          and int((over == 0).sum()) > 0 and np.isfinite(rate(kept)) and np.isfinite(rate(recv_raw)),
-          "★★★ **判据成立**（四个条件）：① 加上限后「收下的」`max/min` 由 **%.4f** 降到 **%.4f**；"
-          "② **有**设备超过上限（%d 台）；③ **也有**设备没超（%d 台）⇒ ★★ "
-          "**不均转移了、没有消失**；④ 两个比值都有限（★ 显式判定，"
-          "因为 `max/min` 里 `min` 可能为 `0`）"
-          % (rate(recv_raw), rate(kept), int((over > 0).sum()), int((over == 0).sum())),
-          "**不均没有转移** —— ★ 检查上限是不是压得太松（一台都没超）或太紧（全都超了）")
+    print("        **不得**把它当成「典型值」；★★★ **更不得**把它与任何来源的丢弃率比较")
+    print("        （★ 口径先在 `80-model-architectures/moe/02-capacity-factor.md` §3.3 对齐）——")
+    print("        ★★ 本库**取到过** Switch §2.2 的 `typically <1%`（`specs.SWITCH_DROPPED_RATE_QUOTE`")
+    print("           与 `_ALT`；详见本文 §4.4）—— ★ 但本节这些数**只对一个种子成立**，两者不可比。")
+    check("C.1", den_ok and r_kept < r_raw and int((over > 0).sum()) > 0
+          and int((over == 0).sum()) > 0,
+          "★★★ **判据成立**（四个条件）：① **两个比值的分母都非零**（`den_ok`，见上）；"
+          "② 加上限后「收下的」`max/min` 由 **%.4f** 降到 **%.4f**；"
+          "③ **有**设备超过上限（%d 台）；④ **也有**设备没超（%d 台）⇒ ★★ "
+          "**不均转移了、没有消失**。★★ 条件① 守的是**分母** —— `rate()` 是 `max/min`，"
+          "`min == 0` 时 Python **抛 `ZeroDivisionError`**（**不是**返回 `inf`/`nan`）"
+          % (r_raw, r_kept, int((over > 0).sum()), int((over == 0).sum())),
+          "**不均没有转移** —— ★ 检查上限是不是压得太松（一台都没超）或太紧（全都超了）；"
+          "★ 或某一台设备**一条都没收到**（`min == 0`）")
 
 
 # ===========================================================================
@@ -477,19 +573,27 @@ def part_D():
           % (", ".join(sorted(route_calls)) if route_calls else "**空集**"),
           "**路由与归并互相调用** —— A 类可能退化成分派的重述")
 
-    # ── D.5 ★★★ 引文纪律（★ 本程序的**否定性**依据）───────────────────────
-    check("D.5", specs.SWITCH_ALLTOALL_COUNT == 2 and specs.SWITCH_ALLTOALL_TERM == "All-to-All"
+    # ── D.5 ★★★ 引文纪律（★ 本程序的**外部事实**依据）───────────────────────
+    check("D.5", specs.SWITCH_DROPPED_RATE_QUOTE
+          == ("Throughout our experiments we didn’t notice any dependency on the number of "
+              "experts for the number of tokens dropped")
+          and specs.SWITCH_DROPPED_RATE_ALT == "&lt;1\\%"
+          and specs.SWITCH_ALLTOALL_COUNT == 2 and specs.SWITCH_ALLTOALL_TERM == "All-to-All"
           and specs.GSHARD_ALLTOALL_TERM == "AllToAll"
           and specs.GSHARD_COLLECTIVE_QUOTE == "communication operators in the MoE model are",
-          "★★★ **「无来源的数字不写」这条纪律的依据**逐字钉住：\n"
-          "        ★ 本程序**没有**在任何载体上取到 Switch / GShard 给出的**丢弃率数字**\n"
-          "        （实测：两篇正文里 `capacity` 附近出现 `%%` 各 **0** 次）⇒\n"
-          "        ★★ **本程序一律不给任何来源的丢弃率数字** —— ★ 连「某论文说它低于某个数」\n"
-          "        这种**看起来像背景陈述**的句子也算「编来源」，因为**没有载体支撑它**。\n"
-          "        ★ 这里并列的两条是**取到过**的：`All-to-All` **2** 次（Switch 伪码注释）、"
-          "`AllToAll` **15** 次（GShard，**一个词、不给次数**）。\n"
+          "★★★ **「数不到 ≠ 不存在」的实物 + 两条取到过的依据**逐字钉住：\n"
+          "        ★★★ **恢复的那条引文**（Switch §2.2，散文，原始字节 **1** 次）：\n"
+          "        `Throughout our experiments we didn’t notice any dependency on the\n"
+          "         number of experts for the number of tokens dropped`\n"
+          "        ★★ 紧随其后的 `typically <1%` 在 `<math>` 里 ⇒ 取 **alttext 形态**\n"
+          "        `&lt;1\\%`（原始字节 **2** 次；★ 两次出自**同一个** `<math>` 元素的\n"
+          "        `alttext` 与 `x-tex` 注解 —— **不是两处出处**）。\n"
+          "        ★ 本程序**原来**在这里写的是「两篇正文里没有任何丢弃率数字」—— ★★★ **那条是假否定**。\n"
+          "        ★★ 保留的另一半（**GShard 侧确实没有**）：`AllToAll` **15** 次是**字符串**次数\n"
+          "        （**不是**通信次数），且 GShard 正文的 `%` 12 处 / `drop` 5 处**都不给丢弃率**。\n"
           "        ★★ 载体 = ar5iv `2101.03961` / `2006.16668` 正文，抓取日 2026-10-08",
-          "**那两条依据常量被动过** —— ★ 或者有人把「未取到」当成了「取到了」")
+          "**引文常量被动过** —— ★ 先查它是不是跨了 `<math>`（那样会计到 `0`），"
+          "★ 或 `didn’t` 里的 `’` 被写成了 ASCII `'`")
 
     # ── D.6 ★★ 数值常量 ────────────────────────────────────────────────────
     check("D.6", specs.TOL_MACHINE == 1.0e-12 and specs.EP_CAP_LIMIT == 64
