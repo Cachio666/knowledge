@@ -296,11 +296,16 @@ def part_B():
     mono = all(rows[specs.LRU_CAP_GRID[i]][0] <= rows[specs.LRU_CAP_GRID[i + 1]][0]
                for i in range(len(specs.LRU_CAP_GRID) - 1))
     print("     ★★ **单调不降 = %s**（★ 缓存越大，命中不会变少）" % mono)
-    check("B.1", mono and rows[16][0] == 384 and rows[8][0] == 350 and rows[2][0] == 136,
+    check("B.1", mono and rows[16][0] == 384 and rows[8][0] == 350 and rows[2][0] == 136
+          and rows[4][0] == 266
+          and rows[2][1] == 138 and rows[4][1] == 250 and rows[8][1] == 327 and rows[16][1] == 384,
           "★ **判据成立**：命中率随容量**单调不降**（`2 → 4 → 8 → 16` 块：`%d → %d → %d → %d`）——"
-          " ★★ 这正是「**缓存大小是命中率的上界**」这条单调性的可算形态"
-          % (rows[2][0], rows[4][0], rows[8][0], rows[16][0]),
-          "**单调性被破坏** —— ★ 先查 LRU 的 `move_to_end`（命中时有没有刷新顺序）")
+          " ★★ 这正是「**缓存大小是命中率的上界**」这条单调性的可算形态。\n"
+          "        ★★ **FIFO 对照（逐格钉住）**：`2 / 4 / 8 / 16` 块上 FIFO = `%d / %d / %d / %d` ——"
+          "        ★★★ **注意 `cap = 2`：FIFO `%d` > LRU `%d`**（★ **两者无普遍次序**，不是「LRU 恒优」）"
+          % (rows[2][0], rows[4][0], rows[8][0], rows[16][0],
+             rows[2][1], rows[4][1], rows[8][1], rows[16][1], rows[2][1], rows[2][0]),
+          "**单调性或某一格（LRU / FIFO）被动过** —— ★ 先查 LRU 的 `move_to_end`（命中时有没有刷新顺序）")
 
     # ── B.2 ★ 免费守卫：容量 ≥ 去重键数 ⇒ 只剩强制缺失 ──────────────────
     print()
@@ -333,22 +338,27 @@ def part_C():
     cache_good = {}
     cache_bad = {}
     bad_req = None
+    ok_good = True
     for i, r in enumerate(reqs):
         _, reused_good = measured_match(r, cache_good, mk_key)
+        # ★★ 正确路径的复用内容必须与真前缀**逐字相同** —— ★ 并进 `C.1`（**不是**裸 `assert`）
+        ok_good = ok_good and (reused_good == tuple(r[:len(reused_good)]))
         m_bad, reused_bad = measured_match(r, cache_bad, mk_key_constant)
         want = tuple(r[:m_bad * specs.PREFIX_BLOCK_TOKENS])
         if reused_bad != want and bad_req is None:
             bad_req = (i, want, reused_bad)
-        # 正确路径的复用内容必须与真前缀**逐字相同**
-        assert reused_good == tuple(r[:len(reused_good)])
-    print("     正确路径：**每一条**请求「复用到的内容」都等于它自己的真前缀（★ 逐字）")
+    b0 = bad_req[0] if bad_req else -1
+    b1 = bad_req[1] if bad_req else ()
+    b2 = bad_req[2] if bad_req else ()
+    print("     正确路径：**每一条**请求「复用到的内容」都等于它自己的真前缀（★ 逐字）= %s" % ok_good)
     print("     碰撞路径：req%d 期望前缀 %s，却复用到了 %s"
-          % (bad_req[0], bad_req[1], bad_req[2]) if bad_req else "     碰撞路径：未出现错配")
-    check("C.1", bad_req is not None and bad_req[1] != bad_req[2],
-          "★★★ **判据成立**：常数键下，req%d 复用到的是 **`%s`**，而它**真正**的前缀是 `%s` ⇒"
+          % (b0, b1, b2) if bad_req else "     碰撞路径：未出现错配")
+    check("C.1", ok_good and bad_req is not None and b1 != b2,
+          "★★★ **判据成立**：① **正确路径**：**每一条**请求「复用到的内容」都等于它自己的**真前缀**（★ 逐字）；"
+          "② 常数键下，req%d 复用到的是 **`%s`**，而它**真正**的前缀是 `%s` ⇒"
           " ★★★ **命中到错的块**（`hash → 块` 的前提是**键唯一标识内容**，碰撞就把它打破了）"
-          % (bad_req[0], bad_req[2], bad_req[1]),
-          "**碰撞没有跑出后果** —— ★ 先查坏法键是否真的把所有块撞在一起")
+          % (b0, b2, b1),
+          "**碰撞没有跑出后果、或正确路径没跑对** —— ★ 先查坏法键是否真的把所有块撞在一起")
 
     # ── C.2 ★★★ 驱逐掉仍在用的块 ⇒ 活请求的块消失 ─────────────────────
     print()
@@ -396,7 +406,7 @@ def part_C():
     check("C.2", ("K0" in good_pool) and good_ok and ("K0" not in bad_pool) and bad_ok,
           "★★★ **判据成立**：正确驱逐**保留了 `ref = 1` 的 `K0`**（逐出的是已归还的 `F*`）；"
           "★★ **坏法把 `K0` 逐掉了** —— 而它**还在被一条活请求使用** ⇒ 那条请求的块**消失了**"
-          "（后果：要么读到错的块、要么重算）",
+          "（后果：要么读到错的块、要么 **KV 重算**）",
           "**误逐出没有跑出后果** —— ★ 先查驱逐候选是否真的按 `ref == 0` 过滤")
 
 
@@ -451,6 +461,16 @@ def preflight():
           "★★★ **口径守卫**：**每个请求长度都是块大小的整数倍**（★ 否则「末尾不满一块」的口径分歧会把"
           "「断言捕获」污染成假失败）；★ LRU 容量网格里有一档 `≥` 去重键数（`B.2` 靠它）",
           "**块大小 / 请求长度 / 容量网格被动过** —— ★ 先查 `PREFIX_BLOCK_TOKENS` 与 `LRU_CAP_GRID`")
+
+    # ── D.3c ★★★ **先钉住【会被索引】的网格**（★ 跑在任何计算之前）──────────
+    #   `B.1` 用 `rows[16]` / `rows[8]` / `rows[2]` 作**字典键**取出 LRU/FIFO 命中数 ——
+    #   ★★ 若 `LRU_CAP_GRID` 的元素被动过（如 `2 → 3`），会在**逐元素钉住（`D.7`）之前**就 `KeyError`
+    #      ⇒ 那是**崩溃捕获**，而本库明文「**崩溃捕获不算真捕获**」。⇒ 把会被索引的网格**先钉在这里**。
+    check("D.3c", specs.LRU_CAP_GRID == (2, 4, 8, 16),
+          "★★★ **先钉住会被【索引】的网格**：`LRU_CAP_GRID` = `(2, 4, 8, 16)`"
+          "（`B.1` 用 `rows[2]` / `rows[8]` / `rows[16]` 索引它）；★ 钉在**计算之前** ⇒ "
+          "网格被动过是**断言捕获**，不是 `KeyError`（崩溃捕获不算真捕获）",
+          "**被索引的容量网格被动过** —— ★ 它原本会先崩在 `rows[2]` 上")
     return len(FAILS) == before
 
 

@@ -26,6 +26,8 @@ r"""01_capacity_planning.py —— **从「账」到「容量」**：可用显�
   · `A.1` ★★★ **闭式 == 模拟**（`KV_AVAIL_GIB_GRID` × `KV_BLOCK_TOKEN_GRID` × `KV_SEQ_LEN_GRID`）；
   · `A.2` ★★ 两条路径在**池块数**上也一致（`sim_fill_pool` vs 闭式除法）；
   · `A.3` ★★ **免费守卫**：预算↑ ⇒ 并发不降；序列长度↑ ⇒ 并发不增；预算 `0` ⇒ 并发 `0`；
+  · `A.4` ★★★ **同时装下 prefill 与 decode**（两种需求的准入边界）：闭式 == 模拟；
+  · `A.5` ★★ **准入边界的免费守卫 + 临界**：`⌈S_p/B⌉ + ⌈s_d/B⌉ > 池` ⇒ 共存 decode `0`；
   · `B.1/B.2/B.3` ★ 敏感度表（Llama-2-7B 的预算 × 序列长度；换模型差 4 倍）；
   · `C.1` ★★★ **极小块的退化**：需块数越过块表上界 ⇒ 计划**不可实现**（而**并发数看不出来**）；
   · `C.2` ★★★ **极大块的退化**：一个块就装不下 ⇒ 池空 ⇒ 并发 **`0`**；
@@ -60,6 +62,10 @@ _TOTAL = collections.Counter()
 _PASS = collections.Counter()
 
 GIB = 1073741824          # 2^30（十进制字面量，绝不写成幂）
+
+# ★★ **prefill / decode 准入算例的模型参数**（`A.4`/`A.5` 用；**本主题的算例，不是任何引擎的值**）
+PF_POOL_BLOCK_GRID = (256, 512, 1024)   # 块池容量（块数）
+PF_PREFILL_LEN = 1024                   # 一条 prefill 的 prompt 长度（token）
 
 
 def check(name, cond, detail="", detail_fail=None):
@@ -161,6 +167,51 @@ def both_paths(avail_gib, block_tokens, per_token_bytes, seq_len):
 
 
 # ===========================================================================
+# 2b. 被测/参照：**同时装下 prefill 与 decode**（两种请求的 KV 需求不同）
+#     ★★ prefill **一次性**占满 `⌈S_p/B⌉` 块（它是一条请求，装不下就进不来）；
+#     ★★ decode 每条按**当前长度**占 `⌈s_d/B⌉` 块（随解码逐步增长）。
+# ===========================================================================
+def cf_coexist(pool_blocks, block_tokens, prefill_len, decode_len):
+    """**闭式**：池里**同时**装下 **1 条 prefill** 与**若干条 decode** ⇒ 返回 decode 的条数。
+
+    ★ `= (池块数 − ⌈S_p/B⌉) // ⌈s_d/B⌉` —— ★★ prefill 的块**先被一次扣掉**（它不能只占一块）。
+    """
+    p = cf_blocks_per_seq(prefill_len, block_tokens)
+    d = cf_blocks_per_seq(decode_len, block_tokens)
+    return (pool_blocks - p) // d
+
+
+def sim_coexist(pool_blocks, block_tokens, prefill_len, decode_len):
+    """★★★ **参照**：**逐 token 数满块**地分配（**没有除法**）——
+      · **prefill 先一次性占满** `⌈S_p/B⌉` 块（**不退回**：它是**一条**请求，装不下就进不来 ⇒ 返回 `None`）；
+      · 再**逐条 decode** 地取块（每条要够 `⌈s_d/B⌉` 块才被接受，不够则**全部退回**）。
+    ★★★ 它**不与 `cf_*` 共享任何一行**（`D.8` 核）。
+    """
+    free = pool_blocks
+    for t in range(prefill_len):
+        if t % block_tokens == 0:
+            if free == 0:
+                return None                      # ★ prefill 都装不下 ⇒ 连它都进不来
+            free -= 1
+    admitted = 0
+    while True:
+        taken = 0
+        ok = True
+        for t in range(decode_len):
+            if t % block_tokens == 0:
+                if free == 0:
+                    ok = False
+                    break
+                free -= 1
+                taken += 1
+        if not ok:
+            free += taken                        # ★ 退回这一条 decode 已取的块
+            break
+        admitted += 1
+    return admitted
+
+
+# ===========================================================================
 # 3. A 类 —— ★★★ **两条独立路径会不会会合**
 # ===========================================================================
 def part_A():
@@ -212,7 +263,10 @@ def part_A():
                   % (avail_gib, bt, got, exp, got == exp))
     check("A.2", ok2,
           "★★ **判据成立**：**逐块填池得到的块数**（一个 `while`，每转一圈放一块）"
-          "**逐位等于**闭式除法 `avail // (块 × 每token字节)` —— ★ 这是**同一条路径以外的第二条**",
+          "**逐位等于**闭式除法 `avail // (块 × 每token字节)`。\n"
+          "        ★★★ **如实声明（★ 本判据很弱）**：`sim_fill_pool` 是「**把一条除法写成重复加法**」——"
+          "它与 `cf_pool_blocks` 几乎**恒等**（两者都会数到「放不下为止」），**信息量远小于 `A.1`**；"
+          "★ 它只钉住**边界那一块**（`<=` 还是 `<`）。★ 真正的两条独立路径会合在 `A.1`（逐 token 取块）与 `A.4`。",
           "**填池与除法对不上** —— ★ 先查 `<=` 还是 `<`（边界那一块）")
 
     # ── A.3 ★★ 免费守卫（单调性 + 零预算）────────────────────────────────
@@ -236,6 +290,63 @@ def part_A():
           "★ **序列长度↑ ⇒ 并发不增**（%s）；★ **预算 `0` ⇒ 并发 `0`**（无块可用，不是负数、不是幻觉）"
           % (by_budget, by_len),
           "**某条守卫被破坏** —— ★ 先查取整方向（`//` 的方向决定单调性）")
+
+    # ── A.4 ★★★ **同时装下 prefill 与 decode**（两种需求不同）──────────────
+    print()
+    print("  ── A.4 ★★★ **同时装下 prefill 与 decode**：闭式 == 模拟 ──")
+    print("     ★★ prefill **一次性**占满 `⌈S_p/B⌉` 块（它是一条请求）；")
+    print("        decode 每条按**当前长度**占 `⌈s_d/B⌉` 块（随解码逐步增长）。")
+    print("     %-10s %-12s %-10s %-10s %-10s %-6s"
+          % ("池(块)", "S_prefill", "S_decode", "闭式", "模拟", "一致"))
+    ok4 = True
+    n_rows4 = 0
+    for pool in PF_POOL_BLOCK_GRID:
+        for sl in specs.KV_SEQ_LEN_GRID:
+            cfc = cf_coexist(pool, BT, PF_PREFILL_LEN, sl)
+            smc = sim_coexist(pool, BT, PF_PREFILL_LEN, sl)
+            ok4 = ok4 and (cfc == smc)
+            n_rows4 += 1
+            print("     %-10d %-12d %-10d %-10d %-10d %-6s"
+                  % (pool, PF_PREFILL_LEN, sl, cfc, smc, cfc == smc))
+    check("A.4", ok4 and n_rows4 == 12,
+          "★★★ **判据成立**：**%d 档**上「闭式 `(池 − ⌈S_p/B⌉) // ⌈s_d/B⌉`」**逐位等于**"
+          "「模拟先**一次性占满** prefill、再**逐条**塞 decode 的数」—— ★★ 一面是代数、一面是逐块取走"
+          % n_rows4,
+          "**prefill/decode 的两条路径对不上** —— ★ 先查 prefill 是否**一次性**占满（而不是逐块增长）")
+
+    # ── A.5 ★★ **准入边界的免费守卫 + 临界条件** ────────────────────────
+    print()
+    print("  ── A.5 ★★ **准入边界**：prefill 越大 ⇒ decode 越少；`⌈S_p/B⌉ + ⌈s_d/B⌉ > 池` ⇒ 共存 `0` ──")
+    p_blocks = cf_blocks_per_seq(PF_PREFILL_LEN, BT)
+    print("     池 %s 块 · 一条 prefill（`S = %d`）**一次性**占 **%d** 块（= `⌈%d/%d⌉`）"
+          % (list(PF_POOL_BLOCK_GRID), PF_PREFILL_LEN, p_blocks, PF_PREFILL_LEN, BT))
+    pf_by_pool = [cf_coexist(p, BT, PF_PREFILL_LEN, 512) for p in PF_POOL_BLOCK_GRID]
+    pf_by_len = [cf_coexist(1024, BT, PF_PREFILL_LEN, sl) for sl in specs.KV_SEQ_LEN_GRID]
+    print("     池 %s ⇒ 共存 decode %s（单调不减）"
+          % (list(PF_POOL_BLOCK_GRID), pf_by_pool))
+    print("     `S_decode` %s ⇒ 共存 decode %s（单调不增）"
+          % (list(specs.KV_SEQ_LEN_GRID), pf_by_len))
+    P0, Sd = 256, 4096
+    d0 = cf_blocks_per_seq(Sd, BT)
+    zero = cf_coexist(P0, BT, PF_PREFILL_LEN, Sd)          # ★ 临界：装不下 ⇒ 0
+    decode_only = cf_coexist(P0, BT, 0, Sd)                # ★ 退化：无 prefill ⇒ 纯 decode
+    squeezed = (P0 // d0) - zero
+    mono_p = all(pf_by_pool[i] <= pf_by_pool[i + 1] for i in range(len(pf_by_pool) - 1))
+    mono_l = all(pf_by_len[i] >= pf_by_len[i + 1] for i in range(len(pf_by_len) - 1))
+    print("     ★★ **临界**：池 %d · `S_decode = %d`（%d 块）⇒ prefill %d + decode %d = %d > %d"
+          " ⇒ 共存 **%d**（连一条 decode 都塞不下）"
+          % (P0, Sd, d0, p_blocks, d0, p_blocks + d0, P0, zero))
+    print("     ★★ **挤掉几条**：纯 decode %d 条 → 有 prefill 时 %d 条 ⇒ **挤掉 %d 条**"
+          % (P0 // d0, zero, squeezed))
+    print("     ★ 退化：`S_prefill = 0` ⇒ 共存 %d == 纯 decode 并发 %d" % (decode_only, P0 // d0))
+    check("A.5", mono_p and mono_l and zero == 0 and squeezed >= 1
+          and decode_only == P0 // d0 and pf_by_pool == [6, 14, 30]
+          and pf_by_len == [30, 15, 7, 3],
+          "★★ **判据成立**：★ 池↑ ⇒ 共存 decode **不减**（%s）；★ `S_decode`↑ ⇒ **不增**（%s）；"
+          "★★ **临界** `⌈S_p/B⌉ + ⌈s_d/B⌉ > 池`（%d+%d > %d）⇒ 共存 **`0`**；"
+          "★ **一条 prefill 挤掉 %d 条 decode**；★ 退化（无 prefill）回到纯 decode 并发"
+          % (pf_by_pool, pf_by_len, p_blocks, d0, P0, squeezed),
+          "**准入边界的守卫被破坏** —— ★ 先查 prefill 的块有没有被**一次性**扣掉（而不是只扣一块）")
 
 
 # ===========================================================================
@@ -426,6 +537,17 @@ def preflight():
           "★★★ **口径守卫**：网格全为正（★ 否则 `// 0` 会抛 `ZeroDivisionError` ⇒ **崩溃捕获**，"
           "把「断言捕获」的读数污染掉），★ 且块网格**从 `1` 起**（`C.1` 的极值）",
           "**网格或每 token 字节被动过** —— ★ 先查 `KV_*_GRID` 与 `LLAMA2_7B_KV_BYTES_PER_TOKEN`")
+
+    # ── D.3c ★★★ **先钉住【会被索引】的网格**（★ 跑在任何计算之前）──────────
+    #   `B.1` 用 `tbl[(80, …)]`、`B.1`/`B.2` 用 `KV_SEQ_LEN_GRID` 的元素作**字典键/索引** ——
+    #   ★★ 若网格元素被动过（如 `80 → 81`），会在**逐元素钉住（`D.7`）之前**就 `KeyError`
+    #      ⇒ 那是**崩溃捕获**，而本库明文「**崩溃捕获不算真捕获**」。⇒ 把会被索引的量**先钉在这里**。
+    check("D.3c", specs.KV_GPU_MEM_GIB_GRID == (24, 40, 80)
+          and PF_POOL_BLOCK_GRID == (256, 512, 1024) and PF_PREFILL_LEN == 1024,
+          "★★★ **先钉住会被【索引】的网格**：`KV_GPU_MEM_GIB_GRID` = `(24, 40, 80)`（`B.1` 用 "
+          "`tbl[(80, …)]` 索引它）· prefill/decode 算例常量（`A.4`/`A.5`）；"
+          "★ 钉在**计算之前** ⇒ 网格被动过是**断言捕获**，不是 `KeyError`（崩溃捕获不算真捕获）",
+          "**被索引的网格或 prefill/decode 算例常量被动过** —— ★ 它原本会先崩在 `tbl[(80, …)]` 上")
     return len(FAILS) == before
 
 
@@ -498,10 +620,11 @@ def part_D():
           and specs.LLAMA2_7B_MISTRAL_CONTRAST_KIB == 128
           and specs.KV_FETCH_DAY == "2026-10-09"
           and GIB == 1073741824
+          and PF_POOL_BLOCK_GRID == (256, 512, 1024) and PF_PREFILL_LEN == 1024
           and specs.UNSOURCED == (),
-          "★★★ **五个元组逐元素钉住**（`KV_AVAIL_GIB_GRID` 3 · `KV_SEQ_LEN_GRID` 4 · "
-          "`KV_BLOCK_TOKEN_GRID` 4 · `KV_GPU_MEM_GIB_GRID` 3）+ **六个标量**"
-          "（极值块 · 块表上界 · 预留 · 每 token 字节 · 权重 · 对照模型）钉住；"
+          "★★★ **六个元组逐元素钉住**（`KV_AVAIL_GIB_GRID` 3 · `KV_SEQ_LEN_GRID` 4 · "
+          "`KV_BLOCK_TOKEN_GRID` 4 · `KV_GPU_MEM_GIB_GRID` 3 · `PF_POOL_BLOCK_GRID` 3）+ **七个标量**"
+          "（极值块 · 块表上界 · 预留 · 每 token 字节 · 权重 · 对照模型 · `PF_PREFILL_LEN`）钉住；"
           "★★ `UNSOURCED == ()` 一并钉住（★ 0 个叶子 ⇒ 不产生变异体）",
           "**元组的元素或某个标量被动过**")
 

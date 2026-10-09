@@ -376,6 +376,9 @@ def part_B():
     print("     %-10s %-14s %-16s %-14s" % ("块token", "块数(条目)", "块表字节", "每 token 表的字节"))
     rows = {}
     for bt in specs.KV_BLOCK_TOKEN_GRID:
+        # ★★ 「块数」**与 `01-capacity-planning` 是【同一条链】**（`可用 显存 // (块大小 × 每 token 字节)`）——
+        #    = `01` 的 `cf_pool_blocks(avail, bt, t)`。★ 这里**只把它的字节代价摆出来**，
+        #    ★ 不重推块数公式（`P37`：一个公式在库里出现两次就是重复建设；本主题**接口复用**可接受，故只注明）。
         blocks = avail // (bt * t)
         table = blocks * BLOCK_TABLE_ENTRY_BYTES
         rows[bt] = (blocks, table)
@@ -396,9 +399,10 @@ def part_B():
     ops = gen_ops(specs.COW_SEED, specs.COW_OP_ROUNDS, specs.COW_BLOCK_TOKENS)
     cow = apply_ops(CowManager(specs.COW_BLOCK_TOKENS, specs.COW_POOL_CAP), ops)
     nai = apply_ops(NaiveManager(specs.COW_BLOCK_TOKENS), ops)
-    print("     期末活块：CoW %d · 朴素 %d ⇒ 省下 %d 块（+%d%%）"
+    print("     期末活块：CoW %d · 朴素 %d ⇒ 省下 %d 块（`%d/%d` ≈ %.1f%%）"
           % (cow.n_live(), nai.n_live(), nai.n_live() - cow.n_live(),
-             100 * (nai.n_live() - cow.n_live()) // max(nai.n_live(), 1)))
+             nai.n_live() - cow.n_live(), nai.n_live(),
+             100.0 * (nai.n_live() - cow.n_live()) / max(nai.n_live(), 1)))
     print("     ★★ **读法**：省下的块**就是能多开的序列**（同一个池装得下更多）——")
     print("        ★ 这条把 `01` 的「容量」与本节的「共享」接起来：**共享提高的是并发，不是吞吐**。")
     check("B.2", cow.n_live() <= nai.n_live() and cow.n_live() > 0,

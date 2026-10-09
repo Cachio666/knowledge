@@ -48,7 +48,7 @@ VLLM_DEFAULT_BLOCK_SIZE = 16
 #       ★★ **不得写成「业界通常 16」**：SGLang 的对应实现是 `page = 1 token`（见下，差 16 倍）。
 #       ★ 文档页**不给数字**（只写 `Accepts None (meaning "use default")`）⇒ 16 这个数**来自源码常量**。
 #       ★ 另有独立的 `--mamba-block-size`（`mamba_block_size`），**不要与 `block_size` 混同**。
-# 消费者：Chunk 1 的 `01-capacity-planning`（程序 `code/01_*.py` 尚未落盘）——
+# 消费者：`01-capacity-planning`（程序 `code/01_capacity_planning.py`，已落盘）——
 #         容量规划里「一个 KV 块装多少 token」这一因子。
 # 同值位置：无（★ 本域唯一的 `16`；`40-kernels/attention/05` 的块大小讨论**回链，不重算**）。
 
@@ -249,8 +249,12 @@ COW_POOL_CAP = 4096
 # ===========================================================================
 
 VLLM_FULL_BLOCKS_QUOTE = "We only cache full blocks."
-# 来源：**[B] vLLM 官方文档** —— `design/automatic_prefix_caching`（latest developer preview，
-#       抓取日 2026-10-09）。★ 同一页还逐字给出哈希口径：
+# 来源：**[B] vLLM 官方文档** —— `design/prefix_caching/`（latest developer preview，
+#       抓取日 2026-10-09）。★★ **载体 URL 订正**：原写 `design/automatic_prefix_caching`，
+#       ★ 实测该 URL **302 到 `/contributing/`**，页面上 `We only cache full blocks` 与
+#       `we hash each kv-cache block` 各 **0 次**；★ **正确载体是 `design/prefix_caching/`**
+#       （两条引文各 1 次，`docs/superpowers/research/2026-10-09-inference-external-facts.md:125` 给的就是它）。
+#       ★ 同一页还逐字给出哈希口径：
 #       「we hash each kv-cache block by the tokens in the block and **the tokens in the prefix before the block**」。
 # 口径：★★★ **两条**：(a) **只有【整块】进缓存** ⇒ 末尾不满一块的部分**既不入缓存、也不参与命中**
 #       （`03` 的 `A.1` 两边都按整块算，正是照这条）；(b) 块的键**含前缀链** ⇒ 同一个块内容在不同前缀下
