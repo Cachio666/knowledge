@@ -21,11 +21,11 @@
   · **continuous batching / chunked prefill 的【定义】** → `10-foundations/performance-models/01:251`；
   · **prefill/decode 的 kernel 差异** → `40-kernels/attention/05:229-236`；
   · ★★ **静态 batching 的填充浪费 `1 − 均值/最大值`** → `40-kernels/moe-kernels/02-grouped-gemm.md:89`
-    （★ 本域**只写「同式在调度里的含义不同」**，**不重算** —— `P37` / `§0.7 D5`）。
+    （★ 本域**只写「同式在调度里的含义不同」**，**不重算** —— **错误模式 `P37`** / `§0.7 D5`）。
 
 ★ **本主题的判据纪律**：
   ★★ **收益来自【长度方差】，不来自【到达过程】**（`§0.7 D3`）；
-  ★★ 任何「X 带来 N 倍」的句子**必须写明【基线】**（`§0.7 D4`：同一件事的两个加速比差 **17 倍**）。
+  ★★ 任何「X 带来 N 倍」的句子**必须写明【基线】**（`§0.7 D4`：同一件事的两个加速比差 **16.9 倍**）。
 
 ★ **本机的限定语**：本机**无 GPU、无 vLLM / SGLang / TensorRT-LLM**
   ⇒ ★★★ **本主题最强的一条限定语：**「**不是任何真实引擎，也不是真机**」。
@@ -87,14 +87,14 @@ VLLM_MAX_NUM_BATCHED_TOKENS_CLASS_DEFAULT = 2048
 #       常量 `DEFAULT_MAX_NUM_BATCHED_TOKENS`。`grep -c '... = 2048'` → 1。
 # 口径：★★ **同样只是兜底类常量**；生产默认按显存 + 场景覆盖（见下）。
 # 消费者：Chunk 2 的 `01-iteration-level-scheduling`（同 `VLLM_MAX_NUM_SEQS_CLASS_DEFAULT`）。
-# 同值位置：无。
+# 同值位置：`VLLM_API_SERVER_DEFAULT_MAX_TOKENS`（**值相同**（都是 2048），**不同指** —— 兜底 vs 覆盖）。
 
 VLLM_MAX_NUM_BATCHED_TOKENS_FOR_BATCHED_DP = 256
 # 来源：[B] vLLM 官方源码 —— `vllm/config/scheduler.py`（main 分支，抓取日 2026-10-09），
 #       常量 `DEFAULT_MAX_NUM_BATCHED_TOKENS_FOR_BATCHED_DP`。
 # 口径：★★ 这是 **batched-DP 场景**的另一个兜底常量（★ 与上面两条**并列，不是它的子项**）。
 # 消费者：Chunk 2 的 `01-iteration-level-scheduling`（说明「兜底值有多个」）。
-# 同值位置：无。
+# 同值位置：`VLLM_API_SERVER_DEFAULT_MAX_SEQS`（**值相同**（都是 256），**不同指** —— batched-DP 兜底 vs A100 覆盖）。
 
 VLLM_API_SERVER_H100_MAX_TOKENS = 8192
 # 来源：[B] vLLM 官方源码 —— `vllm/engine/arg_utils.py` 的 `get_batch_defaults()`（main 分支，抓取日 2026-10-09）。
@@ -140,7 +140,9 @@ VLLM_API_SERVER_B200_MAX_SEQS = 1024
 VLLM_TEST_CONVENIENCE_QUOTE = "The default value here is mainly for convenience when testing. In real usage, this should be set in EngineArgs.create_engine_config."
 # 来源：[B] vLLM 官方文档 —— `configuration/engine_args/` 的 `--max-num-seqs` 与
 #       `--max-num-batched-tokens`（**两条各一次**）。抓取日 2026-10-09。
-#       ★ 完整性：`grep -c 'The default value here is mainly for convenience when testing'` → 2。
+#       ★ 完整性：抓取日（2026-10-09）上 `grep -c 'The default value here is mainly for convenience when testing'` → 2。
+#       ★★ **该计数会漂移**（文档站是 developer preview）—— ★ 所以这里记作「**≥ 2，且至少含
+#          `--max-num-seqs` 与 `--max-num-batched-tokens` 两条各一次**」，不写成硬编码的常数。
 # 口径：★★★ 这是**文档自己**把两个「default」标注为**非生产默认**的逐字依据 ——
 #       它证明「文档默认值」与「生产默认值」**不是同一件事**。
 # 消费者：Chunk 2 的 `01-iteration-level-scheduling`（默认值口径的逐字依据）。
@@ -177,7 +179,9 @@ SCHED_BATCH_CAP = 32
 #       ★ **不是**任何引擎的 `max_num_seqs`（后者**无单一默认值**，见第 2 节）。
 #       ★ 取 2 的幂使闭式在**二进制下精确**（`§0.7 D9` 的「逐位一致」靠这一点）。
 # 消费者：`01` 的 `A.1` / `B.*` / `C.*`；`SCHED_GUARD_CAP` 必须等于它。
-# 同值位置：`SCHED_GUARD_CAP`（同一条事实的两写，用于显式守卫）。
+# 同值位置：`SCHED_GUARD_CAP`（同一条事实的两写，用于显式守卫）；
+#           `SCHED_BURST_SIZE` / `SCHED_BURST_PERIOD` / `CHUNK_CONCURRENT_DECODE`
+#           （**值相同**（都是 `32`），**不同指** —— 批上限 / 突发粒度 / 突发周期 / 并发 decode）。
 
 SCHED_EQUAL_LEN = 100
 # 来源：**[E] 本主题的算例** —— **等长**请求的长度（token）。
@@ -202,7 +206,7 @@ SCHED_LEN_HI = 200
 SCHED_EXP_MEAN = 110
 # 来源：**[E] 本主题的算例** —— 指数分布长度的**均值**（token），取 `(20+200)/2 = 110`。
 # 口径：★★ **它与 `SCHED_LEN_LO`/`HI` 的均值相同**（`110 = (20+200)/2`）——
-#       ★★ 于是「均匀 vs 指数」只差**方差**（`P38` 的隔离手段：一次只改一个因素）。
+#       ★★ 于是「均匀 vs 指数」只差**方差**（**错误模式 `P38`** 的隔离手段：一次只改一个因素）。
 # 消费者：`01` 的 `B.2`（`gen_lens("exp")`）。
 # 同值位置：无（★ 与 `SCHED_LEN_LO`/`HI` 是**同一条链的上下游**，值不同）。
 
@@ -263,7 +267,8 @@ SCHED_BURST_PERIOD = 32
 # 口径：★ 与 `SCHED_BURST_SIZE` 相等 ⇒ 平均到达速率 = `1.0` / 时间单位（> 处理速率 `0.32`）
 #       ⇒ 系统**饱和**（★ 否则测到的是「到达太慢」而不是「到达过程本身」）。
 # 消费者：`01` 的 `B.3` / `C.3` / `D.7`。
-# 同值位置：无。
+# 同值位置：`SCHED_BATCH_CAP` / `SCHED_GUARD_CAP` / `SCHED_BURST_SIZE` / `CHUNK_CONCURRENT_DECODE`
+#           （**值相同**（都是 `32`），**不同指** —— 不得合并）。
 
 SCHED_FETCH_DAY = "2026-10-09"
 # 来源：**[E] 本库自记** —— 它记的是「本主题所有外部条目的抓取日」（计划 `§0.7 C` / 本文件第 1、2 节）。
@@ -298,7 +303,8 @@ CHUNK_CONCURRENT_DECODE = 32
 # 口径：★ 它只用于说明「一批里有什么」（`B.3`）—— ★ 本模型把这 `C` 个请求合起来的耗时
 #       记作 `t_d`（不再拆到每个请求）；真实的每人延迟取决于 kernel，属 `[B]`（本机无引擎）。
 # 消费者：`02` 的 `B.3` / `D.7`。
-# 同值位置：无。
+# 同值位置：`SCHED_BATCH_CAP` / `SCHED_GUARD_CAP` / `SCHED_BURST_SIZE` / `SCHED_BURST_PERIOD`
+#           （**值相同**（都是 `32`），**不同指** —— 并发 decode vs 批上限 / 突发粒度 / 突发周期）。
 
 CHUNK_K_GRID = (1, 2, 4, 8, 16, 20, 32, 64, 128)
 # 来源：**[E] 本主题的算例网格** —— 分块数 `k` 的网格。

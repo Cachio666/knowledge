@@ -7,14 +7,15 @@ r"""03_preemption_and_fairness.py —— **抢占的代价账** 与 **公平**�
 ★ 三类断言**全部在本程序内部**，失败时以**非零退出码**结束；**没有 `verify.py`**。
 
 ★★★ **本程序有两条独立的 A 类**（都过 `CONTRIBUTING:235`）：
-  ① **换出 vs KV 重算的代价账** —— 被测 = **账本**（逐块搬运 / 逐 token 重算的循环）；
+  ① **换出 vs KV 重算的代价账** —— 被测 = **账本**（逐块搬运 / 逐 token KV 重算的循环）；
      参照 = **闭式**（`2·s·bpt/BW` 与 `s·τ_lin + s²·τ_quad`）。★★ 两条路径无共享代码。
      ★★★ **临界长度** `s* = (2·bpt/BW − τ_lin)/τ_quad` 有**第二条独立路径**：
      **在账本上二分**找符号变号点（`A.2`）。
   ② **SJF 的最优性** —— 被测 = **SJF 贪心**；参照 = **`n!` 穷举**（`A.4`）。
-     ★★ 穷举是**最强的一种参照**（不共享任何启发式）。
+     ★★ 穷举是**最强的一种参照**（不共享任何启发式）；★★ **目标函数也不共享**：
+     穷举用独立的 `avg_completion_alt`、SJF 用 `avg_completion`（`D.8` 在源码层核）。
 
-★★★ **术语纪律（`§2.2`）**：本域的 **`KV 重算`** 是**第三义**（抢占时丢掉 KV、需要时重算）——
+★★★ **术语纪律（`§2.2`）**：本域的 **`KV 重算`** 是**第三义**（抢占时丢掉 KV、需要时把它重跑一遍）——
   ★ 与**编译器**的「物化 vs 重算」、**训练**的「重算换显存」（gradient checkpointing）**同名不同指**。
   本文**一律写「KV 重算」全称**。
 
@@ -101,7 +102,7 @@ def check(name, cond, detail="", detail_fail=None):
 
 
 # ===========================================================================
-# 1. 被测：**账本**（逐块搬运 / 逐 token 重算的循环）
+# 1. 被测：**账本**（逐块搬运 / 逐 token KV 重算的循环）
 # ===========================================================================
 def ledger_swap(s, bytes_per_token, bw_bytes_per_ms, block_tokens, corrupt=None):
     """★★★ **被测（换出）**：**逐块**搬运这段 KV，**搬出再搬回**，代价逐块累加。
@@ -157,7 +158,7 @@ def cross_scan_ledger(bytes_per_token, bw_bytes_per_ms, lin_ms, quad_ms, lo, hi,
                       block_tokens, corrupt=None):
     """★★★ **`s*` 的第二条独立路径**：在**账本**上二分，找「换出 − 重算」**变号**的地方。
 
-    ★★ `g(s) = 换出(s) − 重算(s)`：在 `(0, s*)` 上为正、在 `s > s*` 上为负
+    ★★ `g(s) = 换出(s) − KV 重算(s)`：在 `(0, s*)` 上为正、在 `s > s*` 上为负
       ⇒ 找**最后一个** `g(s) > 0` 的整数 `s`。★ 它**不调用** `closed_sstar`（两条路径独立）。
     """
     def g(x):
@@ -176,13 +177,30 @@ def cross_scan_ledger(bytes_per_token, bw_bytes_per_ms, lin_ms, quad_ms, lo, hi,
 # 3. 调度：静态集合上的顺序（供公平性对照）
 # ===========================================================================
 def avg_completion(services, order):
-    """给定处理顺序，返回**平均完成时间**。"""
+    """给定处理顺序，返回**平均完成时间**（`A.4` 里 `sjf_avg`/`fcfs_avg` 用它）。"""
     t = 0.0
     tot = 0.0
     for i in order:
         t += services[i]
         tot += t
     return tot / len(services)
+
+
+def avg_completion_alt(services, order):
+    """★★★ **独立的第二份目标函数**（★ 只供 `brute_force_min_avg` 用）。
+
+    ★★ 与 `avg_completion` **无共享代码**：两者都算「完成时刻的算术平均」，
+      但**写法不同**（这里先收集全部完成时刻、再用 `math.fsum` 求均值）。
+    ★★★ 它是 `A.4` 的**防自证装置**：若目标函数本身写错（如 `sum` ↔ `avg`），
+      `sjf_avg` 与穷举会**一起错**；现在**两份独立实现**必须给出同一个最小值
+      （`D.8` 在源码层核 `brute_force_min_avg` 不调用 `avg_completion`）。
+    """
+    finish = []
+    t = 0.0
+    for i in order:
+        t = t + services[i]
+        finish.append(t)
+    return math.fsum(finish) / len(services)
 
 
 def max_wait(services, order):
@@ -199,9 +217,11 @@ def brute_force_min_avg(services):
     """★★★ **参照**：对全部 `n!` 个处理顺序**穷举**，取平均完成时间的**最小值**。
 
     ★★ 它**不共享任何启发式**（不排序、不贪心）—— ★ 是最强的一种参照。
+    ★★ 它调用的是**独立的第二份目标函数** `avg_completion_alt`（★ **不是** `avg_completion`）——
+      于是「目标函数本身写错」不会让 `sjf` 与穷举**一起错**（`D.8` 在源码层核这一点）。
     """
     n = len(services)
-    return min(avg_completion(services, p) for p in itertools.permutations(range(n)))
+    return min(avg_completion_alt(services, p) for p in itertools.permutations(range(n)))
 
 
 def sim_srtf(arrivals, services):
@@ -251,7 +271,7 @@ def part_A():
     quad = specs.PREEMPT_RECOMPUTE_QUAD_MS_PER_TOKEN_SQ
     blk = specs.PREEMPT_SWAP_BLOCK_TOKENS
     grid = specs.PREEMPT_LEN_GRID
-    print("  ★★ 模型：`换出 = 2·s·bpt/BW`（出+入）· `重算 = s·τ_lin + s²·τ_quad`")
+    print("  ★★ 模型：`换出 = 2·s·bpt/BW`（出+入）· `KV 重算 = s·τ_lin + s²·τ_quad`")
     print("  ★★ 参数：`bpt={:,} B` · `BW={:,.0f} B/ms` · `τ_lin={}` · `τ_quad={}`"
           .format(bpt, bw, lin, quad))
 
@@ -259,7 +279,7 @@ def part_A():
     print()
     print("  ── A.1 ★★★ **账本（循环）与闭式（式子）逐位一致** ──")
     print("     %-8s %-16s %-16s %-16s %-16s %s"
-          % ("s", "账本换出", "闭式换出", "账本重算", "闭式重算", "一致"))
+          % ("s", "账本换出", "闭式换出", "账本KV 重算", "闭式KV 重算", "一致"))
     all_match = True
     for s in grid:
         ls = ledger_swap(s, bpt, bw, blk)
@@ -274,9 +294,9 @@ def part_A():
     check("A.1", all_match and len(grid) >= 5
           and tuple(round(closed_swap(s, bpt, bw), 4) for s in grid) == PINNED_SWAP_R4
           and tuple(round(closed_recompute(s, lin, quad), 4) for s in grid) == PINNED_RECOMPUTE_R4,
-          "★★★ **判据成立**：**%d 档**长度上，**逐块搬运 / 逐 token 重算的账本**与**闭式**"
+          "★★★ **判据成立**：**%d 档**长度上，**逐块搬运 / 逐 token KV 重算的账本**与**闭式**"
           "**逐位一致** —— ★★ 一条是循环、一条是式子，**两条独立路径会合**" % len(grid),
-          "**账本与闭式对不上** —— ★ 先查换出的 `×2`（出+入）与重算的二次项")
+          "**账本与闭式对不上** —— ★ 先查换出的 `×2`（出+入）与KV 重算的二次项")
 
     # ── A.2 ★★★ 临界长度 s* 的两条独立路径 ─────────────────────────────
     print()
@@ -284,24 +304,24 @@ def part_A():
     sstar = closed_sstar(bpt, bw, lin, quad)
     cross = cross_scan_ledger(bpt, bw, lin, quad, 1, specs.PREEMPT_SCAN_MAX, blk)
     print("     闭式 `s* = (2·bpt/BW − τ_lin)/τ_quad` = **%.4f**" % sstar)
-    print("     账本二分：`g(s) = 换出 − 重算` 最后一次 > 0 的整数 `s` = **%d**" % cross)
+    print("     账本二分：`g(s) = 换出 − KV 重算` 最后一次 > 0 的整数 `s` = **%d**" % cross)
     # ★ 两侧方向（用账本，不用闭式）
     lo_s = specs.PREEMPT_LEN_GRID[0]
     hi_s = specs.PREEMPT_LEN_GRID[-1]
     swap_lo, rc_lo = ledger_swap(lo_s, bpt, bw, blk), ledger_recompute(lo_s, lin, quad)
     swap_hi, rc_hi = ledger_swap(hi_s, bpt, bw, blk), ledger_recompute(hi_s, lin, quad)
-    print("     `s=%d`（< `s*`）：换出 %.2f vs 重算 %.2f ⇒ **重算更便宜 = %s**"
+    print("     `s=%d`（< `s*`）：换出 %.2f vs KV 重算 %.2f ⇒ **KV 重算更便宜 = %s**"
           % (lo_s, swap_lo, rc_lo, rc_lo < swap_lo))
-    print("     `s=%d`（> `s*`）：换出 %.2f vs 重算 %.2f ⇒ **换出更便宜 = %s**"
+    print("     `s=%d`（> `s*`）：换出 %.2f vs KV 重算 %.2f ⇒ **换出更便宜 = %s**"
           % (hi_s, swap_hi, rc_hi, swap_hi < rc_hi))
-    print("     ★★★ **读法**：**短序列 KV 重算、长序列换出** —— 因为重算的**自注意力项按 `s²` 涨**，")
+    print("     ★★★ **读法**：**短序列 KV 重算、长序列换出** —— 因为KV 重算的**自注意力项按 `s²` 涨**，")
     print("        而换出只按 `s` 涨；`s*` 就是这两条线的交点。")
     check("A.2", abs(sstar - PINNED_SSTAR) < 1e-6
           and abs(cross - sstar) <= 1.0
           and rc_lo < swap_lo and swap_hi < rc_hi,
           "★★★ **判据成立**：闭式 `s*` = **%.1f**，账本二分落点 **%d**（★ 两条路径相差 ≤ 1，"
           "★ 差 ≤ 1 是因为临界点上 `g` 恰好为 0、落点取整数侧）；"
-          "★ 两侧方向都成立（`s<%d` 重算便宜、`s>%d` 换出便宜）"
+          "★ 两侧方向都成立（`s<%d` KV 重算便宜、`s>%d` 换出便宜）"
           % (sstar, cross, int(sstar), int(sstar)),
           "**临界长度的两条路径不一致** —— ★ 先查闭式的分子（`2·bpt/BW − τ_lin`）与二分的比较符")
 
@@ -317,15 +337,15 @@ def part_A():
     sw_hi = closed_swap(s_fix, bpt, hi_bw)
     print("     `s=%d` 固定：`BW* = 2·bpt/(τ_lin + s·τ_quad)` = **%s B/ms**"
           % (s_fix, format(bw_star, ",.0f")))
-    print("     `BW = 0.5·BW*` ⇒ 换出 %.2f > 重算 %.2f ⇒ **重算更便宜 = %s**"
+    print("     `BW = 0.5·BW*` ⇒ 换出 %.2f > KV 重算 %.2f ⇒ **KV 重算更便宜 = %s**"
           % (sw_lo, rc_fix, rc_fix < sw_lo))
-    print("     `BW = 2.0·BW*` ⇒ 换出 %.2f < 重算 %.2f ⇒ **换出更便宜 = %s**"
+    print("     `BW = 2.0·BW*` ⇒ 换出 %.2f < KV 重算 %.2f ⇒ **换出更便宜 = %s**"
           % (sw_hi, rc_fix, sw_hi < rc_fix))
     print("     ★★ **读法**：带宽**越低**（越贵），越应当 **KV 重算**；带宽**越高**，越应当**换出** ——")
     print("        ★★ 与 `A.2` 的**长度**是**两个独立的旋钮**（一个改 `s`、一个改 `BW`）。")
     check("A.3", abs(2.0 * bpt / (lin + s_fix * quad) - bw_star) < 1e-6
           and rc_fix < sw_lo and sw_hi < rc_fix,
-          "★★ **判据成立**：`s=%d` 时的临界带宽 **%s B/ms** —— 带宽减半则**重算更便宜**、"
+          "★★ **判据成立**：`s=%d` 时的临界带宽 **%s B/ms** —— 带宽减半则**KV 重算更便宜**、"
           "加倍则**换出更便宜**（★ 两个方向都成立）" % (s_fix, format(bw_star, ",.0f")),
           "**临界带宽的方向被破坏** —— ★ 先查 `2·bpt/(τ_lin + s·τ_quad)`")
 
@@ -338,18 +358,24 @@ def part_A():
     sjf_order = tuple(sorted(range(n), key=lambda i: svc[i]))
     fcfs_avg = avg_completion(svc, fcfs_order)
     sjf_avg = avg_completion(svc, sjf_order)
+    # ★★ 第二份**独立**目标函数（★ `brute_force_min_avg` 用的就是它，不是 `avg_completion`）
+    sjf_avg_alt = avg_completion_alt(svc, sjf_order)
     best = brute_force_min_avg(svc)
     print("     服务时间（按到达序）= %s（`n=%d` ⇒ **%d 个顺序**）" % (svc, n, math.factorial(n)))
     print("     FCFS 顺序 %s ⇒ 平均完成 **%.4f**" % (fcfs_order, fcfs_avg))
     print("     SJF  顺序 %s ⇒ 平均完成 **%.4f**" % (sjf_order, sjf_avg))
-    print("     **穷举最小** ⇒ **%.4f**" % best)
+    print("     **穷举最小** ⇒ **%.4f**（★ 穷举用的是**独立的第二份目标函数**）" % best)
+    print("     ★★ **两份独立的目标函数**在 SJF 序上一致：`avg_completion` **%.4f** == "
+          "`avg_completion_alt` **%.4f**" % (sjf_avg, sjf_avg_alt))
     print("     ★★★ **读法**：SJF 的平均完成时间**恰好等于穷举最小值** ⇒ 它在**这组数据上最优**；")
     print("        而 FCFS 比它差 **%.2f**（★ 贪心不是「近似」，在这条判据上**就是最优**）。" % (fcfs_avg - sjf_avg))
     check("A.4", abs(sjf_avg - best) < TIME_EPS and fcfs_avg > best + TIME_EPS
+          and abs(sjf_avg - sjf_avg_alt) < TIME_EPS
           and math.factorial(n) == 720,
           "★★★ **判据成立**：SJF 贪心 **%.4f** == **穷举最小值** %.4f（`%d!` 个顺序）；"
-          "★ FCFS **%.4f** 比它差 —— ★★ 参照是**穷举**，**不共享任何启发式**"
-          % (sjf_avg, best, n, fcfs_avg),
+          "★ FCFS **%.4f** 比它差；★★ 穷举用的是**独立的第二份目标函数**（`%.4f` == `%.4f`）——"
+          " ★★ 参照是**穷举**，**不共享任何启发式**，**目标函数也不共享**"
+          % (sjf_avg, best, n, fcfs_avg, sjf_avg, sjf_avg_alt),
           "**SJF 与穷举最小值不一致** —— ★ 先查 `SJF` 的排序方向（升序 = 最短优先）")
 
 
@@ -376,7 +402,7 @@ def part_B():
     for s in grid:
         sw = closed_swap(s, bpt, bw)
         rc = closed_recompute(s, lin, quad)
-        who = "换出" if sw < rc else ("重算" if rc < sw else "相等")
+        who = "换出" if sw < rc else ("KV 重算" if rc < sw else "相等")
         tot_swap += sw
         tot_rc += rc
         tot_best += min(sw, rc)
@@ -442,7 +468,7 @@ def part_C():
     print("  ── C.1 ★★ **边界**：`s = 0` ⇒ 两种代价都为 0 ──")
     zs = ledger_swap(0, bpt, bw, blk)
     zr = ledger_recompute(0, lin, quad)
-    print("     `s=0` ⇒ 账本换出 = **%.1f** · 账本重算 = **%.1f**（★ 没有 KV 可搬、也没有 token 要重算）"
+    print("     `s=0` ⇒ 账本换出 = **%.1f** · 账本KV 重算 = **%.1f**（★ 没有 KV 可搬、也没有 token 要KV 重算）"
           % (zs, zr))
     check("C.1", zs == 0.0 and zr == 0.0,
           "★★ **判据成立**：`s=0` 时两种代价**都为 0** —— ★ 于是 `s*` 的**非零根**才是有意义的那个"
@@ -456,13 +482,13 @@ def part_C():
     rc_fix = closed_recompute(s_fix, lin, quad)
     for label, factor in (("极慢 (BW/1000)", 1e-3), ("极快 (BW×1000)", 1e3)):
         sw = closed_swap(s_fix, bpt, bw * factor)
-        print("     `%s`：`s=%d` 换出 = %.4f vs 重算 = %.4f ⇒ **%s**"
-              % (label, s_fix, sw, rc_fix, "换出" if sw < rc_fix else "重算"))
+        print("     `%s`：`s=%d` 换出 = %.4f vs KV 重算 = %.4f ⇒ **%s**"
+              % (label, s_fix, sw, rc_fix, "换出" if sw < rc_fix else "KV 重算"))
     sw_slow = closed_swap(s_fix, bpt, bw * 1e-3)
     sw_fast = closed_swap(s_fix, bpt, bw * 1e3)
     check("C.2", rc_fix < sw_slow and sw_fast < rc_fix,
-          "★★ **判据成立**：带宽缩 `1000` 倍 ⇒ 换出 **%.2f** ≫ 重算 **%.2f**（**永远重算**）；"
-          "扩 `1000` 倍 ⇒ 换出 **%.4f** ≪ 重算（**永远换出**）—— ★★ 两端都把临界点挤出了可行域"
+          "★★ **判据成立**：带宽缩 `1000` 倍 ⇒ 换出 **%.2f** ≫ KV 重算 **%.2f**（**永远KV 重算**）；"
+          "扩 `1000` 倍 ⇒ 换出 **%.4f** ≪ KV 重算（**永远换出**）—— ★★ 两端都把临界点挤出了可行域"
           % (sw_slow, rc_fix, sw_fast),
           "**带宽两端的行为被动过** —— ★ 先查换出的 `1/BW` 依赖")
 
@@ -480,8 +506,8 @@ def part_C():
           % (specs.PREEMPT_LEN_GRID[0], good_lo, specs.PREEMPT_LEN_GRID[-1], good_hi))
     print("     坏法（只算出）：`s=%d` 换出 %.2f · `s=%d` 换出 %.2f"
           % (specs.PREEMPT_LEN_GRID[0], one_lo, specs.PREEMPT_LEN_GRID[-1], one_hi))
-    print("     对 `s=%d`（**正确版里换出更便宜**）：坏法换出 %.2f vs 重算 %.2f ⇒ **%s**"
-          % (specs.PREEMPT_LEN_GRID[-1], one_hi, rc_hi, "换出" if one_hi < rc_hi else "重算"))
+    print("     对 `s=%d`（**正确版里换出更便宜**）：坏法换出 %.2f vs KV 重算 %.2f ⇒ **%s**"
+          % (specs.PREEMPT_LEN_GRID[-1], one_hi, rc_hi, "换出" if one_hi < rc_hi else "KV 重算"))
     print("     ★★★ **读法**：忘掉一半 ⇒ 换出的代价**系统性地低估 2 倍** ⇒ 临界长度 `s*` **左移或消失** ⇒")
     print("        结论从「**短序列重算、长序列换出**」变成「**几乎总是换出**」。")
     print("        ★★ 这正是 `20-gpu-architecture/interconnect/01` 说的**单向 / 双向口径**之分的现场。")
@@ -633,11 +659,11 @@ def part_D():
     sstar_bad = (2.0 * bpt / bw - lin) / (quad)  # 仍用闭式对照：坏法下无临界点
     print("     `s=%d`：正确 = **%.4f**（= 闭式 %.4f）· 坏法（去二次项） = **%.4f**（= `s·τ_lin`）"
           % (s_fix, h_good, h_ref, h_bad))
-    print("     ★★★ **读法**：去掉二次项后重算变成**纯线性** ⇒ **没有长度临界点**（两条线不再交叉）——")
+    print("     ★★★ **读法**：去掉二次项后KV 重算变成**纯线性** ⇒ **没有长度临界点**（两条线不再交叉）——")
     print("        而 `s*` 的闭式**分母**正是那个二次项系数。")
     check("D.5", abs(h_good - h_ref) <= REL_EPS * h_ref
           and abs(h_bad - s_fix * lin) < TIME_EPS and abs(h_bad - h_ref) > 1e-6,
-          "★★★ **守卫成立**：去二次项后重算 = **%.4f**（纯线性），与闭式 **%.4f** 对不上 ——"
+          "★★★ **守卫成立**：去二次项后KV 重算 = **%.4f**（纯线性），与闭式 **%.4f** 对不上 ——"
           " ★★ `A.1` 的「逐位一致」对**参照的表达式**（含 `s²` 项）也敏感；★ 且**临界点因此消失**"
           % (h_bad, h_ref),
           "**守卫失效** —— ★ 去二次项后账本仍与闭式一致（那 `A.1` 抓不到它）")
@@ -667,23 +693,47 @@ def part_D():
           and abs(PINNED_STARVE_K100 - 300.0) < 1e-9
           and PINNED_SWAP_R4 == (8.3886, 16.7772, 33.5544, 67.1089, 131.072, 268.4355, 536.8709)
           and PINNED_RECOMPUTE_R4 == (5.3292, 11.0768, 23.8271, 54.3482, 131.072, 378.0515, 1184.526),
-          "★★★ **规格常量逐元素 + 程序内常量**钉住（`bpt` · `BW` · 块粒度 · 两个重算系数 ·"
+          "★★★ **规格常量逐元素 + 程序内常量**钉住（`bpt` · `BW` · 块粒度 · 两个KV 重算系数 ·"
           " 长度网格 · 扫描上界 · 公平服务时间 · 两个饥饿参数 · 五个 `PINNED_*`）；★★ `UNSOURCED == ()` 一并钉住",
           "**某个常量被动过**")
 
-    # ── D.7 ★★ 引文逐字：术语纪律（`KV 重算` 的第三义）──────────────────
+    # ── D.7 ★★★ 术语纪律：全称 + **裸写计数 == 0** ──────────────────────
     print()
-    print("  ── D.7 ★★ **术语纪律（可机械 grep）**：本文一律写「KV 重算」，不裸写「重算」──")
+    print("  ── D.7 ★★★ **术语纪律（可机械判定）**：本文一律写「KV 重算」，**裸写「重算」的计数 == 0** ──")
     src = open(__file__, encoding="utf-8").read()
-    n_all = sum(1 for ln in src.splitlines() if "重算" in ln)
-    n_full = sum(1 for ln in src.splitlines() if "KV 重算" in ln)
+    # ★ **被测串【拼接构造】**：`"重" + "算"` —— 这样本程序的源码里**不出现连续的「重算」**，
+    #   于是检测器**不会把自身的比较字面量误判成裸写**（否则它会自己抓自己）。
+    needle = "重" + "算"
+    full = "KV " + needle
+    n_all = sum(1 for ln in src.splitlines() if needle in ln)
+    n_full = sum(1 for ln in src.splitlines() if full in ln)
+    # ★★★ **裸写**的机械定义：出现「重算」，但**既不**紧跟 `KV `、**也不**被 `「…」` 包住。
+    #   ★ 被「」包住的那些是**消歧时对【别义】的引用**（如「物化 vs 重算」「重算」换显存）——
+    #     ★★ 它们**必须**保留裸字，否则消歧就失去对象。★ 本义（第三义）**一处也不许裸写**。
+    bare = []
+    for lineno, ln in enumerate(src.splitlines(), 1):
+        depth = 0
+        i = 0
+        while i < len(ln):
+            if ln[i] == "「":
+                depth += 1
+            elif ln[i] == "」":
+                depth = max(0, depth - 1)
+            elif ln.startswith(needle, i):
+                if ln[max(0, i - 3):i] != "KV " and depth == 0:
+                    bare.append((lineno, ln.strip()[:48]))
+                i += 1
+            i += 1
     print("     含「重算」的行 = **%d** 行，其中含「KV 重算」全称的 = **%d** 行" % (n_all, n_full))
-    print("     ★★ **读法**：库内「重算」已有**三义**（编译器的物化/重算 · 训练的重算换显存 ·")
-    print("        本域的 **KV 重算**）—— ★★★ 引用时**必须写全称**（`§2.2`）。")
-    check("D.7", "**KV 重算**" in src and "同名不同指" in src and n_full >= 1,
-          "★★ **判据成立**：本程序**使用「KV 重算」全称**并**显式写下「同名不同指」的消歧**"
-          "（可机械 grep）—— ★★ 与编译器 / 训练的「重算」区分开，★ 全称是唯一可机械区分的写法",
-          "**术语全称或消歧缺失** —— ★ 先查模块抬头与摘要里的术语纪律")
+    print("     ★★★ **裸写「重算」（既非 `KV 重算`、也不在「」内）的处数 = %d**%s"
+          % (len(bare), ("  ⇒ %s" % bare[:3]) if bare else ""))
+    print("     ★★ **读法**：库内「重算」已有**三义**（编译器的「物化 vs 重算」 · 训练的「重算」换显存 ·")
+    print("        本域的 **KV 重算**）—— ★★★ 引用本义时**必须写全称**（`§2.2`）。")
+    check("D.7", "**KV 重算**" in src and "同名不同指" in src and n_full >= 1 and len(bare) == 0,
+          "★★ **判据成立**：本程序**使用「KV 重算」全称**、**显式写下「同名不同指」的消歧**，"
+          "且**裸写「重算」的计数 == 0**（机械判定：非 `KV ` 前缀且不在「」内）——"
+          " ★★ 只断言「含全称」抓不住裸写（那正是 `§5` v1.5 的 `H1` 形态）",
+          "**术语全称 / 消歧缺失，或本义出现了裸写「重算」** —— ★ 先查模块抬头与摘要里的术语纪律")
 
     # ── D.8 ★★★ 独立性（源码级）────────────────────────────────────────
     ln_ = _names_in(ledger_swap) | _names_in(ledger_recompute)
@@ -699,9 +749,11 @@ def part_D():
           "**不证明**判据有信息量 —— 后者由 `A.1`–`A.4` 与 `D.4`/`D.5` 的**行为**兜底。")
     check("D.8", not any(n.startswith(("closed_", "cross_scan")) for n in ln_)
           and not any(n.startswith("ledger_") for n in cn_)
-          and "sorted" not in _names_in(brute_force_min_avg),
+          and "sorted" not in _names_in(brute_force_min_avg)
+          and "avg_completion" not in _names_in(brute_force_min_avg),
           "★★ **源码级线索成立**：**账本（循环）与闭式（式子）互不引用**；★ `brute_force_min_avg`"
-          "（穷举参照）**不调用 `sorted`**（SJF 的排序原语）—— ★★ 它只做**排列枚举**（**两侧都审**）",
+          "（穷举参照）**不调用 `sorted`**（SJF 的排序原语）；★★ **也不调用 `avg_completion`**"
+          "（SJF 的目标函数）—— ★★ 它只做**排列枚举**，**目标函数也独立**（`avg_completion_alt`）",
           "**两实现互相引用** —— A 类可能退化成自证（`§1.3.2b`）")
 
     # ── D.9 ★★ 边界：临界点是唯一的（两条线只交于一点） ────────────────
@@ -709,7 +761,7 @@ def part_D():
     diff_lo = closed_swap(int(sstar) - 100, bpt, bw) - closed_recompute(int(sstar) - 100, lin, quad)
     diff_hi = closed_swap(int(sstar) + 100, bpt, bw) - closed_recompute(int(sstar) + 100, lin, quad)
     print()
-    print("  ── D.9 ★★ **临界点是唯一的**：`g(s) = 换出 − 重算` 在 `s*` 两侧**变号** ──")
+    print("  ── D.9 ★★ **临界点是唯一的**：`g(s) = 换出 − KV 重算` 在 `s*` 两侧**变号** ──")
     print("     `g(%.0f − 100) = %.4f`（**正**：换出更贵）· `g(%.0f + 100) = %.4f`（**负**：换出更便宜）"
           % (sstar, diff_lo, sstar, diff_hi))
     check("D.9", diff_lo > 0.0 > diff_hi and abs(diff_lo + diff_hi) < 1.0 + TIME_EPS,
