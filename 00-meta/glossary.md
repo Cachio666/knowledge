@@ -265,16 +265,16 @@
 ## 训练与推理系统
 
 > ★ **本节与 `120-inference` 共享**：**训练部分**的正文在 `90-training`；
-> **推理部分**的正文在 `120-inference`（未建成）。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
+> **推理部分**的正文在 `120-inference`（★ **已建成**）。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
 > （★ 另两条不属本节的归口：`ZeRO` / `FSDP` 的正文在 `100-parallelism` 的 `zero-fsdp`，此处只回链。）
 > ★★ **六个切分轴的【正文】**已归口到上面新增的「**并行策略**」节；★ 其中 `ZeRO` / `FSDP` 的**词条**留在本节（它们的正文在 `100-parallelism/zero-fsdp/`）。
 
 | 英文 | 中文 | 说明 |
 |---|---|---|
-| KV cache | 键值缓存 | 自回归解码时缓存历史 token 的 K/V，避免重复计算。 |
-| continuous batching | 连续批处理 | 在请求级别动态进出批次，而非等待整批完成。 |
-| PagedAttention | 分页注意力 | 将 KV cache 按页管理，消除显存碎片。 |
-| speculative decoding | 投机解码 | 用小模型草拟、大模型验证，减少解码步数。 |
+| KV cache | 键值缓存 | 自回归解码时缓存历史 token 的 K/V，避免重复计算。★ **它的【账】与 decode 的 memory-bound** 的正文在 `130-quantization/kv-cache-quantization/01`；**系统侧的容量规划与块管理**在 `120-inference/kv-cache/`。 |
+| continuous batching | 连续批处理 | 在请求级别动态进出批次，而非等待整批完成。★ **机制与收益来源**的正文在 `120-inference/batching-and-scheduling/01`（★★ **收益来自请求长度的【方差】，不来自到达过程**）。 |
+| PagedAttention | 分页注意力 | 将 KV cache 按页管理。★★ **它消掉的是「按最大长度【预留】」的浪费，不是「碎片」** —— ★ **碎片只占 `0.049%`，按字节算不值一提**（`40-kernels/attention/05:145`），★ **页大小的真正约束是查表次数**（同篇 `:290`）。★ **定义与算式**的正文在 `130-quantization/kv-cache-quantization/01:68-84`；**系统侧的块管理**在 `120-inference/kv-cache/02`。 |
+| speculative decoding | 投机解码 | 用小模型草拟、大模型验证，减少解码步数。★ **它的加速比闭式与三条假设**（★ 含 `β` i.i.d.）的正文在 `120-inference/decoding-strategies/02`。 |
 | ZeRO | — | 将优化器状态、梯度、参数分片到各卡的显存优化方案。 |
 | FSDP (Fully Sharded Data Parallel) | 全分片数据并行 | ZeRO 思想在 PyTorch 中的实现。 |
 | all-reduce | 全规约 | 集合通信原语：所有参与者的数据求和后广播给所有人。 |

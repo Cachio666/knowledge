@@ -1,7 +1,7 @@
 # 实施进度表
 
 > 最后更新：2026-10-09
-> 进度：60 / 65 主题完成
+> 进度：65 / 65 主题完成 ★ 全库建成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -85,11 +85,11 @@
 - [x] overlap
 
 ## 120-inference
-- [ ] kv-cache
-- [ ] batching-and-scheduling
-- [ ] decoding-strategies
-- [ ] engines
-- [ ] serving-infra
+- [x] kv-cache
+- [x] batching-and-scheduling
+- [x] decoding-strategies
+- [x] engines
+- [x] serving-infra
 
 ## 130-quantization
 - [x] numerical-formats

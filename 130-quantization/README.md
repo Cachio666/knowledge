@@ -11,13 +11,13 @@
 | [ptq](ptq/) | 训练后量化 / 校准方法 / GPTQ / AWQ / SmoothQuant | 已完成 |
 | [qat](qat/) | 量化感知训练 / 伪量化 / 梯度近似 | 已完成 |
 | [quantized-kernels](quantized-kernels/) | 量化算子实现（正文在本域，回链 40-kernels） | 已完成 |
-| [kv-cache-quantization](kv-cache-quantization/) | KV cache 量化（正文在本域，回链 120-inference） | 已完成 |
+| [kv-cache-quantization](kv-cache-quantization/) | KV cache 量化（★ **正文在本域**，回链 `120-inference/kv-cache`） | 已完成 |
 | [sparsity-and-distillation](sparsity-and-distillation/) | 结构化与非结构化稀疏 / 知识蒸馏 | 已完成 |
 
 ## 与其他域的关系
 
 - **上游**：`10-foundations/floating-point`（数值格式的误差来源）、`20-gpu-architecture/tensor-core`（低精度算力）。
 - **下游**：`120-inference`（量化是推理加速的主要手段）。
-- **横切**：量化算子实现（正文在本域，回链 `40-kernels`）；KV cache 量化（正文在本域，回链 `120-inference`）。
+- **横切**：量化算子实现（正文在本域，回链 `40-kernels`）；KV cache 量化（★ **正文在本域**，回链 `120-inference/kv-cache`）。
 
 ## 计划主题清单见 [roadmap.md](../00-meta/roadmap.md)

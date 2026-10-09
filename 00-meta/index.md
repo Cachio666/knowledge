@@ -263,7 +263,27 @@
   - [03-async-io](../110-communication/overlap/03-async-io.md)
 
 ## 120-inference
-尚未开始。
+
+- [kv-cache](../120-inference/kv-cache/) —— 从账到容量规划 / 系统侧块管理器 / 前缀共享与淘汰
+  - [01-capacity-planning](../120-inference/kv-cache/01-capacity-planning.md)
+  - [02-block-management](../120-inference/kv-cache/02-block-management.md)
+  - [03-prefix-and-eviction](../120-inference/kv-cache/03-prefix-and-eviction.md)
+- [batching-and-scheduling](../120-inference/batching-and-scheduling/) —— 迭代级调度 / chunked prefill 的分块数权衡 / 抢占与公平
+  - [01-iteration-level-scheduling](../120-inference/batching-and-scheduling/01-iteration-level-scheduling.md)
+  - [02-chunked-prefill](../120-inference/batching-and-scheduling/02-chunked-prefill.md)
+  - [03-preemption-and-fairness](../120-inference/batching-and-scheduling/03-preemption-and-fairness.md)
+- [decoding-strategies](../120-inference/decoding-strategies/) —— 采样与搜索 / speculative decoding / 并行解码
+  - [01-sampling-and-search](../120-inference/decoding-strategies/01-sampling-and-search.md)
+  - [02-speculative-decoding](../120-inference/decoding-strategies/02-speculative-decoding.md)
+  - [03-parallel-decoding](../120-inference/decoding-strategies/03-parallel-decoding.md)
+- [engines](../120-inference/engines/) —— vLLM / SGLang（RadixAttention）/ TensorRT-LLM 与 llama.cpp
+  - [01-vllm](../120-inference/engines/01-vllm.md)
+  - [02-sglang-and-radix](../120-inference/engines/02-sglang-and-radix.md)
+  - [03-tensorrt-llm-and-llamacpp](../120-inference/engines/03-tensorrt-llm-and-llamacpp.md)
+- [serving-infra](../120-inference/serving-infra/) —— 两个延迟 / 推理的 TP/PP 与 PD 分离 / 扩缩容与可观测性
+  - [01-latency-and-slo](../120-inference/serving-infra/01-latency-and-slo.md)
+  - [02-inference-parallelism-and-pd](../120-inference/serving-infra/02-inference-parallelism-and-pd.md)
+  - [03-scaling-and-observability](../120-inference/serving-infra/03-scaling-and-observability.md)
 
 ## 130-quantization
 
@@ -289,7 +309,7 @@
   - [01-w8a8](../130-quantization/quantized-kernels/01-w8a8.md)
   - [02-w4a16-packing](../130-quantization/quantized-kernels/02-w4a16-packing.md)
   - [03-kernel-design](../130-quantization/quantized-kernels/03-kernel-design.md)
-- [kv-cache-quantization](../130-quantization/kv-cache-quantization/) —— KV cache 量化（正文在本域，回链 120-inference）
+- [kv-cache-quantization](../130-quantization/kv-cache-quantization/) —— KV cache 量化（正文在本域，回链 [120-inference/kv-cache](../120-inference/kv-cache/)）
   - [01-kv-cache-basics](../130-quantization/kv-cache-quantization/01-kv-cache-basics.md)
   - [02-kivi-asymmetry](../130-quantization/kv-cache-quantization/02-kivi-asymmetry.md)
   - [03-low-bit-and-engines](../130-quantization/kv-cache-quantization/03-low-bit-and-engines.md)

@@ -87,7 +87,7 @@
 | `pipeline-parallel` | **重算换显存**的机制 | `90-training/autograd-and-backward/02-gradient-checkpointing.md` |
 | **全主题** | **框架的分布式 API 语义**（`torch.distributed` / `DDP` / `FSDP` 的类与参数） | ★★ **框架侧当前没有正文**（`70-frameworks/pytorch/` 与 `tensorflow/` 对 `torch.distributed` / `DDP` / `FSDP` / `ProcessGroup` 实测命中 `0` 次；★ 唯一的分布式*契约*正文在 `90-training/checkpointing/01,02`，那是 `torch.distributed.checkpoint` 的保存/恢复语义，不是 API 语义）⇒ 本域只在 `zero-fsdp` 里引 `sharding_strategy` 的**取值列表**（标 **B 级 + 版本 2.14 + URL + 抓取日**），**不解释其语义** |
 | **全主题** | **JAX 的自动分片 / SPMD**（`shard_map` / `pjit` / `pmap`、"谁来把切分假设写下来"） | `70-frameworks/jax/03-sharding-and-differences.md` |
-| **全主题** | **推理侧的并行形态**（推理的 TP/PP/EP、PD 分离、KV cache 切分） | `120-inference/`（**未建成**） |
+| **全主题** | **推理侧的并行形态**（推理的 TP/PP/EP、PD 分离、KV cache 切分） | ★ **已建成**：`120-inference/serving-infra/02-inference-parallelism-and-pd`（**推理与训练的实质差异**：PP 无反向 ⇒ 气泡模型不同；TP 要切 KV cache；PD 分离）；★ **EP 在该篇 §1.4 显式声明「与训练侧无实质差异」** |
 | **全主题** | **通信压缩 / 低精度 all-reduce / PowerSGD** | ★ **本域不做**（那是「通信」侧，不是「切分」侧） |
 | `tensor-parallel` | ★★★ **`performance-models/02:223` 已经逐字写完了的三条**（「通信发生在**每一层内部**（attention 后、FFN 后各一次 all-reduce）」「通信量与**激活**成正比而不是与参数量成正比」「**只在高带宽互联上可用 / 通常限于单节点 8 卡**、TP 的规模上限由节点内互联决定」） | `10-foundations/performance-models/02-amdahl-and-scaling.md:223`（**v3 由事实层审查者实测发现**）⇒ ★★ **本域不得重写这三条**（否则是「同一个载体重复」）；**只写它没写的**：切法本身（列/行的配对）、`2 + 2` 的逐字出处、通信量**也饱和**这一层 |
 | **全主题** | ★★ **`00-meta/glossary.md` 已有的本域相关词条**（`ZeRO` / `FSDP` / `all-reduce` / `all-to-all` / `容量因子` / `aux loss` / `sharded checkpoint` / `grouped GEMM`） | `00-meta/glossary.md` 的那几条 ⇒ ★★ **本域不得另立同名词条**（否则出现**同名两条**）；新词条建成时**并入**并逐条去重（Chunk 7 办） |

@@ -58,7 +58,7 @@
 | **全主题** | **Amdahl / Gustafson / `N₅₀` / 扩展效率的模型** | `10-foundations/performance-models/02-amdahl-and-scaling.md`（**全篇**） |
 | **全主题** | ★★ **通信压缩 / 低精度 all-reduce / PowerSGD** | ★ **本域不做** —— 它是「**通信量**」侧的优化，不是本域四层里的任何一层；★ 见 `docs/superpowers` 计划 `§4` 的 `T65`/`T66` |
 | **全主题** | **框架的分布式 API 语义**（`torch.distributed` / `DDP` / `FSDP` 的类与参数、`ncclGroupStart` 的**用法**） | ★ **全库当前没有正文** ⇒ 本域**只引 NCCL/NCCL 官方文档的取值与语义**（标 `[B]` + 版本），**不写框架的使用教程** |
-| **全主题** | **推理侧的通信**（KV cache 的传输、PD 分离、推理的 TP/PP/EP） | `120-inference/`（**未建成**） |
+| **全主题** | **推理侧的通信**（KV cache 的传输、PD 分离、推理的 TP/PP/EP） | ★ **已建成**：`120-inference/serving-infra/02-inference-parallelism-and-pd`（**推理侧的通信【需求】**）；★ **通信的机制**仍在本域（本域只被回链，不反向让渡） |
 | `overlap` | **异步落盘的【存储侧】机制**（写盘流水、元数据、重分片） | `90-training/checkpointing/01,02,03` —— ★★ **本域只写「通信 / 计算与落盘重叠」的那一半** |
 | `network-topology` | ★★ **NVLink 域 / NVSwitch / PCIe 的带宽与拓扑** | `20-gpu-architecture/interconnect/02`（★ 上游已逐代写好） |
 | **全主题** | ★ **`00-meta/glossary.md` 已有的相关词条**（`all-reduce` / `all-to-all` / `bisection bandwidth` / `NVLink Domain` / `algbw`-`busbw` / `P2P` / `InfiniBand` / `scale-up`-`scale-out`） | `00-meta/glossary.md` ⇒ ★★ **本域不另立同名词条**；建成后**补回链**（收尾办） |
