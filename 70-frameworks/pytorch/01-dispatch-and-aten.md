@@ -10,7 +10,7 @@ tags: [pytorch, dispatch, dispatcher, aten, dispatch-key, torch-dispatche-mode, 
 related:
   - 60-compilers/inductor/01-graph-capture
   - 70-frameworks/pytorch/04-custom-operators
-  - 30-gpu-programming/cuda/01-execution-model
+  - 30-gpu-programming/cuda/01-thread-hierarchy-and-sync
 code:
   - code/01_dispatch_layers.py
 status: stable

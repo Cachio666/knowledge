@@ -13,7 +13,7 @@ related:
   - 130-quantization/numerical-formats/03-bf16-fp16-tf32
   - 10-foundations/floating-point/04-low-precision-formats
   - 40-kernels/gemm/04-tensor-core-and-async-pipeline
-  - 130-quantization/sparsity-and-distillation/01-structured-sparsity
+  - 130-quantization/sparsity-and-distillation/01-sparsity-granularity
 code:
   - code/03_kernel_design.py
 status: stable

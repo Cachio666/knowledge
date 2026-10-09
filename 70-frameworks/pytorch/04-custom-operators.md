@@ -12,7 +12,7 @@ tags: [pytorch, custom-op, torch-library, register-fake, torch-compile, dynamo, 
 related:
   - 60-compilers/inductor/01-graph-capture
   - 60-compilers/inductor/04-dynamic-shapes
-  - 30-gpu-programming/cuda/01-execution-model
+  - 30-gpu-programming/cuda/01-thread-hierarchy-and-sync
 code:
   - code/04_custom_ops.py
 status: stable

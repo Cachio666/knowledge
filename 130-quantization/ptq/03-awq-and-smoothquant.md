@@ -12,7 +12,7 @@ tags: [awq, smoothquant, activation-outlier, per-channel-scaling, w8a8]
 related:
   - 130-quantization/ptq/02-gptq
   - 130-quantization/theory/03-outliers-and-propagation
-  - 130-quantization/kv-cache-quantization/01-kivi
+  - 130-quantization/kv-cache-quantization/01-kv-cache-basics
 code:
   - code/03_awq_smoothquant.py
 status: stable
