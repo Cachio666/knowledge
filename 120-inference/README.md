@@ -10,7 +10,7 @@
 | batching-and-scheduling | **迭代级调度**（continuous batching 的机制与收益来源）· **chunked prefill 的分块数权衡** · **抢占与公平** |
 | decoding-strategies | 采样与搜索（greedy / beam / top-k / top-p）· ★★ **speculative decoding**（三条独立路径 + 假设边界）· 并行解码 |
 | engines | vLLM · SGLang（RadixAttention）· TensorRT-LLM · llama.cpp —— ★★ **只写「各家的选择与差异」，机制一律回链**。★★ **`llama.cpp`：本次取数无一手来源 ⇒ 只作【边界声明】**（`03` 的 §0.5 / `C.3`，`F3`） |
-| serving-infra | **两个延迟**（TTFT / inter-token latency）· ★★ **推理的 TP/PP/EP 与 PD 分离** · 扩缩容 / 路由 / 可观测性 |
+| serving-infra | **两个延迟**（TTFT / inter-token latency）· ★★ **推理的 TP/PP 与 PD 分离**（★★ **EP 显式不在本域** —— 见 `serving-infra/02` §1.4）· 扩缩容 / 路由 / 可观测性 |
 
 ## 主线
 
@@ -22,7 +22,7 @@
 |---|---|---|---|
 | **显存** | KV cache 是**动态增长**的 ⇒ 必须**按需分配** | ★ **可算**（容量 / 块数 / 并发） | ★ 本域 `kv-cache`；★★ **「账」本身在 `130-quantization/kv-cache-quantization/01`，本域只回链** |
 | **吞吐** | 批越大吞吐越高 ⇒ 但受显存与延迟限制 | ★ **可模拟**（调度器） | ★ 本域 `batching-and-scheduling` |
-| **延迟** | ★ **有两个**：TTFT 与 inter-token latency，它们**互相冲突** | ▲ 可推导 | ★ 本域 `serving-infra/01` |
+| **延迟** | ★ **有两个**：TTFT 与 inter-token latency；★★ **它们【何时】冲突取决于模型** —— ★ 见 `serving-infra/01` 的 §3（★ 本文模型里 `B` 越大 TTFT 反而越小，因为 prefill 记成独立一步） | ▲ 可推导 | ★ 本域 `serving-infra/01` |
 | **实现** | 各家引擎怎么选（分页 / 前缀树 / 调度器） | ✗ **不可验**（本机无 GPU、无引擎） | ★ 本域 `engines`（**只有 `[B]` 级**） |
 
 ★★★ **推论（本域最要紧的一条）**：**「账能算」推不出「真实系统会这样跑」** ——
@@ -57,7 +57,8 @@
 | **全主题** | ★ **vLLM 的模型接入流程与算子注册**（三档分治 · `vllm.ir` · `@register_op` · KDA 的 prefill/decode 拆分） | `45-kernel-lifecycle/requirement-discovery/01:158-214`（+ `operator-design/01` / `implementation/01`） |
 | **全主题** | ★ **continuous batching / chunked prefill 的【定义】** | `10-foundations/performance-models/01:251` —— ★ 本域只写**它们的机制与收益来源** |
 | **`batching-and-scheduling`** | ★ **prefill/decode 的【kernel】差异**（两者的 `AI` 差 120 倍） | `40-kernels/attention/05:229-236` |
-| **`serving-infra`** | ★ **通信的机制**（集合通信原语、NCCL、拓扑、重叠） | ★ `110-communication` 全域 —— 本域只写**推理侧的通信需求**（KV 传输、TP/PP/EP 的形态） |
+| **`serving-infra`** | ★ **通信的机制**（集合通信原语、NCCL、拓扑、重叠） | ★ `110-communication` 全域 —— 本域只写**推理侧的通信需求**（KV 传输、TP/PP 的形态） |
+| **`serving-infra`** | ★ **EP（专家并行）的推理侧** | ★ `100-parallelism/expert-parallel` + `110-communication/collectives` —— ★★ **本域显式声明**它「**与训练侧无实质差异**」（`serving-infra/02` §1.4），★ 不是默认省略 |
 | **`serving-infra`** | ★ **并行策略本身的正文**（数据/张量/流水/序列/专家/状态六轴） | ★ `100-parallelism` 全域 —— 本域只写**推理与训练的实质差异**（PP 无反向 ⇒ 气泡模型不同；TP 要切 KV cache） |
 | **`engines`** | ★★ **引擎的机制细节**（分页 → `kv-cache/02`；前缀树 → `kv-cache/03`；调度器 → `batching/01`） | ★ 本域其它篇 —— `engines` **只写「各家的选择与差异」** |
 | **全主题** | ★ **训推共用的导出格式与权重账** | `70-frameworks/tensorflow/03` + `90-training/checkpointing/01` |

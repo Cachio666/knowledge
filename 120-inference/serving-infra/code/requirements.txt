@@ -9,7 +9,8 @@
 #
 # ★★ **本主题的定位**：
 #   · **两个延迟**：TTFT（含排队 + prefill）与 inter-token latency，以及它们的**冲突**；
-#   · ★★ **推理的 TP/PP/EP 与 PD 分离**（承接 `100-parallelism` / `110-communication` 两处让渡）；
+#   · ★★ **推理的 TP/PP 与 PD 分离**（承接 `100-parallelism` / `110-communication` 两处让渡；
+#     ★★★ 让渡里的 **`EP` 本域【显式不接】** —— `02` §1.4 明写理由，**不是默认省略**）；
 #   · **扩缩容 / 路由 / 可观测性**（★ `50-performance/README:49` 明文让渡的「serving 栈」）。
 #
 # ★★ **本主题的边界**（**只回链，不重推**）：

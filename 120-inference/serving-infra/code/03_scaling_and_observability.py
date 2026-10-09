@@ -9,7 +9,7 @@ r"""03_scaling_and_observability.py —— 扩缩容 / 路由（**前缀感知�
 
 ★★★ **本程序【有真 A 类】**（两条，各自两条独立路径）—— ★★ **不能整主题标「无 A」**：
   ★ 「**排队与负载均衡本质是可独立参照的算法**」：
-  · `A.1` **前缀感知的路由**：一个**事件驱动**的路由模拟（逐请求）vs **参照 = 随机路由**（同一请求流）；
+  · `A.1` **前缀感知的路由**：一个**事件驱动**的路由模拟（逐请求）vs **闭式** `N − 不同模板数`（纯计数）；
   · `A.2` **排队**：离散事件排队模拟（逐到达、逐服务）vs **M/M/1 的闭式**（`W_q = ρ/(μ(1−ρ))`）。
   ★★ **只有「真实网络 / 多机的行为」不可测**（本机单机、无真网络 —— `§0.7 D7`）。
   ★★ **守卫**（`D.4`）：把路由策略的「优先发给持有者」改坏（改成随机）⇒ `A.1` 必须失败。
@@ -21,12 +21,13 @@ r"""03_scaling_and_observability.py —— 扩缩容 / 路由（**前缀感知�
   · **请求调度器的机制** → 本域 `batching-and-scheduling/01`；
   · **两个延迟的定义** → 本域 `01-latency-and-slo`。
 
-★★★ **本程序的禁写清单**：
-  · `F5`（**不写**那个前缀复用开关「默认开启」—— 取数到的页面**未声明**默认值）；
-  · ★★ **不裸写那个社区缩写当 vLLM 的官方词**（该词在 vLLM 页面上 **0 处**）。
+★★★ **本程序的禁写清单**（★ **每条纪律都配一条断言** —— 形态 A 的根治）：
+  · `F5`（**不写**那个前缀复用开关「默认开启」—— 取数到的页面**未声明**默认值）⇒ ★ **由 `D.6` 机械守住**
+    （`specs.APC_DEFAULT_DECLARED_IN_SOURCE is False`）；
+  · ★★ **不裸写那个社区缩写当 vLLM 的官方词**（该词在 vLLM 页面上 **0 处**）⇒ ★ 由 `C.1` 守住。
 
 ★★ 可证伪断言（把下面任一条改错，本程序必须非零退出）：
-  · `A.1` ★★★ **前缀感知的路由**：同一请求流下，命中率**显著高于**随机路由（逐请求模拟）；
+  · `A.1` ★★★ **前缀感知的路由**：逐请求模拟的命中数 == 闭式 `N − 不同模板数`（★ 前提 `R·C ≥ T`）；
   · `A.2` ★★★ **排队**：离散事件排队的平均等待 == M/M/1 闭式 `ρ/(μ(1−ρ))`（容差 `3%`）；
   · `B.1` ★★ 路由命中率 vs 缓存容量（两种策略）；
   · `B.2` ★★ 排队等待 vs 利用率（`ρ → 1` 时发散）；
@@ -181,6 +182,18 @@ def run_routing(trace, n_replica, cap, policy, corrupt=False):
     return hits, [x.served for x in reps], reps
 
 
+def prefix_hits_closed(trace, n_replica, cap):
+    """★★★ **参照实现（I）**：**前缀感知路由**的命中数**闭式**。
+
+    ★★ 前提 `R·C ≥ T`（`R` = 副本数、`C` = 每副本容量、`T` = **不同**模板数）：
+      ⇒ ★★★ **永无驱逐** —— 若 `R` 台副本都装满 `C` 个，则**已被持有的不同模板数 = `R·C ≥ T`**
+      ⇒ **所有模板都有主** ⇒ 不会出现「无主的模板」触发**回退分配** ⇒ **不会挤掉任何条目**。
+    ⇒ ★★★ 于是**每个模板的首次出现是唯一的缺失** ⇒ 命中数 = `N − (#不同模板)`。
+    ★ 纯计数，**不含任何 LRU / 事件循环**（`D.8` 在源码层核两条路径不互相引用）。
+    """
+    return len(trace) - len(set(trace))
+
+
 # ===========================================================================
 # 2. A.2：**排队**（离散事件）vs **M/M/1 闭式**
 # ===========================================================================
@@ -224,29 +237,34 @@ def part_A():
     print("A · **路由与排队**：两条判据，各自两条独立路径")
     print("=" * 78)
 
-    # ── A.1 ★★★ 前缀感知的路由 vs 随机 ──────────────────────────────────
+    # ── A.1 ★★★ 前缀感知的路由：逐请求模拟 vs 闭式 ───────────────────────
     print()
-    print("  ── A.1 ★★★ **前缀感知的路由** vs **随机路由**（同一请求流）──")
+    print("  ── A.1 ★★★ **前缀感知的路由**：逐请求模拟（被测）vs **闭式** `N − 不同模板数`（参照）──")
     R, N, T = specs.ROUTE_N_REPLICA, specs.ROUTE_N_REQ, specs.ROUTE_N_TEMPLATE
     cap = 2
     rng = np.random.default_rng(specs.ROUTE_SEED)
     trace = route_trace(N, T, rng)
     hit_pa, share_pa, _ = run_routing(trace, R, cap, "prefix_aware")
     hit_rr, share_rr, _ = run_routing(trace, R, cap, "random")
+    hit_pa_cf = prefix_hits_closed(trace, R, cap)
     print("     副本 %d 个 · 每副本缓存 `%d` 条前缀 · 请求 %d 条 · 模板 %d 个（★ 模板 = 共享前缀）"
           % (R, cap, N, T))
-    print("     %-18s %-12s %-14s %s" % ("策略", "命中数", "命中率", "各副本份额"))
-    print("     %-18s %-12d %-14.4f %s" % ("前缀感知", hit_pa, hit_pa / N, share_pa))
-    print("     %-18s %-12d %-14.4f %s" % ("随机（参照）", hit_rr, hit_rr / N, share_rr))
+    print("     %-20s %-12s %-14s %s" % ("策略", "命中数", "命中率", "各副本份额"))
+    print("     %-20s %-12d %-14.4f %s" % ("前缀感知（被测）", hit_pa, hit_pa / N, share_pa))
+    print("     %-20s %-12d %-14.4f %s" % ("前缀感知（闭式）", hit_pa_cf, hit_pa_cf / N, "-"))
+    print("     %-20s %-12d %-14.4f %s" % ("随机（对照）", hit_rr, hit_rr / N, share_rr))
     print("     ★★ `%s`" % ROUTE_HIT_DEF)
-    print("     ★★★ **读法**：★ 前缀感知把请求**送到已经持有该前缀的副本** ⇒ 命中率 **%.4f vs %.4f**；"
-          % (hit_pa / N, hit_rr / N))
-    print("         ★★ 参照（随机）**完全不看请求内容** —— 两条路径**无共享逻辑**。")
-    check("A.1", hit_pa > hit_rr and hit_pa / N > 0.8 and hit_rr / N < 0.4 and len(trace) == N,
-          "★★★ **判据成立**：同一请求流下，前缀感知命中 **%.4f** ≫ 随机 **%.4f**（★ 提升 **%.2f 倍**）—— "
-          "★★ 一面按「谁持有就发给谁」、一面纯轮转，两条独立路径**拉开差距**"
-          % (hit_pa / N, hit_rr / N, (hit_pa / N) / (hit_rr / N)),
-          "**前缀感知没有优势（或命中率不对）** —— ★ 先查 `run_routing` 的持有者查找与容量")
+    print("     ★★★ **读法**：被测（逐请求事件驱动）的命中数与**闭式** `N − 不同模板数 = %d − %d = %d`"
+          % (N, len(set(trace)), hit_pa_cf))
+    print("         **逐位一致**（★ 前提 `R·C = %d ≥ T = %d` ⇒ **永无驱逐**，首次出现是唯一的缺失）；" % (R * cap, len(set(trace))))
+    print("         ★★ 随机（对照）只命中 **%d** —— 它**完全不看请求内容**，与前述两条路径拉开差距。" % hit_rr)
+    check("A.1", hit_pa == hit_pa_cf and hit_pa == 792 and hit_rr == 209
+          and abs(hit_pa / N - 0.99) < 1e-9 and abs(hit_rr / N - 0.26125) < 1e-9
+          and R * cap >= len(set(trace)) and len(trace) == N and hit_pa > hit_rr,
+          "★★★ **判据成立**：前缀感知命中 **%d**（= 闭式 `N − 不同模板数 = %d`，**逐位一致**）· "
+          "随机 **%d** —— ★★ 一面逐请求事件驱动、一面纯计数，两条**独立路径**会合"
+          % (hit_pa, hit_pa_cf, hit_rr),
+          "**前缀感知命中数（或闭式、或 `R·C ≥ T` 前提）被动过** —— ★ 先查 `run_routing` 与 `prefix_hits_closed`")
 
     # ── A.2 ★★★ 排队模拟 vs M/M/1 闭式 ─────────────────────────────────
     print()
@@ -261,7 +279,7 @@ def part_A():
           % (m, 1.0 / math.sqrt(m)))
     print("     ★★ Little 定律 `L = λW`：平均系统时间 %.4f ⇒ `L = %.4f`（★ 由闭式 `ρ/(1−ρ)` 得 %.4f）"
           % (ws, lam * ws, (lam / mu) / (1 - lam / mu)))
-    check("A.2", rel < 0.03 and abs(ws - (wq + 1.0 / mu)) < 0.05
+    check("A.2", rel < 0.03 and abs(wq - 9.0871) < 1e-3 and abs(ws - (wq + 1.0 / mu)) < 0.05
           and abs(wq_cf - 9.0) < 1e-9 and abs(lam * ws - (lam / mu) / (1 - lam / mu)) < 0.2,
           "★★★ **判据成立**：离散事件模拟的平均等待 **%.4f** 与闭式 **%.4f** 相对差 **%.4f** < `3%%` —— "
           "★★ 一面逐到达推进、一面纯代数；★ Little 定律也逐位对上" % (wq, wq_cf, rel),
@@ -411,7 +429,7 @@ def part_C():
     check("C.3", abs(wq - 9.0) < 1e-12 and abs(p95 - 28.9037) < 1e-3
           and p95 > 3 * wq and p50 < wq,
           "★★ **判据成立**：`ρ=0.9` 时**均值 `%.2f` 但 `p95` = `%.2f`**（`p95/均值` = **%.2f**），"
-          "且**中位数大于均值**（`%.2f > %.2f`，★ 重尾）—— ★★ 均值达标**不能**推出尾部达标"
+          "且**中位数【小于】均值**（`%.2f < %.2f`，★ **右偏**的重尾）—— ★★ 均值达标**不能**推出尾部达标"
           % (wq, p95, p95 / wq, p50, wq),
           "**分位或均值被动过** —— ★ 先查 `mm1_wait_quantile_closed`")
 
@@ -531,36 +549,44 @@ def part_D():
           % (good, bad),
           "**守卫失效** —— ★ 改回随机后命中居然没掉（那 `A.1` 抓不到它）")
 
+    # ── D.6 ★★ 禁写挡板 `F5`（★ 抬头宣称的纪律必须有一条断言盯住）────────────
+    print()
+    print("  ── D.6 ★★ **禁写挡板 `F5`**：APC「默认开启」**未取到** ──")
+    print("     `specs.APC_DEFAULT_DECLARED_IN_SOURCE` = %s（★ 只能是 `False`）"
+          % specs.APC_DEFAULT_DECLARED_IN_SOURCE)
+    check("D.6", specs.APC_DEFAULT_DECLARED_IN_SOURCE is False,
+          "★★ **禁写挡板成立**：取数到的页面**未声明** APC 默认开启 ⇒ ★ 写「APC **默认开启**」会与它"
+          "**自相矛盾**（`F5`）；★ 抬头那条禁写与**本断言成对**",
+          "**`F5` 挡板被动过** —— ★ `APC_DEFAULT_DECLARED_IN_SOURCE` 只能是 `False`（未取到默认值声明）")
+
     # ── D.7 ★★★ 逐元素钉住 ──────────────────────────────────────────────
     check("D.7", specs.ROUTE_N_REPLICA == 4 and specs.ROUTE_N_REQ == 800
           and specs.ROUTE_N_TEMPLATE == 8 and specs.ROUTE_SEED == 20261009
           and specs.QUEUE_ARRIVAL_RATE == 0.9 and specs.QUEUE_SERVICE_RATE == 1.0
           and specs.QUEUE_N_SAMPLE == 120000
+          and specs.APC_DEFAULT_DECLARED_IN_SOURCE is False
           and specs.VLLM_TPOT_OCCURRENCES_ON_DOC_PAGES == 0
           and specs.SERVING_INFRA_FETCH_DAY == "2026-10-09" and specs.UNSOURCED == (),
-          "★★★ **逐元素钉住**：路由四个参数 · 队列三个参数 · 缩写计数 `0` · 抓取日；★ `UNSOURCED == ()`",
-          "**某个常量被动过** —— ★ 先查 `ROUTE_*` / `QUEUE_*`")
+          "★★★ **逐元素钉住**：路由四个参数 · 队列三个参数 · `F5` 挡板 · 缩写计数 `0` · 抓取日；★ `UNSOURCED == ()`",
+          "**某个常量被动过** —— ★ 先查 `ROUTE_*` / `QUEUE_*` / `APC_*`")
 
     # ── D.8 ★★★ 独立性（源码级）──────────────────────────────────────────
     s1 = _func_names(run_routing)
+    c1 = _func_names(prefix_hits_closed)
     s2 = _func_names(sim_queue)
     c2 = _func_names(mm1_wait_closed)
     print()
     print("  ── D.8 ★★ **源码级线索**（★ **不是证明**）：被测与参照互不引用 ──")
-    rsrc = inspect.getsource(run_routing)
-    both_in_one = ("prefix_aware" in rsrc) and ("random" in rsrc)
-    print("     A.1: 两策略**同函数不同分支**（源码里同时出现 `prefix_aware` 与 `random`）= %s"
-          " （★ **这是弱点**，已如实写进 `D.8` 文案）" % both_in_one)
+    print("     A.1: `run_routing` 里出现 `prefix_hits_closed` = %s ；反向 = %s"
+          % ("prefix_hits_closed" in s1, "run_routing" in c1))
     print("     A.2: `sim_queue` 里出现 `mm1_wait_closed` = %s ；反向 = %s"
           % ("mm1_wait_closed" in s2, "sim_queue" in c2))
-    print("     ★★★ **降级措辞**：A.1 的两条路径**住在同一个函数里**（★ 只靠 `policy` 分支区分）——")
-    print("       ★★ 这不满足「两段代码不互相引用」，故 `A.1` 的**真正守卫是 `D.4`**（改坏后差距消失）；")
-    print("       ★ A.2 的两条路径**确为两段独立代码**。")
-    check("D.8", "mm1_wait_closed" not in s2 and "sim_queue" not in c2
-          and "Replica" in s1 and both_in_one,
-          "★★ **源码级线索（★ 分档说明）**：**A.2** 的被测（排队模拟）与参照（闭式）**互不引用** ✓；"
-          "★★ **A.1** 的两条路**在同一函数里**（`policy` 分支）—— ★ **如实降级**：它的守卫靠 `D.4`，"
-          "不靠源码隔离",
+    print("     ★★★ **降级措辞**：这只是「**几段代码不互相引用**」的**源码级线索**，**不证明**判据有信息量 ——")
+    print("       后者由 `A.1`/`A.2` 与 `D.4` 的**行为**兜底（★ `A.1` 的守卫是 `D.4`：改坏后闭式不再对上）。")
+    check("D.8", "prefix_hits_closed" not in s1 and "run_routing" not in c1
+          and "mm1_wait_closed" not in s2 and "sim_queue" not in c2,
+          "★★ **源码级线索成立**：两条判据的**被测与参照两两互不引用**（★ **两侧都审**）——"
+          " ★★ 于是「结果相同」**不是恒真**，而是**两条独立路径的会合**",
           "**两实现互相引用** —— A 类可能退化成自证（`§1.3.2b`）")
 
     # ── D.9 ★★★ 术语纪律 ───────────────────────────────────────────────

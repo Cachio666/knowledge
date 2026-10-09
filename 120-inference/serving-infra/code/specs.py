@@ -35,9 +35,10 @@
 #    载体 = 文档 `usage/metrics/` 与 `features/per_request_metrics/`；抓取日 **2026-10-09**。
 # ===========================================================================
 
-VLLM_TTFT_DEFINITION_QUOTE = "Time from when the request was scheduled until the first output token was generated"
+VLLM_TTFT_DEFINITION_QUOTE = "Time from when the request was scheduled until the first output token was generated (TTFT)."
 # 来源：[B] vLLM 官方文档 —— `features/per_request_metrics/` 的 `time_to_first_token_ms` 说明（抓取日 2026-10-09）。
-#       ★ 完整性：`grep -c 'Time from when the request was scheduled until the first output token was generated'` → 1。
+#       ★ 完整性：原文**以 `(TTFT).` 收尾**（★ 引文一律逐字 ⇒ 后缀 ` (TTFT).` **不可省**；
+#         与 `VLLM_ITL_DEFINITION_QUOTE` 的 `(average time ...).` 同形）。
 # 口径：★★★ 这是 TTFT 的**官方逐字定义** —— ★ 注意起算点是「**request was scheduled**」（**不含排队**）⇒
 #       ★★ 与本库「TTFT 含排队 + prefill」的口径**要分开写**（排队时间在 vLLM 里是另一个量）。
 # 消费者：Chunk 5 的 `01-latency-and-slo`（程序 `code/01_latency_and_slo.py`，已落盘）—— TTFT 的定义。
@@ -62,6 +63,8 @@ VLLM_ITL_DEFINITION_QUOTE = "Mean inter-token latency (average time between succ
 
 VLLM_ITL_NULL_FOR_SINGLE_TOKEN_QUOTE = "null for single-token responses"
 # 来源：[B] vLLM 官方文档 —— `features/per_request_metrics/` 的 `mean_itl_ms` 说明的后半句（抓取日 2026-10-09）。
+#       ★★ **本条是【渲染后】的文本** —— 原始 HTML 为 `phase. <code>null</code> for single-token responses.`
+#         （`null` 被 `<code>` 包着）⇒ ★ 在**原始字节**上 `grep -c 'null for single-token responses'` = **0**。
 # 口径：★★ 它是「该指标在**单 token 响应**上**不可定义**」的逐字依据 ⇒ 写「每输出 token 时间」时
 #       **必须说明它的分母口径**（响应只有 1 个 token 时它无意义）。
 # 消费者：Chunk 5 的 `03-scaling-and-observability`（`C.1` 的指标口径）。
@@ -203,18 +206,21 @@ LAT_PREFILL_COST = 5.0
 # 来源：**[E] 本主题的算例** —— **一次 prefill 步的耗时**（简化：记为一次性的固定延迟，不占调度步的时间）。
 # 口径：★★★ **这是一条写明的简化** —— 真实里 prefill 与 decode **共享算力**（耦合模型正文在
 #       `120-inference/batching-and-scheduling/02-chunked-prefill`）；本模型把 prefill 记成**独立的 prefill 步**。
-# 消费者：`01` 的 `A.2` / `A.3` / `B.4` / `D.7`。
+# 消费者：`01` 的 `A.2` / `A.3` / `B.3` / `D.7`。
 # 同值位置：无。
 
 LAT_STEP_FIXED = 2.0
 # 来源：**[E] 本主题的算例** —— 步耗时模型里的**固定项** `α`（与在飞请求数无关的开销）。
-# 口径：★★ 它是「批处理能省掉的那部分」—— `β` 才是随批线性增长的那部分（两者之比决定吞吐的上界）。
+# 口径：★★ 它是「批处理能省掉的那部分」—— `β` 才是随批线性增长的那部分；★★★ **步吞吐 `n / S(n)` 的
+#       渐近上界只由 `β` 定**（`n → ∞` 时 `→ 1 / β`），`α / β` 只影响**趋近它的速率**（不是上界本身）。
 # 消费者：`01` 的 `A.1` / `B.1` / `B.2` / `D.7`。
 # 同值位置：无。
 
 LAT_STEP_PER_REQ = 0.5
 # 来源：**[E] 本主题的算例** —— 步耗时模型里的**每请求项** `β`。
-# 口径：★★★ **吞吐的渐近上界 = `1 / β`**（`n → ∞`）—— 这是一个**免费守卫**（`01` 的 `B.2`）。
+# 口径：★★★ 它是**【步吞吐】`n / S(n)` 的渐近上界**（`n → ∞` 时 `→ 1 / β = 2.0`）—— ★★ **不是**本程序
+#       `throughput()` 的（那是 `N·D / makespan`：`B = N` 时 `2.0168 > 1 / β = 2.0`，**两个量**）。
+#       ★ `01` 的 `B.2` 现为**两端点闭式**（`B=1` / `B=N` 各有唯一解），**不再守 `1 / β`**。
 # 消费者：`01` 的 `A.1` / `B.1` / `B.2` / `D.7`。
 # 同值位置：无。
 
@@ -226,8 +232,8 @@ LAT_BATCH_GRID = (1, 2, 4, 10, 20, 30, 60)
 
 LAT_ARRIVE_PERIOD = 12.0
 # 来源：**[E] 本主题的算例** —— **持续到达**模型里相邻两次到达的间隔（固定间隔，不用随机 ⇒ 可复现）。
-# 口径：★★ 它是 `B.4` 的第二个工作负载：**到达发生在服务过程中** ⇒ 排队时间真的出现（与一次到齐的 `B.1` 对照）。
-# 消费者：`01` 的 `B.4` / `D.7`。
+# 口径：★★ 它是 `B.3` 的第二个工作负载：**到达发生在服务过程中** ⇒ 排队时间真的出现（与一次到齐的 `B.1` 对照）。
+# 消费者：`01` 的 `B.3` / `D.7`。
 # 同值位置：无。
 
 
@@ -323,7 +329,7 @@ ROUTE_N_REQ = 800
 
 ROUTE_N_TEMPLATE = 8
 # 来源：**[E] 本主题的算例** —— **共享前缀模板**的个数（★ 每个模板有一批请求复用它的前缀）。
-# 口径：★★ 它是「前缀共享」这个前提的载体：`N_TEMPLATE = 1` 时就退化成「所有请求共享一个前缀」（`C.3` 的反例）。
+# 口径：★★ 它是「前缀共享」这个前提的载体：`N_TEMPLATE = 1` 时就退化成「所有请求共享一个前缀」（`C.2` 的反例）。
 # 消费者：`03` 的 `A.1` / `B.1` / `D.7`。
 # 同值位置：无。
 
@@ -341,8 +347,17 @@ QUEUE_ARRIVAL_RATE = 0.9
 
 QUEUE_SERVICE_RATE = 1.0
 # 来源：**[E] 本主题的算例** —— **服务率** `μ`。
-# 口径：★ `ρ = λ / μ`；★ `ρ ≥ 1` 时排队无界（`C.4` 的反例格）。
+# 口径：★ `ρ = λ / μ`；★ `ρ ≥ 1` 时排队无界（★ 本文算例只取 `ρ = 0.9 < 1`，发散趋势见 `B.2` 的 `ρ → 1`）。
 # 消费者：`03` 的 `A.2` / `B.2` / `D.7`。
+# 同值位置：无。
+
+APC_DEFAULT_DECLARED_IN_SOURCE = False
+# 来源：**[E] 本库的记载**（★ 不是任何来源里的话）—— ★ 取数到的那两个 vLLM 页面
+#       （`features/automatic_prefix_caching` 与 `design/` 下相关页）**均未声明** APC（自动前缀缓存）
+#       是否**默认开启**（计划 `§0.7 C.5` 的 `F5`）。
+# 口径：★★★ 它是一条**禁写挡板**：`F5` 禁止写「APC **默认开启**」—— ★ 因为**未取到**该声明。
+#       ★★ 取值 `False` 表示「**没有取到**默认值声明」；写成 `True` 就等于**擅自给它加了一个默认值**。
+# 消费者：`03` 的 `D.6`（`F5` 的机械守卫；★ 抬头禁写清单与它成对）。
 # 同值位置：无。
 
 QUEUE_N_SAMPLE = 120000

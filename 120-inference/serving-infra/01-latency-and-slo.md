@@ -27,7 +27,8 @@ updated: 2026-10-09
 > **没有一个 `B` 能让两头同时最优** —— 这就是服务侧一切取舍的起点。
 >
 > ★★★ **本主题【有真 A 类】**：本文程序用一个**离散事件模拟器**（按步推进、量事件时间戳）
-> 与一套**闭式**（纯代数）**两条独立路径**互相对拍。
+> 与一套**闭式**（纯代数）**两条独立路径**互相对拍。★★ **如实标注（S1）**：`A.1`/`A.2`/`A.3`
+> **共用同一对**被测/参照（**不是三条独立参照** —— 是同一个被测量了**三个不同的量**）。
 > ★★ **本文只写这两个延迟的【算术与它们的关系】** —— 别处的正文一律回链：
 > **chunked prefill 的分块数权衡** → [02-chunked-prefill](../batching-and-scheduling/02-chunked-prefill.md)；
 > **continuous batching 的收益来源** → [01-iteration-level-scheduling](../batching-and-scheduling/01-iteration-level-scheduling.md)；
@@ -45,20 +46,20 @@ updated: 2026-10-09
 | **自回归解码** | 第一个 token → 最后一个 token | 用户（**一个字一个字地看**） |
 
 前两段之和就是 **TTFT**；第三段被切成 `(输出长度 − 1)` 个间隔，每个间隔就是
-**inter-token latency**（★ **vLLM 的官方词**；见 §4.3）。
+**inter-token latency**（★ **vLLM 的官方词**；见 §4.1）。
 
 **一个具体的对照场景**（本文程序的真算例，`code/01_latency_and_slo.py`）：
 
 `60` 条请求、每条解码 `12` 个 token、**同时到达**、在飞上限 `B`。一步（一次 iteration）的
 耗时模型是 `2.0 + 0.5 × 在飞请求数`。把 `B` 从 `1` 调到 `60`：
 
-| `B` | inter-token latency | 吞吐（token / 单位时间） |
+| `B` | inter-token latency | 端到端吞吐 `N·D/makespan`（token / 单位时间） |
 |---|---|---|
 | `1` | **`2.5`** | `0.3692` |
 | `60` | **`32.0`** | `2.0168` |
 
-⇒ ★★★ **同一个旋钮，两个方向**：`B` 变大，**inter-token latency 涨 `12.8` 倍**，
-**吞吐涨 `5.46` 倍**。这不是「调参没调好」，而是**两个延迟与吞吐在同一个批里的必然交换**。
+⇒ ★★★ **同一个旋钮，两个走向**：`B` 变大，**inter-token latency 涨 `12.8` 倍**（流不流畅**变差**），
+**吞吐涨 `5.46` 倍**（服务能力**变好**）。这不是「调参没调好」，而是**两个延迟与吞吐在同一个批里的必然交换**。
 
 ## 1. 原理
 
@@ -82,9 +83,15 @@ updated: 2026-10-09
 
 - **inter-token latency = 一步的耗时 `S(n)`** —— 一个 decode 步恰好产出 `n` 个 token（每请求一个），
   所以**相邻两个 token 之间的时间就是这一步的耗时**；
-- **吞吐 = `n / S(n)`** —— 一步产出 `n` 个 token、花 `S(n)` 时间。
+- ★★ **步吞吐 = `n / S(n)`** —— 一步产出 `n` 个 token、花 `S(n)` 时间；
+- ★★ **端到端吞吐 = `N·D / makespan`** —— 整批请求的 token 数除以总时间（§0 与 §2 的表用的是**这一个**）。
 
-⇒ **两者都由 `n` 决定，且一个升一个降**。这是本文全部结论的来源。
+⇒ ★★★ **两个吞吐口径不是同一个量**：`B=N` 时**步吞吐的渐近上界**是 `1/β = 2.0`，
+而**端到端吞吐**是 `2.0168 > 2.0`（★ 一个按「一步」算、一个按「整批」算）。
+★★ **本文一律标注用的是哪一个**；把两者混叫「吞吐」正是 §4 的失败模式之一。
+
+⇒ **两者都由 `n` 决定，且一个变差、一个变好**（ITL 与吞吐的**数值都升**，但一个是延迟、一个是速率）。
+这是本文全部结论的来源。
 
 ### 第三步：TTFT = 排队 + prefill（+ 首 token）
 
@@ -121,7 +128,7 @@ ITL(相位 k)   = S(n_k)
 ★ 一旦步数不对，说明推进逻辑变了 —— 这是最便宜的一条哨兵。
 
 **（2）`n` 是引擎里唯一的「旋钮」**：它同时定 **ITL（`S(n)`）**、
-**吞吐（`n/S(n)`）**、**TTFT（经由相位数）**。§3 的表把这三条一起列出来。
+**步吞吐（`n/S(n)`）**、**TTFT（经由相位数）**。§3 的表把这三条一起列出来。
 
 **（3）★★ 两个「延迟」的名字必须分清楚**：
 - **TTFT**：只发生**一次**（每个请求一次），它是「**多久开始看到东西**」；
@@ -131,7 +138,7 @@ ITL(相位 k)   = S(n_k)
 
 **（4）本文算例的实际数字**（`make run`，`code/01_latency_and_slo.py`）：
 
-| `B` | ITL | 吞吐 | makespan |
+| `B` | ITL | 端到端吞吐 `N·D/makespan` | makespan |
 |---|---|---|---|
 | `1` | `2.5000` | `0.3692` | `1950.00` |
 | `2` | `3.0000` | `0.6316` | `1140.00` |
@@ -180,9 +187,9 @@ ITL(相位 k)   = S(n_k)
 
 - **现象**：拿 vLLM 的 TTFT 指标直接当「用户等了多久」；
 - **成因**：★★★ vLLM 的 TTFT **从 `request was scheduled` 起算**（逐字：「Time from when the request
-  was **scheduled** until the first output token was generated」）—— **不含排队**；
+  was **scheduled** until the first output token was generated (TTFT).」）—— **不含排队**；
   而本库口径是「**从到达**到首 token」，**含排队**；
-- **本文实测**（`C.2`）：两条口径的引文**逐字钉住**；vLLM 的 `generation_time` 还**显式排除**
+- **本库算例**（`C.2`）：两条口径的引文**逐字钉住**；vLLM 的 `generation_time` 还**显式排除**
   「queue wait and prefill/TTFT」；
 - **规避**：★★★ **报一个延迟前先问「它的起算点是什么」** —— 起算点不同，量就不同。
 
@@ -190,7 +197,7 @@ ITL(相位 k)   = S(n_k)
 
 - **现象**：为了吞吐把 `B` 拉满，用户说「卡顿」；为了流畅把 `B` 调到 1，吞吐塌了；
 - **成因**：★★★ ITL 与吞吐是 `n` 的**同一个单调函数的两个读数**（§2 表：两列**同向**）；
-- **本文实测**（`B.1`）：ITL `2.5 → 32.0` 与吞吐 `0.37 → 2.02` **同时上升** ⇒
+- **本库算例**（`B.1`）：ITL `2.5 → 32.0` 与吞吐 `0.37 → 2.02` **同时上升** ⇒
   **没有一个 `B` 同时最优**（ITL 最小在 `B=1`，吞吐最大在 `B=60`）；
 - **规避**：★★ **先写 SLO，再选 `B`** —— `B` 是**在 SLO 内**最大化吞吐的那一点，不是「越大越好」。
 
@@ -232,7 +239,7 @@ ITL(相位 k)   = S(n_k)
 - ★★ **扩缩容 / 路由 / 指标口径** → [03-scaling-and-observability](03-scaling-and-observability.md)；
 - ★★★ **chunked prefill 的分块数权衡 `k*`** → [02-chunked-prefill](../batching-and-scheduling/02-chunked-prefill.md)（**正文在彼处**）；
 - ★★ **continuous batching 的收益来源（长度方差）** → [01-iteration-level-scheduling](../batching-and-scheduling/01-iteration-level-scheduling.md)（**正文在彼处**）；
-- ★ **单调延迟指标在真实剖面里的用法** → `45-kernel-lifecycle/requirement-discovery/03-optimization-priority`（**正文在彼处**）。
+- ★ **真实剖面里的 TTFT 数字**（CPU 剖面的 `1070 ms`）→ `45-kernel-lifecycle/requirement-discovery/03-optimization-priority:205,315`（**正文在彼处**）。
 
 ## 参考
 
@@ -243,7 +250,7 @@ ITL(相位 k)   = S(n_k)
 - ★★ **一条载体纪律**：vLLM 的两个 metrics 页面上**没有**那个社区缩写（`grep` 计数 = **`0`**）。
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
   · chunked prefill 的耦合模型 → [02-chunked-prefill](../batching-and-scheduling/02-chunked-prefill.md)；
-  · 单调延迟指标 → `45-kernel-lifecycle/requirement-discovery/03-optimization-priority`。
+  · 真实剖面里的 TTFT 数字（`1070 ms`）→ `45-kernel-lifecycle/requirement-discovery/03-optimization-priority:205,315`。
 - ★ **一条术语纪律**：本文一律写「**KV 缓存**」「**请求调度器**」全称。
 
 ## 编译与运行
@@ -258,7 +265,8 @@ make 01_latency_and_slo                   # ★★ 与上一行**不等价**：�
 ★★★ **本文的程序【有真 A 类】**（`D.0` 用 **AST 扫自己的源码**证明 `check("A…")` 的调用数 ≥ 3）：
 **离散事件模拟器 vs 闭式**，两条无共享代码的独立路径。
 
-★ `A.1`/`A.2`/`A.3` 断言**逐请求的 ITL / makespan / TTFT** 两条路径逐位一致；
+★ `A.1`/`A.2`/`A.3` 断言**逐请求的 ITL / makespan / TTFT** 两条路径逐位一致（★★ **三者共用**同一对
+被测/参照 —— 见抬头与 `D.8`）；
 ★ `B.1`–`B.3` 是**两个延迟的冲突**与 TTFT 的分解；★ `C.1`–`C.3` 是**禁写的真现场**与两端边界；
 ★ `D.4` 是**守卫实验**（把准入上限改成 `B + 1` ⇒ 断言必须失败）；
 ★ `D.5` 是**六条引文逐字钉住**；★ `D.9` 是**术语纪律**（`裸写被禁 ASCII 词的计数 == 显式豁免清单覆盖数`）。

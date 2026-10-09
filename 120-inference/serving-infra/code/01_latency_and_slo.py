@@ -39,7 +39,7 @@ r"""01_latency_and_slo.py —— **两个延迟**（TTFT 与 inter-token latency
   · `A.2` ★★★ **makespan**：模拟器**量出**的总时间 == 参照的 `Σ_k (prefill + (D−1)·步耗时)`；
   · `A.3` ★★★ **TTFT**：模拟器**量出**的逐请求 TTFT == 参照的 `相位起点 + prefill`；
   · `B.1` ★★ **两个延迟的冲突**：`B ↑` ⇒ ITL **单调升**、吞吐**单调升**（⇒ 没有一个 `B` 两头都好）；
-  · `B.2` ★ **吞吐的渐近上界** = `1 / β`（免费守卫，两端各一）；
+  · `B.2` ★ **两个端点的闭式**（`B = 1` 与 `B = N` 各有唯一解；★ **不守 `1 / β`** —— 那是**步吞吐**的上界，与本程序的 `throughput()` 是两个量）；
   · `B.3` ★★ **TTFT 的分解**（排队 + prefill + 首 token）与**两个工作负载下方向不同**（数值驱动）；
   · `C.1` ★★★ **把社区缩写当 vLLM 官方词**必须被拒（`F9`）；
   · `C.2` ★★★ **两个 TTFT 口径**：vLLM 的从 `scheduled` 起（不含排队），本库的含排队；
@@ -330,17 +330,28 @@ def part_B():
         print("     %-8d %-14.4f %-14.4f %-14.2f" % (B, itl, thr, mk))
     itl_m = all(rows[i][1] < rows[i + 1][1] for i in range(len(rows) - 1))
     thr_m = all(rows[i][2] < rows[i + 1][2] for i in range(len(rows) - 1))
-    print("     ★★ ITL **单调升** = %s · 吞吐 **单调升** = %s" % (itl_m, thr_m))
+    # ★★★ **整表逐格钉住**（D1）：正文 §2 的表把 7 行当「本机实测值」列出 ⇒ ★ **每一格都要有 `==` 复核**，
+    #   只查单调性与端点等于**给错的那几格开后门**。★ `rows` 来自 `simulate()`，这里是**闭式**复核（两个量）。
+    pref = specs.LAT_PREFILL_COST
+    bad_cells = []
+    for (B, itl, thr, _ttft, mk) in rows:
+        nph = N // B                     # ★ 每个 `B` 都整除 `N` ⇒ 相位满、相位内 `n` 恒为 `B`
+        c = a + b * B
+        mk_exp = nph * (pref + (D - 1) * c)
+        if not (abs(itl - c) < 1e-12 and abs(thr - N * D / mk_exp) < 1e-12 and abs(mk - mk_exp) < 1e-12):
+            bad_cells.append(B)
+    print("     ★★ ITL **单调升** = %s · 吞吐 **单调升** = %s · **整表 %d 行 × 3 列逐格 == 闭式** = %s"
+          % (itl_m, thr_m, len(rows), not bad_cells))
     print("     ★★★ **读法**：这两行**同向变动** ⇒ ★ **没有任何一个 `B` 能同时让两头都最优** ——")
     print("        ITL 最小在 `B = %d`（%.4f），吞吐最大在 `B = %d`（%.4f）。"
           % (rows[0][0], rows[0][1], rows[-1][0], rows[-1][2]))
-    check("B.1", itl_m and thr_m and len(rows) == len(specs.LAT_BATCH_GRID)
+    check("B.1", itl_m and thr_m and not bad_cells and len(rows) == len(specs.LAT_BATCH_GRID)
           and abs(rows[0][1] - (a + b * 1)) < 1e-12
           and abs(rows[-1][1] - (a + b * specs.LAT_BATCH_GRID[-1])) < 1e-12,
           "★★ **判据成立**：ITL 从 **%.4f**（`B=1`）升到 **%.4f**（`B=%d`），吞吐同时从 **%.4f** 升到 **%.4f**"
-          " —— ★★ 两行**同向** ⇒ **冲突成立**（`F9` 那条禁写与本节无关，见 `C.1`）"
-          % (rows[0][1], rows[-1][1], specs.LAT_BATCH_GRID[-1], rows[0][2], rows[-1][2]),
-          "**单调性或端值被动过** —— ★ 先查 `LAT_BATCH_GRID` / `LAT_STEP_FIXED` / `LAT_STEP_PER_REQ`")
+          " —— ★★ 两行**同向** ⇒ **冲突成立**；★★ **整表 %d 行 × 3 列（ITL/吞吐/makespan）逐格 == 闭式**"
+          % (rows[0][1], rows[-1][1], specs.LAT_BATCH_GRID[-1], rows[0][2], rows[-1][2], len(rows)),
+          "**单调性、端值或表中某一格被动过** —— ★ 先查 `LAT_BATCH_GRID` / `LAT_STEP_FIXED` / `LAT_STEP_PER_REQ`")
 
     # ── B.2 ★ **两端的闭式**（免费守卫：端点各有唯一解）──────────────────
     print()
@@ -601,7 +612,7 @@ def part_D():
 
     # ── D.5 ★★★ 逐字引文钉住（★ 关键引文一律 `==`，不用 `in`）──────────────
     check("D.5", specs.VLLM_TTFT_DEFINITION_QUOTE
-          == ("Time from when the request was scheduled until the first output token was generated")
+          == ("Time from when the request was scheduled until the first output token was generated (TTFT).")
           and specs.VLLM_ITL_DEFINITION_QUOTE
           == ("Mean inter-token latency (average time between successive output tokens) "
               "during the decode phase.")
@@ -641,6 +652,9 @@ def part_D():
           % ("closed_form" in sim_names, "simulate" in cf_names))
     print("     ★★★ **降级措辞**：这只是「**两段代码不互相引用**」的**源码级线索**，"
           "**不证明**判据有信息量 —— 后者由 `A.1`/`A.2`/`A.3` 与 `D.4` 的**行为**兜底。")
+    print("     ★★ **如实标注（S1）**：`A.1`/`A.2`/`A.3` **共用同一对**被测/参照"
+          "（都是 `simulate()` vs 同一个 `closed_form()`）—— ★ **不是三条独立参照**，"
+          "而是**同一个被测**量了**三个不同的量**（ITL / makespan / TTFT）；★ 真正兜底的是 `D.4` 的**行为守卫**。")
     check("D.8", "closed_form" not in sim_names and "simulate" not in cf_names
           and "step_cost" in sim_names and "step_cost" in cf_names
           and "phases_for" not in sim_names,

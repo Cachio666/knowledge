@@ -18,6 +18,9 @@ r"""02_inference_parallelism_and_pd.py —— ★★★ **承接两处让渡**�
 ★★★ **一行的硬边界（只回链，不重写）**：
   · ★★★ **并行策略的六轴本身**（数据/张量/流水/序列/专家/状态）→ `100-parallelism` 全域；
   · ★★★ **通信的机制**（集合通信原语 / NCCL / 拓扑 / 重叠）→ `110-communication` 全域；
+  · ★★★ **EP（专家并行）**：★ 两处让渡**逐字都含 `EP`**，但本域**显式不接** ——
+    `02` 的 §1.4 明写「**它与训练侧无实质差异**」这条理由（`CONTRIBUTING` 反模式 1）⇒
+    正文 → `100-parallelism/expert-parallel` + `110-communication/collectives`；★★ **不是默认省略**；
   · **训练侧的气泡推导**（`(m+p−1)(t_f+t_b)` / 两个口径）→ `100-parallelism/pipeline-parallel/01`；
   · **chunked prefill 的分块数权衡** → 本域 `batching-and-scheduling/02`；
   · **KV 缓存的「账」** → `130-quantization/kv-cache-quantization/01`；
@@ -171,16 +174,20 @@ def bubble_rate_megatron(p, m):
 # 2. A.2 的被测：**KV 头到设备的分配**（逐头，不用闭式）
 # ===========================================================================
 def assign_kv_heads(h_kv, t):
-    """★★★ **被测实现（II）**：把 `h_kv` 个 **KV 头**逐个分给 `t` 个设备 —— **逐头分配**，数每设备几个。
+    """★★★ **被测实现（II）**：把 `h_kv` 个 **KV 头**分给 `t` 个设备，数每设备几个。
 
-    ★★★ **切分粒度下限**：一个 KV 头**不可再分** ⇒ 能切出的份数最多 `h_kv`
-      ⇒ `t > h_kv` 时**只能复制**、每设备仍要装 **1 个头**。
+    ★★★ **切分粒度下限**：一个 KV 头**不可再分** ⇒ 能切出的**不同**份数最多 `h_kv`
+      ⇒ `t > h_kv` 时**只能复制**：每台设备仍装 **1 个头**（某一个头的副本），**没有设备是 0 头**。
+      ★★ 这正是推理侧的真实行为 —— **复制 KV 头**给多台设备，而**不是让设备闲置**。
     ★ 返回 `(每设备头数列表, 每设备最大头数)`。
     """
-    s = h_kv if h_kv < t else t          # ★ 可用的「份数」= min(头数, 设备数)
     per = [0] * t
-    for h in range(h_kv):
-        per[h % s] += 1
+    if h_kv >= t:
+        for h in range(h_kv):            # ★ 按头切：第 `h` 头 → 设备 `h % t`（每设备 `h_kv / t` 头）
+            per[h % t] += 1
+    else:
+        for d in range(t):               # ★ 复制：第 `d` 台装第 `d % h_kv` 头的副本 ⇒ 每台恰 `1` 头
+            per[d] = 1
     return per, max(per)
 
 
@@ -291,6 +298,10 @@ def part_A():
     mismatch = [k for k in verdict_sim if verdict_sim[k] != verdict_cf[k]]
     nstars = {P: pd_threshold_closed(cp, b_kv, bw, ov, P) for P in specs.PD_PREFILL_LEN_GRID}
     nstar0 = {P: pd_threshold_closed(cp, b_kv, bw, 0.0, P) for P in specs.PD_PREFILL_LEN_GRID}
+    # ★★★ **逐值钉住 `n*(P)`**（C10）：只钉裁决会让 `pd_threshold_closed` 差一个常数仍全绿
+    #   （`+1.0` 不改变任何一格的裁决）⇒ ★ `n*` 的**每个值**都要有 `==`。
+    nstar_vals = (4.0625, 2.890625, 2.59765625, 2.5244140625)
+    nstar_ok = all(abs(nstars[P] - v) < 1e-9 for P, v in zip(specs.PD_PREFILL_LEN_GRID, nstar_vals))
     print("     `b_kv/bw = %.5f` ms/token · `c_p = %.3f` ms/token · 一次性开销 = %.2f ms" % (b_kv / bw, cp, ov))
     print("     %-10s %-14s %-14s" % ("P", "临界 n*", "（无开销时 n*）"))
     for P in specs.PD_PREFILL_LEN_GRID:
@@ -298,12 +309,15 @@ def part_A():
     print("     ★★ **裁决不一致的格数 = %d**（应 `0`）" % len(mismatch))
     print("     ★★★ **读法**：`n*` **随 `P` 上升而下降**（趋于 `(b_kv/bw)/c_p = %.4f`）；" % (b_kv / bw / cp))
     print("        ★★ **`overhead = 0` 时 `n*` 与 `P` 无关**（恒为 %.4f）—— 那是本文一条可证伪的结论。" % (b_kv / bw / cp))
-    check("A.3", not mismatch and abs(nstar0[specs.PD_PREFILL_LEN_GRID[0]] - nstar0[specs.PD_PREFILL_LEN_GRID[-1]]) < 1e-12
+    check("A.3", not mismatch and nstar_ok
+          and abs(nstar0[specs.PD_PREFILL_LEN_GRID[0]] - nstar0[specs.PD_PREFILL_LEN_GRID[-1]]) < 1e-12
           and nstars[specs.PD_PREFILL_LEN_GRID[0]] > nstars[specs.PD_PREFILL_LEN_GRID[-1]]
           and not verdict_sim[(16, 1)] and verdict_sim[(1024, 8)],
-          "★★★ **判据成立**：**%d 格**的裁决两条路径**逐格一致**；★ 带一次性开销时 `n*` **随 `P` 下降**"
+          "★★★ **判据成立**：**%d 格**的裁决两条路径**逐格一致**；★ **`n*(P)` 四值逐位钉住**"
+          "（`%.4f / %.6f / %.6f / %.6f`）；★ 带一次性开销时 `n*` **随 `P` 下降**"
           "（`%.3f → %.3f`），★ 而无开销时**恒为 %.4f**（与 `P` 无关）—— ★★ 「与 `P` 无关」这条结论**可证伪且成立**"
-          % (len(verdict_sim), nstars[specs.PD_PREFILL_LEN_GRID[0]], nstars[specs.PD_PREFILL_LEN_GRID[-1]], b_kv / bw / cp),
+          % (len(verdict_sim), nstar_vals[0], nstar_vals[1], nstar_vals[2], nstar_vals[3],
+             nstars[specs.PD_PREFILL_LEN_GRID[0]], nstars[specs.PD_PREFILL_LEN_GRID[-1]], b_kv / bw / cp),
           "**PD 裁决不一致（或 `n*` 的走向不对）** —— ★ 先查 `sim_pd` 与 `pd_threshold_closed`")
 
 
@@ -345,21 +359,23 @@ def part_B():
     # ── B.2 ★★ 每设备 KV 头数 ───────────────────────────────────────────
     print()
     print("  ── B.2 ★★ **每设备 KV 头数 vs `(h_kv, t)`**（★ 下限是 1 头）──")
-    print("     %-10s %-14s %-16s %-16s" % ("(h_kv,t)", "每设备头数", "KV 相对单卡", "线性会写成"))
+    print("     %-10s %-16s %-16s %-16s" % ("(h_kv,t)", "每设备头数(列表)", "KV 相对单卡", "线性(1/t)"))
     rows2 = []
     for h_kv, t in specs.TP_KV_HEAD_GRID:
         per, mx = assign_kv_heads(h_kv, t)
-        rows2.append((h_kv, t, mx, mx / h_kv))
-        print("     %-10s %-14d %-16.4f %-16.4f" % ("(%d,%d)" % (h_kv, t), mx, mx / h_kv, (h_kv / t) / h_kv))
+        rows2.append((h_kv, t, mx, mx / h_kv, per))
+        print("     %-10s %-16s %-16.4f %-16.4f" % ("(%d,%d)" % (h_kv, t), per, mx / h_kv, (h_kv / t) / h_kv))
     print("     ★★ **读法**：`KV 相对单卡` = 每设备头数 / 单卡头数 —— 它**只在 `h_kv ≥ t` 时**才等于 `1/t`；")
-    print("        `h_kv < t` 时**卡在 `1/h_kv`**（★ 复制）⇒ ★★ **再加 TP 度也压不下去**。")
+    print("        `h_kv < t` 时**卡在 `1/h_kv`**（★ **复制**：每台 1 头，**没有 0 头设备**）⇒ ★★ **再加 TP 度也压不下去**。")
     floor_ok = all(r[2] >= 1 for r in rows2)
-    check("B.2", floor_ok and len(rows2) == 5
+    replic_ok = all(min(per) >= 1 for _h, _t, _mx, _p, per in rows2)   # ★ 每台设备至少 1 头（复制）
+    check("B.2", floor_ok and replic_ok and len(rows2) == 5
           and abs(rows2[2][3] - 0.5) < 1e-12 and abs(rows2[3][3] - 0.5) < 1e-12,
-          "★★ **判据成立**：**5 格**的每设备头数**全部 ≥ 1**（★ 下限是 1 头）；`(4,2)` 与 `(2,8)` 的"
-          "「KV 相对单卡」都是 **%.2f** —— ★ `(2,8)` 用 8 张卡却只把 KV 压到一半（★ 线性会说 `1/8`）"
+          "★★ **判据成立**：**5 格**的每设备头数**全部 ≥ 1**（★ 下限是 1 头；`h_kv < t` 时**复制**、"
+          "**没有 0 头设备**）；`(4,2)` 与 `(2,8)` 的「KV 相对单卡」都是 **%.2f** —— "
+          "★ `(2,8)` 用 8 张卡却只把 KV 压到一半（★ 线性会说 `1/8`）"
           % rows2[3][3],
-          "**每设备头数或下限被动过** —— ★ 先查 `assign_kv_heads`")
+          "**每设备头数、下限或「复制」行为被动过** —— ★ 先查 `assign_kv_heads`")
 
     # ── B.3 ★★ PD 裁决网格 ─────────────────────────────────────────────
     print()
@@ -382,12 +398,17 @@ def part_B():
     n_split = sum(1 for v in grid_split.values() if v)
     print("     ★★ 分离更优的格数 = **%d / %d**；★★ **`n = 1` 那一列全是「耦合」**（只有一个人被阻塞）"
           % (n_split, len(grid_split)))
-    check("B.3", n_split == 7 and all(not grid_split[(P, 1)] for P in specs.PD_PREFILL_LEN_GRID)
-          and all(grid_split[(P, 8)] for P in specs.PD_PREFILL_LEN_GRID)
-          and grid_split[(16, 4)] is False and grid_split[(64, 4)] is True,
-          "★★ **判据成立**：**16 格**里 **7 格**分离更优；★ `n=1` 列**全耦合**（反例），`n=8` 列**全分离**；"
-          "★ `n=4` 时 `P=16` 耦合、`P=64` 分离 ⇒ **临界随 `P` 移动**",
-          "**PD 网格被动过** —— ★ 先查 `PD_*` 与 `sim_pd`")
+    # ★★★ **整表 16 格逐格钉住**（H5）：只钉 `n=1`/`n=8` 两列与 `n_split == 7`
+    #   ⇒ ★ `n=2` 整列 + `(256,4)`/`(1024,4)` **无覆盖**，而总数约束满足时**另一配置也成立**。
+    expect_split = {(16, 1): False, (16, 2): False, (16, 4): False, (16, 8): True,
+                    (64, 1): False, (64, 2): False, (64, 4): True, (64, 8): True,
+                    (256, 1): False, (256, 2): False, (256, 4): True, (256, 8): True,
+                    (1024, 1): False, (1024, 2): False, (1024, 4): True, (1024, 8): True}
+    grid_ok = all(grid_split[k] == v for k, v in expect_split.items())
+    check("B.3", n_split == 7 and len(grid_split) == 16 and grid_ok,
+          "★★ **判据成立**：**16 格逐格 == 预期**（其中 **7 格**分离更优）；★ `n=1`/`n=2` 两列**全耦合**（反例），"
+          "`n=8` 列**全分离**；★ `n=4` 时 `P=16` 耦合、`P=64/256/1024` 分离 ⇒ **临界随 `P` 移动**",
+          "**PD 网格被动过（含 `n=2` 列与 `(256,4)`/`(1024,4)` 两格）** —— ★ 先查 `PD_*` 与 `sim_pd`")
 
 
 # ===========================================================================
