@@ -29,7 +29,7 @@
 #    ★★ **另有三条硬边界**：`S×S` 矩阵的访存账（FlashAttention 的字节数收益）→
 #      `40-kernels/attention/03-flash-attention-backward.md`；位置编码的外推 →
 #      `80-model-architectures/positional-encoding/02,03`；集合通信原语的算法与复杂度 →
-#      `110-communication/collectives`）与 `10-foundations/performance-models/02:209`。
+#      `110-communication/collectives`与 `10-foundations/performance-models/02:209`。
 #
 # ★★★ **本主题最要紧的三处形态风险**（每一条都对应一个程序里的真实现场）：
 #    · **`01` 的 A 类是「恒等式核对」，不是「实现 vs 参照」** —— 它的三式都是从 `specs.py`
@@ -87,7 +87,7 @@
 #     **「在线 softmax」的 `(m, l)` 更新公式本身** → `40-kernels/softmax-normalization/02-online-softmax.md`；
 #     **`S×S` 矩阵的访存账** → `40-kernels/attention/03-flash-attention-backward.md`；
 #     **位置编码的外推** → `80-model-architectures/positional-encoding/02,03`；
-#     **集合通信原语的算法与复杂度** → `110-communication/collectives`（与
+#     **集合通信原语的算法与复杂度** → `110-communication/collectives`与
 #     `10-foundations/performance-models/02:209`；**TP 每层 `2+2` 次 all-reduce** →
 #     `tensor-parallel/03` 与 `10-foundations/performance-models/02:417`（★ **不是 `:223`**）。
 #   ★ **本主题的 `ASSERT_FAIL_MARK`**：`{{ FAIL: seq-context-parallel`（**每个主题一个，不跨主题照抄**；

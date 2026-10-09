@@ -63,7 +63,7 @@ updated: 2026-09-23
 | 本文**写** | 本文**不写**（回链目标） |
 |---|---|
 | **切法本身**：列/行各切哪一维、谁要通信 | ★★★ **TP 的通信模式与规模上限**（通信发生在**每一层内部** · 通信量与**激活**成正比而不是与参数量成正比 · **只在高带宽互联上可用 / 通常限于单节点 8 卡** · 规模上限由节点内互联决定）—— 这三条**已经由 `10-foundations/performance-models/02-amdahl-and-scaling.md:223` 逐字写完** ⇒ **本文不重写它的【结论】**（★ **本文复述它哪一句、补它哪一句**见 §1.6 与 §5：**复述**「每层前向 `2` 次」、**补**上**后向那 `2` 次**的逐字出处），只回链 |
-| **配对约束**（列后面必须是行）与它的**代价含义** | **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S`、reduce-scatter / all-gather 的阶段划分）→ `110-communication/collectives`）、`performance-models/02:209` |
+| **配对约束**（列后面必须是行）与它的**代价含义** | **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S`、reduce-scatter / all-gather 的阶段划分）→ `110-communication/collectives`、`performance-models/02:209` |
 | **「列并行为什么非得在前面」的机制**（原文逐字：非线性 ⇒ 同步点） | **GEMM 的 tiling / 分块 / 层级**（本域只写「矩阵怎么切到**设备**上」，不写「一个 GEMM 怎么切到 **block** 上」）→ `40-kernels/gemm/`、`30-gpu-programming/cutlass/02-hierarchical-tiling.md` |
 | 每层 all-reduce 的**次数**（与 [C] 的逐字对拍） | **注意力变体的结构**（MHA / MQA / GQA、KV head 配比）→ `80-model-architectures/attention-variants/01-mha-mqa-gqa.md`；★ 头怎么分给设备在 `02-heads-and-vocab.md` |
 | —— | **通信-计算重叠的机制**（双缓冲、分块流水）→ `110-communication` 的 `overlap` |
@@ -407,7 +407,7 @@ BLAS 路径噪声（差**不保证非零**）⇒ **两种情形都不能当 A �
 - **DP 那一侧的对照**（为什么梯度是**平均**不是求和） ⇒
   `100-parallelism/data-parallel/01-gradient-averaging.md`。
 - **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S`、`S` 的饱和） ⇒
-  `110-communication/collectives`）、
+  `110-communication/collectives`、
   `10-foundations/performance-models/02-amdahl-and-scaling.md:209`（**正文在彼，本文一行都不重推**）。
 - **GEMM 的 tiling / 分块 / 层级**（本文只写「矩阵怎么切到设备上」） ⇒
   `40-kernels/gemm/`、`30-gpu-programming/cutlass/02-hierarchical-tiling.md`。

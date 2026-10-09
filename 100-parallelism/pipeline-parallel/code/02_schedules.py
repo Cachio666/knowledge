@@ -46,7 +46,7 @@ r"""02_schedules.py —— PP 的三种**调度**：GPipe / 1F1B / interleaved�
 
 ★★★ **本主题的禁区（回链，一行都不重写）**：
   · **重算换显存**的机制 → `90-training/autograd-and-backward/02-gradient-checkpointing.md`；
-  · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`）；
+  · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`；
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:223`（★ **不得重写**）。
 

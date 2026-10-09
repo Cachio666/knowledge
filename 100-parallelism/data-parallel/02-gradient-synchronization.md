@@ -61,7 +61,7 @@ updated: 2026-09-23
 
 | 本文**写** | 本文**不写**（回链目标） |
 |---|---|
-| 桶的**划分性质**（完备 / 不重叠 / 大小自由）与三种坏法的**后果** | **梯度规约的算法**（ring / tree allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter 与 all-gather 的**阶段划分**）→ `110-communication/collectives`）、`10-foundations/performance-models/02-amdahl-and-scaling.md:209` |
+| 桶的**划分性质**（完备 / 不重叠 / 大小自由）与三种坏法的**后果** | **梯度规约的算法**（ring / tree allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter 与 all-gather 的**阶段划分**）→ `110-communication/collectives`、`10-foundations/performance-models/02-amdahl-and-scaling.md:209` |
 | 桶的**峰值缓冲**（只算字节）与**启动次数**（接口级） | ★★★ **「通信能藏多少」**（通信-计算重叠的收益）→ `110-communication` 的 `overlap`。★ 本主题**不给这条判据**（见 §2.2） |
 | 桶的边界**与参数张量的边界对齐**（「梯度怎么与参数对齐」） | **拓扑受限的集合通信**（bisection 下界、all-to-all 的跨切口量）→ `20-gpu-architecture/interconnect/03-collectives-on-topology.md` |
 | 「平均」的语义与除数的位置 | ★ **那一条的正文在 `100-parallelism/data-parallel/01-gradient-averaging.md`**（本文只引用它的结论：本程序把「统一除以 `N`」当作既定口径） |
@@ -198,7 +198,7 @@ out ← out / N                              # 统一除以 N（01 的口径）
 
 ⇒ **本主题只写接口**：*桶的作用是让通信能尽早发起；桶数 `k` ⇒ 启动 `k` 次、
 每次搬 `Ψ/k` 个元素*。**「能藏多少」的正文在 `110-communication` 的 `overlap` 主题
-（，此处回链。** ★ 本程序的 `B.2` 只断言那条**接口级的整数恒等**，
+，此处回链。** ★ 本程序的 `B.2` 只断言那条**接口级的整数恒等**，
 **不给任何关于重叠收益的判定**。
 
 ### 2.3 桶的边界与参数张量的边界
@@ -313,7 +313,7 @@ out ← out / N                              # 统一除以 N（01 的口径）
 - **平均的语义（除数在哪一边、`loss` 的口径）** ⇒ `100-parallelism/data-parallel/01-gradient-averaging.md`。
 - **DP 的冗余账（`N` 个副本用 `N × 16Ψ` 存 `16Ψ` 的状态）** ⇒ `100-parallelism/data-parallel/03-redundancy-and-limits.md`。
 - **梯度规约的算法与复杂度（ring allreduce、`V(N)`、它的饱和）** ⇒
-  `110-communication/collectives`）、`10-foundations/performance-models/02-amdahl-and-scaling.md:209`（**正文在彼**）。
+  `110-communication/collectives`、`10-foundations/performance-models/02-amdahl-and-scaling.md:209`（**正文在彼**）。
 - **通信-计算重叠（桶真正买到的东西）** ⇒ `110-communication` 的 `overlap`（本文只留接口）。
 - **集合通信在拓扑上的行为**（bisection 下界、分层） ⇒
   `20-gpu-architecture/interconnect/03-collectives-on-topology.md`（**正文在彼**）。

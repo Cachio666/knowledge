@@ -38,7 +38,7 @@ updated: 2026-10-08
 
 ★ **本文不写集合通信的算法与复杂度**（ring / tree all-reduce、`V(N) = 2(N−1)/N × S`）——
 那是 `10-foundations/performance-models/02-amdahl-and-scaling.md:209,428` 与
-`110-communication/collectives`）的正文（见 `§3.2`）。
+`110-communication/collectives`的正文（见 `§3.2`）。
 
 ## 1. 原理
 
@@ -172,10 +172,10 @@ ZeRO §7.1 逐字（`specs.ZERO_RS_AG_QUOTE`，载体 = ar5iv `1910.02054` 正�
 | 话题 | 在哪 |
 |---|---|
 | **每个阶段的通信量**（`Ψ` 的倍数） | **本文** |
-| **集合通信的算法与复杂度**（ring / tree、`V(N)`、阶段划分） | `10-foundations/performance-models/02:209,428`、`110-communication/collectives`） |
+| **集合通信的算法与复杂度**（ring / tree、`V(N)`、阶段划分） | `10-foundations/performance-models/02:209,428`、`110-communication/collectives` |
 | **拓扑受限的集合通信**（bisection 下界、分层） | `20-gpu-architecture/interconnect/03-collectives-on-topology.md` |
 | **链路带宽的三种口径**与 NVLink / IB 的规格值 | `20-gpu-architecture/interconnect/01-bandwidth-conventions.md` |
-| **通信-计算重叠的机制** | `110-communication/overlap/`（`overlap`） |
+| **通信-计算重叠的机制** | `110-communication/overlap/` |
 | **显存的账**（各阶段每卡几个字节） | [01-three-stages](01-three-stages.md) |
 | **FSDP 的策略与分片后的正确性** | [03-fsdp-and-correctness](03-fsdp-and-correctness.md) |
 
@@ -268,10 +268,10 @@ baseline 里若已含一次 all-gather，那么「多一次」**就是对的**�
 - ★★ **FSDP 的策略与分片后的正确性** → [03-fsdp-and-correctness](03-fsdp-and-correctness.md)；
 - **本域不写、只回链的正文**：
   · **集合通信的算法与复杂度**（`V(N) = 2(N−1)/N × S`、阶段划分）→
-    `10-foundations/performance-models/02:209,428`、`110-communication/collectives`（；
+    `10-foundations/performance-models/02:209,428`、`110-communication/collectives`；
   · **拓扑受限的集合通信** → `20-gpu-architecture/interconnect/03`；
     **链路带宽的三种口径** → 同域 `interconnect/01`；
-  · **通信-计算重叠的机制** → `110-communication/overlap/`（`overlap`，。
+  · **通信-计算重叠的机制** → `110-communication/overlap/`。
 
 ## 参考
 

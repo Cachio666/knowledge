@@ -26,7 +26,7 @@
 #      `90-training/autograd-and-backward/02-gradient-checkpointing.md`（本域**只引**它压的是什么量、
 #      **只写**「PP 下用重算做显存均衡的取舍」）；**transformer block 的结构** →
 #      `80-model-architectures/transformer/`；**点对点通信的实现**与**通信-计算重叠** →
-#      `110-communication/`）。
+#      `110-communication/`。
 #
 # ★★★ **本主题最要紧的一处形态风险**：三个程序**全是模拟器**
 #    （`01` 是离散事件模拟、`02` 是两种调度的模拟、`03` 是纯算术）⇒ A 类判据极易写成**自证**。
@@ -76,7 +76,7 @@
 #      （★ 1F1B 换的是**显存**不是气泡）、**各流水线级的负载均衡**（总时间由最慢的那一级决定）
 #   ★★ **本主题的禁区**：
 #     **通信-计算重叠的机制**（双缓冲 / 分块流水 / 异步落盘）与**重算换显存**的机制
-#     —— 正文回链 `110-communication` 的 `overlap` 主题（与
+#     —— 正文回链 `110-communication` 的 `overlap` 主题与
 #     `90-training/autograd-and-backward/02-gradient-checkpointing.md`
 #   ★ **本主题的 `ASSERT_FAIL_MARK`**：`== FAIL: pipeline-parallel`（**每个主题一个，不跨主题照抄**；
 #     标记**只允许出现在 `print()` 的字符串里**，**不得**出现在任何 shell 命令行里）；

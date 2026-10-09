@@ -130,7 +130,7 @@ updated: 2026-10-08
 **EP 改的是「张量里哪一块属于我」**，不是张量本身的大小。
 
 > ★★★ **一条硬边界（本域一个字都不写）**：**all-to-all 的通信量分析**
-> —— 它**不在本域**。正文在 `110-communication/collectives`）与
+> —— 它**不在本域**。正文在 `110-communication/collectives`与
 > `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
 > ★★ 而且 `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡了它给 `110`**
 > （「**它的通信量分析不在本域**，见 `110-communication/collectives`」）。
@@ -184,7 +184,7 @@ updated: 2026-10-08
 | 两次 all-to-all 的**位置与尺寸** | **本文** |
 | **负载不均**（发出量 vs 接收量） | [02-load-imbalance](02-load-imbalance.md) |
 | **`EP` 的约束**、EP 与 TP/DP 的组合 | [03-ep-and-other-axes](03-ep-and-other-axes.md) |
-| **all-to-all 的通信量分析** | `110-communication/collectives`（、`20-gpu-architecture/interconnect/03` |
+| **all-to-all 的通信量分析** | `110-communication/collectives`、`20-gpu-architecture/interconnect/03` |
 | **kernel 侧的 permute / unpermute / grouped GEMM** | `40-kernels/moe-kernels/02,03`；`00-meta/glossary.md` 的 `grouped GEMM` 条 |
 | **容量因子的定义与语义** | `80-model-architectures/moe/02-capacity-factor.md` |
 | **TP 每层 `2+2` 次 all-reduce** | `tensor-parallel/03` 与 `10-foundations/performance-models/02:417`（★ **不是 `:223`**） |
@@ -241,7 +241,7 @@ updated: 2026-10-08
 | 引 GShard 说通信次数 | ★★★ **不行**：GShard 用**一个词** `AllToAll`（**15** 次是**字符串**次数）、**不给次数**（`D.9`） |
 | 说「MoE 的通信就是 all-to-all」 | ★★★ **不成立**：GShard §5.3 逐字说关键算子**是 `AllReduce` 与 `AllToAll`** |
 | 报「两次 all-to-all 的载荷」 | ★★ 尺寸 = `[E, C, d_model]`（**每次**）⇒ 两次 = 两倍；★★ **尺寸与 `EP` 无关**（`B.2`） |
-| 由载荷尺寸推「通信量 ∝ …」 | ★★★ **越界**：通信量分析在 `110-communication/collectives`）—— `moe-kernels/01:243` 已逐字让渡给它 |
+| 由载荷尺寸推「通信量 ∝ …」 | ★★★ **越界**：通信量分析在 `110-communication/collectives`—— `moe-kernels/01:243` 已逐字让渡给它 |
 | 路由里带上 gating 权重 | ★★ **本文不带**（等权 `1/top_k`）；gating 的正文在 `80-model-architectures/moe/01,03` |
 
 ## 6. 小结与延伸
@@ -269,7 +269,7 @@ updated: 2026-10-08
   · ★★★ **容量因子的定义与语义**（定义式 / 取整口径 / dropping vs No-Token-Left-Behind /
     丢弃率口径）→ `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）；
   · **aux loss 的式子 / 路由 gating 的机制** → `80-model-architectures/moe/01`、`03`；
-  · **all-to-all 的通信量分析** → `110-communication/collectives`）与
+  · **all-to-all 的通信量分析** → `110-communication/collectives`与
     `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已**逐字让渡**；
   · **kernel 侧的 permute / unpermute / grouped GEMM** → `40-kernels/moe-kernels/02,03`、
     `00-meta/glossary.md` 的 `grouped GEMM` 条；

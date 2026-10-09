@@ -265,7 +265,7 @@
 ## 训练与推理系统
 
 > ★ **本节与 `120-inference` 共享**：**训练部分**的正文在 `90-training`；
-> **推理部分**的正文在 `120-inference`（。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
+> **推理部分**的正文在 `120-inference`（未建成）。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
 > （★ 另两条不属本节的归口：`ZeRO` / `FSDP` 的正文在 `100-parallelism` 的 `zero-fsdp`，此处只回链。）
 > ★★ **六个切分轴的【正文】**已归口到上面新增的「**并行策略**」节；★ 其中 `ZeRO` / `FSDP` 的**词条**留在本节（它们的正文在 `100-parallelism/zero-fsdp/`）。
 
@@ -298,8 +298,9 @@
 
 > ★ **本节是 `110-communication` 的归口**（★ **追加在文件末尾** —— 本域纪律：**不在中间插节**，
 > 因为中间插节会把下游的**行号锚点**整体下移）。
-> ★★ **本节不另立**已在「互联与多卡」节的词条（`all-reduce` / `all-to-all` / `bisection bandwidth` /
-> `NVLink Domain` / `algbw`-`busbw` / `P2P` / `InfiniBand` / `scale-up`-`scale-out`）—— 本域已在那 10 条上**补了回链**。
+> ★★ **本节不另立**已在别处的词条：「互联与多卡」节的 `all-to-all` / `bisection bandwidth` /
+> `NVLink Domain` / `algbw`-`busbw` / `P2P` / `InfiniBand` / `scale-up`-`scale-out`，
+> 以及「训练与推理系统」节的 `all-reduce` —— 本域已在那几条上**补了回链**。
 
 | 英文 | 中文 | 说明 |
 |---|---|---|
@@ -313,4 +314,3 @@
 | rail-optimized | 按轨优化 | ★ 把每个 GPU 的网卡放到**不同的第一层（LEAF）交换机**上 ⇒ **同轨的卡只隔一跳**（官方逐字 `just one switch hop away`）⇒ **同轨便宜、跨轨贵**。（正文在 `110-communication/network-topology/02-rail-optimized.md`） |
 | 双缓冲 | double buffering | 通信-计算重叠的基本机制：**两块缓冲乒乓** ⇒ 第 `i` 块的通信可以与第 `i+1` 块的计算并行。★★ **可藏的上限是 `min(C,T)`**，且**第一块不可重叠** ⇒ 总时间 `≥ max(C,T)`。⚠ 与 `90-training` 的「**异步落盘**」**是同一件事的另一面**（**不是**同名不同指）。（正文在 `110-communication/overlap/01-mechanisms.md`） |
 | 通信分块 | chunking | 把一个大的通信**切成 `K` 块**逐块发起（DDP 的**梯度桶**就是一种通信分块）。★ 模型：`T(K) = (C+T)/K + (K−1)·max(C/K, T/K)`。⚠ **「桶 / bucket」在库内另有「形状分桶」（JAX）一义** ⇒ 本域一律写「**通信分块**」。（正文在 `110-communication/overlap/`） |
-| 气泡（流水线并行的） | — | 见「并行策略」节 —— ★ **与「GPU 硬件与执行模型」节 `TLP` 条的「流水线气泡」不是同一个量**（那条是 **SM 内部**的指令流水线气泡）。（正文在 `100-parallelism/pipeline-parallel/01`） |

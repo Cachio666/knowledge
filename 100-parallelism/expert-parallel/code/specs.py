@@ -95,7 +95,7 @@
       ★★ 本主题**一个字都不写**它们，只写**它对 EP 的影响**。
     **aux loss 的式子 / 路由 gating 的机制** ⇒ `80-model-architectures/moe/01-gating-and-routing.md`、
       `03-balance-and-granularity.md`。
-    **all-to-all 的通信量分析** ⇒ `110-communication/collectives`）+
+    **all-to-all 的通信量分析** ⇒ `110-communication/collectives`+
       `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
       ★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡了它给 `110`**。
     **kernel 侧的 permute / unpermute / grouped GEMM** ⇒ `40-kernels/moe-kernels/02,03`；
@@ -328,7 +328,7 @@ EP_MOE_README_A2A_QUOTE = "NCCL-based All-to-All communication for token exchang
 # 来源：[B] Megatron-LM MoE README（活文档，抓取日 2026-10-08），**原始字节 1 次**。
 # 口径：★★★ **实现文档侧对 EP 通信的原话**：**token exchange**（即 dispatch/combine）
 #       用的是 **`All-to-All`**。★ 它给出的是**机制名**，**不给次数、也不给尺寸**
-#       ⇒ ★★ **不得从它推出通信量**（那是 `110-communication/collectives`）的正文）。
+#       ⇒ ★★ **不得从它推出通信量**（那是 `110-communication/collectives`的正文）。
 #       ★★ 注意这里用的是**带连字符的大写形**`All-to-All` —— 与 GShard 的
 #         `AllToAll`（一个词）**不同形**（见 `GSHARD_ALLTOALL_TERM`）。
 # 消费者：`03_ep_and_other_axes.py` 的 `D.5`。
@@ -393,7 +393,7 @@ EP_A2A_DIM = (4, 8, 16)
 # 口径：★★★ **本域只给【尺寸】**：`01` 的 `B.1` 用 `E × C × d_model` 这个**乘积**做
 #       **本库的记账模型**（每次 all-to-all 每设备发出的元素数 = 它手里那个张量的大小）。
 #       ★★★ **all-to-all 的通信量分析照旧不在本域** —— 正文在
-#         `110-communication/collectives`（与 `20-gpu-architecture/interconnect/03`；
+#         `110-communication/collectives`与 `20-gpu-architecture/interconnect/03`；
 #         ★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡**了它。
 #         ⇒ 本主题**只声明张量的尺寸**，**不声明任何「通信量 ∝ 什么」的结论**。
 #       ★★ **本元组必须逐元素钉住**（`01` 的 `D.7`）。

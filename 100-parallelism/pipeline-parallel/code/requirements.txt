@@ -26,7 +26,7 @@
 #       `90-training/autograd-and-backward/02-gradient-checkpointing.md`
 #       （★ 本主题只写「**PP 下用重算做显存均衡的取舍**」）
 #     · **transformer block 的结构** → `80-model-architectures/transformer/`
-#     · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`）
+#     · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`
 #     · **TP 每层 `2+2` 次 all-reduce** → 正文在 `100-parallelism/tensor-parallel/03`（本域）与
 #       `10-foundations/performance-models/02-amdahl-and-scaling.md:417`（★ **不得重写**；
 #       ★ 订正 2026-10-08：原先回链的是 `:223` —— 那一行是**纯 TP 段**，落点应是 `:417`）

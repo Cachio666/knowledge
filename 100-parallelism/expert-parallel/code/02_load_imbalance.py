@@ -74,7 +74,7 @@ r"""02_load_imbalance.py —— ★★★ **EP 的负载账**：**发出量均�
   · **aux loss 的式子 / 路由 gating 的机制** → `80-model-architectures/moe/01-gating-and-routing.md`、
     `03-balance-and-granularity.md`。★ 本程序的路由只是 `argsort` 取 `top_k`，
     **不含 gating 权重**（★ 与第一代探测 `probe_100f.py` 的口径一致）。
-  · **all-to-all 的通信量分析** → `110-communication/collectives`）+
+  · **all-to-all 的通信量分析** → `110-communication/collectives`+
     `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
     ★★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡**了它给 `110`。
     ⇒ ★ 本程序量的是**搬运的条数**（一个**计数**），**不是字节数、也不是带宽**。
@@ -499,7 +499,7 @@ def preflight():
     print("        ★★ 本程序的「上限」是 `EP_CAP_LIMIT` **直接给定的整数**，不是公式的输出。")
     print("      · **aux loss 的式子 / 路由 gating 的机制** → "
           "`80-model-architectures/moe/01-gating-and-routing.md`、`03-balance-and-granularity.md`。")
-    print("      · **all-to-all 的通信量分析** → `110-communication/collectives`（、")
+    print("      · **all-to-all 的通信量分析** → `110-communication/collectives`、")
     print("        `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已让渡。")
     print("      · **kernel 侧的 permute / unpermute / grouped GEMM** → "
           "`40-kernels/moe-kernels/02,03`、`00-meta/glossary.md` 的 `grouped GEMM` 条。")

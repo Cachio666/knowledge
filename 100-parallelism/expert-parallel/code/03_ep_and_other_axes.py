@@ -53,7 +53,7 @@ r"""03_ep_and_other_axes.py —— EP 与 **TP / DP** 的组合、**EP 组的划
     `10-foundations/performance-models/02-amdahl-and-scaling.md:417`
     （★ **不是 `:223`** —— 那一行是纯 TP 段）。★ **本程序一行都不重写它们**：
     这里只把「**行切**」当成一个**改变了求值顺序**的操作来用。
-  · **all-to-all 的通信量分析** → `110-communication/collectives`）+
+  · **all-to-all 的通信量分析** → `110-communication/collectives`+
     `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
     ★★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡**了它给 `110`。
     ⇒ ★ 本程序的 `B` 类量的是**条目数**（一个**计数**），**不是字节数、也不是带宽**。
@@ -453,7 +453,7 @@ def preflight():
     print("        `tensor-parallel/01,02,03` 与 `10-foundations/performance-models/02:417`"
           "（★ **不是 `:223`**）；")
     print("        ★ 本程序只把「**行切**」当成一个**改变了求值顺序**的操作来用。")
-    print("      · **all-to-all 的通信量分析** → `110-communication/collectives`（、")
+    print("      · **all-to-all 的通信量分析** → `110-communication/collectives`、")
     print("        `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已让渡。")
     print("      · **kernel 侧的 permute / unpermute / grouped GEMM** → "
           "`40-kernels/moe-kernels/02,03`、`00-meta/glossary.md` 的 `grouped GEMM` 条。")

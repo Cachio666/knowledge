@@ -26,7 +26,7 @@
 #     丢弃率口径）⇒ 正文在 `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）；
 #     **aux loss 的式子 / 路由 gating 的机制** ⇒ `80-model-architectures/moe/01-gating-and-routing.md`、
 #     `03-balance-and-granularity.md`。★★ 本主题的路由只是 `argsort` 取 `top_k`、**等权** `1/top_k`。
-#     **all-to-all 的通信量分析** ⇒ `110-communication/collectives`（+
+#     **all-to-all 的通信量分析** ⇒ `110-communication/collectives`+
 #     `20-gpu-architecture/interconnect/03`（★ `40-kernels/moe-kernels/01:243` 已逐字让渡）；
 #     **kernel 侧的 permute / unpermute / grouped GEMM** ⇒ `40-kernels/moe-kernels/02,03`、
 #     `00-meta/glossary.md` 的 `grouped GEMM` 条；

@@ -54,7 +54,7 @@ TP：  all-reduce 每【层】发生，每卡每 micro-batch 搬 8bsh·(t−1)/t
 | 本文**写** | 本文**不写**（回链目标） |
 |---|---|
 | **`8bsh((t−1)/t)` 的口径、成分与饱和行为** | ★★★ **TP 的通信模式与规模上限**（「通信在每一层内部」·「∝ 激活而不是参数量」·「只在高带宽互联上可用 / 通常限于单节点 8 卡」·「规模上限由节点内互联决定」）—— 这三条已由 `10-foundations/performance-models/02-amdahl-and-scaling.md:223` **逐字写完** ⇒ **本文不重写它的【结论】**（★ 本文在 §1.7/§5 里**复述**了「∝ 激活量而不是参数量」这个方向，并把它**定量化** —— 复述哪一句、补哪一句都写在那里） |
-| **`8 = 4 × 2` 的分解**（★ 并标明这个分解**原文没有给**，是本库拼的） | **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S` 的**推导**、`S` 的饱和、reduce-scatter / all-gather 的阶段划分）→ `110-communication/collectives`）、`performance-models/02:209`（**本文只引用它的系数 `2`**） |
+| **`8 = 4 × 2` 的分解**（★ 并标明这个分解**原文没有给**，是本库拼的） | **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S` 的**推导**、`S` 的饱和、reduce-scatter / all-gather 的阶段划分）→ `110-communication/collectives`、`performance-models/02:209`（**本文只引用它的系数 `2`**） |
 | **DP 与 TP 两个饱和值随什么变**（定量对比） | **链路带宽的三种口径**（线速率 / 载荷 / 营销取整）、NVLink 与 IB 的规格值 → `20-gpu-architecture/interconnect/01-bandwidth-conventions.md` |
 | **「TP 限于单节点」的【一手出处】**（`2104.04473 §3.2` 的 `Takeaway #1`，**不是** `1909.08053`） | **拓扑受限的集合通信**（bisection 下界、all-to-all 跨切口量）→ `20-gpu-architecture/interconnect/03-collectives-on-topology.md` |
 | **两个错法的可判定倍数**（多乘 `2`、漏 `(t−1)/t`） | **Amdahl / Gustafson / `N₅₀` / 扩展效率的模型** → `performance-models/02`（**全篇**）；**`(p−1)/m` 与 DP 度的关系 / 3D 并行配置** → `performance-models/02:225` 与 `2104.04473 §3` |
@@ -368,7 +368,7 @@ DP 的 `2S` 是**每步**（梯度规约每步一次），TP 的 `8bsh` 是**每
   `100-parallelism/data-parallel/01-gradient-averaging.md`、
   `100-parallelism/data-parallel/03-redundancy-and-limits.md`。
 - **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S` 的**推导**、`S` 的饱和） ⇒
-  `110-communication/collectives`）、
+  `110-communication/collectives`、
   `10-foundations/performance-models/02-amdahl-and-scaling.md:209`（**正文在彼，本文一行都不重推**）。
 - **链路带宽的三种口径 / 拓扑受限的集合通信** ⇒
   `20-gpu-architecture/interconnect/01-bandwidth-conventions.md`、

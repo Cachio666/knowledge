@@ -194,7 +194,7 @@ exp(-inf − (−inf)) = exp(nan) = nan
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`
     ⇒ ★ 本文只谈「**用哪一段的绝对位置**」，**不谈位置编码本身怎么造**；
-  · **集合通信原语的算法与复杂度** → `110-communication/collectives`）与
+  · **集合通信原语的算法与复杂度** → `110-communication/collectives`与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:209`；
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:417`（★ **不是 `:223`**）。
@@ -265,7 +265,7 @@ CP 连 `O(s²)` 一起切；★★ **而 CP 的一切约束都落在一件事上
 - **SP 的三式与收益** → [01-activation-sharding](01-activation-sharding.md)；
 - **块统计量重缩放的形式** → [02-ring-attention](02-ring-attention.md)；
 - **位置编码本身**（怎么造、能不能外推）→ `80-model-architectures/positional-encoding/02,03`；
-- **集合通信原语** → `110-communication/collectives`）。
+- **集合通信原语** → `110-communication/collectives`。
 
 ## 参考
 

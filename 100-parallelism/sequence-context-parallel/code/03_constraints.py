@@ -47,7 +47,7 @@ r"""03_constraints.py —— **SP 与 CP 的分工**、`cp` 的约束、以及 *
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`
     （★ 本程序只谈「**用哪一段的绝对位置**」，**不谈位置编码本身怎么造**）；
-  · **集合通信原语的算法与复杂度** → `110-communication/collectives`）与
+  · **集合通信原语的算法与复杂度** → `110-communication/collectives`与
     `10-foundations/performance-models/02:209`（★ 本程序的「环」只是**次序**）；
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02:417`（★ **不是 `:223`** —— 那一行是纯 TP 段）。
@@ -411,7 +411,7 @@ def preflight():
     print("      · 位置编码的外推（PI / NTK / ALiBi、混叠周期）→ "
           "`80-model-architectures/positional-encoding/02,03`"
           "（★ 本程序只谈「**用哪一段的绝对位置**」，不谈编码本身怎么造）；")
-    print("      · 集合通信原语的算法与复杂度 → `110-communication/collectives`（"
+    print("      · 集合通信原语的算法与复杂度 → `110-communication/collectives`"
           "与 `10-foundations/performance-models/02:209`；")
     print("      · TP 每层 `2+2` 次 all-reduce → `tensor-parallel/03` 与 "
           "`10-foundations/performance-models/02:417`（★ **不是 `:223`**）。")

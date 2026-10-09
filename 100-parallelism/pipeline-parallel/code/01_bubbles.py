@@ -52,7 +52,7 @@ r"""01_bubbles.py —— PP 的**微批与气泡率**，以及★★★ **气泡
     （★ 本程序**只引** `GPIPE_RECOMPUTE_CAUSAL_QUOTE` 那一句的**因果**，
       **不写**重算的机制）；
   · **transformer block 的结构** → `80-model-architectures/transformer/`；
-  · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`）。
+  · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`。
 
 ★★ 可证伪断言（把下面任一条改错，本程序必须非零退出）：
   · `A.1`  ★★★ 离散事件模拟 ↔ 闭式 `(m+p−1)·(t_f+t_b)`（**8 组**，差 ≤ 机器精度档）；

@@ -72,7 +72,7 @@
 
 | 主题 | 本域**不写** | 那里的正文 |
 |---|---|---|
-| **全主题** | **集合通信原语的算法与复杂度**（ring / tree allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter / all-gather 的阶段划分） | `10-foundations/performance-models/02-amdahl-and-scaling.md` 与 `110-communication/collectives`） |
+| **全主题** | **集合通信原语的算法与复杂度**（ring / tree allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter / all-gather 的阶段划分） | `10-foundations/performance-models/02-amdahl-and-scaling.md` 与 `110-communication/collectives` |
 | **全主题** | **拓扑受限的集合通信**（bisection 下界、all-to-all 跨切口量 `∝ N`、分层） | `20-gpu-architecture/interconnect/03-collectives-on-topology.md` |
 | **全主题** | **链路带宽的三种口径**与 NVLink / IB 的规格值 | `20-gpu-architecture/interconnect/01-bandwidth-conventions.md` |
 | **全主题** | **通信-计算重叠的机制**（双缓冲、分块流水、异步落盘） | `110-communication` 的 `overlap` 主题 |

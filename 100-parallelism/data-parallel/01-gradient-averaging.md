@@ -48,7 +48,7 @@ DP：  4 张卡各 8 行 → 4 份 g_i → ??? 合并 → 更新
 
 | 本文**写** | 本文**不写**（回链目标） |
 |---|---|
-| DP 的**语义**：平均怎么来、`loss` 的 reduction 口径与除数怎么配对、除法的位置 | **梯度规约的算法**（ring allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter + all-gather 的阶段划分）→ `110-communication/collectives`）、`10-foundations/performance-models/02-amdahl-and-scaling.md:209` |
+| DP 的**语义**：平均怎么来、`loss` 的 reduction 口径与除数怎么配对、除法的位置 | **梯度规约的算法**（ring allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter + all-gather 的阶段划分）→ `110-communication/collectives`、`10-foundations/performance-models/02-amdahl-and-scaling.md:209` |
 | 梯度的**字节账**（`2Ψ`）与「每卡常量、全局 batch 变」 | **扩展效率模型**（Amdahl / Gustafson / `N₅₀`）→ `10-foundations/performance-models/02-amdahl-and-scaling.md` |
 | 平均**不增加通信量**这一句的落法（本机可跑的那一部分） | **通信-计算重叠**（双缓冲、分块流水）→ `110-communication` 的 `overlap` |
 | —— | ★★ **梯度累积与 batch 放大的等价性（含归一化层时的失效）** → `90-training/autograd-and-backward/03-gradient-lifecycle.md:71,223-224`（**正文在彼**，本文只写**「无归一化层」这一支**并回链） |
@@ -294,7 +294,7 @@ DP 里有两个独立的口径，它们**乘起来**才是全局的除数：
   `90-training/autograd-and-backward/03-gradient-lifecycle.md:71,223-224`（**正文在彼**）。
 - **`16Ψ` 的组成与字节分解** ⇒ `90-training/checkpointing/01-state-and-bytes.md`（**正文在彼**，本文只消费 `2Ψ` 这一项）。
 - **梯度规约的算法（ring allreduce / `V(N) = 2(N−1)/N × S` 与它的饱和）** ⇒
-  `110-communication/collectives`）、`10-foundations/performance-models/02-amdahl-and-scaling.md:209`（**正文在彼，本文一行都不写**）。
+  `110-communication/collectives`、`10-foundations/performance-models/02-amdahl-and-scaling.md:209`（**正文在彼，本文一行都不写**）。
 - **扩展效率模型（Amdahl / Gustafson / `N₅₀`）** ⇒ `10-foundations/performance-models/02-amdahl-and-scaling.md`。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU、无多卡、无 NCCL、无真实网络**）

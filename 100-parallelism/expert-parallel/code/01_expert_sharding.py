@@ -50,7 +50,7 @@ r"""01_expert_sharding.py —— **专家怎么分到设备**（每设备 `E/EP`
     `03-balance-and-granularity.md`。★ 本程序的「路由」只是 `argsort` 取 `top_k`，
     **不含任何 gating 权重**（★ 这与第一代探测 `probe_100h.py` 的 `H3` 口径一致：
       那一支算的是 `X[t] @ We[e]` 的**等权**和）—— **本程序不声称这是一种 gating 方案**。
-  · **all-to-all 的通信量分析** → `110-communication/collectives`）+
+  · **all-to-all 的通信量分析** → `110-communication/collectives`+
     `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
     ★★ `40-kernels/moe-kernels/01-moe-compute-pattern.md:243` **逐字让渡**了它给 `110`。
     ⇒ ★ 本程序的 `B` 类**只声明张量的尺寸**（`E × C × d_model`），
@@ -326,7 +326,7 @@ def part_A():
 
 # ===========================================================================
 # 3. B 类：两次 all-to-all 的**载荷尺寸**（`B.1` / `B.2`）
-#    ★★★ **本域只给尺寸，不给通信量** —— 通信量分析的正文在 `110-communication/collectives`）
+#    ★★★ **本域只给尺寸，不给通信量** —— 通信量分析的正文在 `110-communication/collectives`
 #      与 `20-gpu-architecture/interconnect/03`；`40-kernels/moe-kernels/01:243`
 #      **逐字让渡**了它。★ 本节的「每设备发出的元素数」是**本库的记账模型**，不是原文的话。
 # ===========================================================================
@@ -445,7 +445,7 @@ def preflight():
     print("      · **aux loss 的式子 / 路由 gating 的机制** → "
           "`80-model-architectures/moe/01-gating-and-routing.md`、`03-balance-and-granularity.md`；")
     print("        ★ 本程序的路由只是 `argsort` 取 `top_k`、权重是**等权** `1/top_k`。")
-    print("      · **all-to-all 的通信量分析** → `110-communication/collectives`（、")
+    print("      · **all-to-all 的通信量分析** → `110-communication/collectives`、")
     print("        `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已让渡。")
     print("      · **kernel 侧的 permute / unpermute / grouped GEMM** → "
           "`40-kernels/moe-kernels/02,03`、`00-meta/glossary.md` 的 `grouped GEMM` 条。")

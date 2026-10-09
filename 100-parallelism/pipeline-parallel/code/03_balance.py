@@ -52,7 +52,7 @@ r"""03_balance.py —— PP 的**负载均衡**：总时间由**最慢的那个 
     —— ★★ 本程序**只引** `specs.GPIPE_RECOMPUTE_MEMORY_QUOTE` 的「它压的是什么量」，
       **不写**重算的机制、**不写**最优检查点数（那是那篇的正文）；
   · **transformer block 的结构** → `80-model-architectures/transformer/`；
-  · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`）；
+  · **点对点通信的实现**与**通信-计算重叠的机制** → `110-communication/`；
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:223`（★ **不得重写**）。
 

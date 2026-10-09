@@ -209,7 +209,7 @@ updated: 2026-10-08
   · **`S×S` 矩阵的访存账**（FlashAttention 的字节数收益）→
     `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md` 的 `flash attention` 条；
   · **集合通信原语的算法与复杂度**（ring allreduce、reduce-scatter / all-gather 的阶段划分）→
-    `110-communication/collectives`）与
+    `110-communication/collectives`与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:209`
     ⇒ ★ 本文的「环」是**数据搬运的次序**，不是原语实现；
   · **通信-计算重叠的机制**（双缓冲 / 分块流水）→ `110-communication` 的 `overlap`；
@@ -290,7 +290,7 @@ updated: 2026-10-08
 - **SP 切的是什么**（`O(s)` 那一项） → [01-activation-sharding](01-activation-sharding.md)；
 - **块内的 `(m, l)` 更新公式** → `40-kernels/softmax-normalization/02-online-softmax.md`（此处**回链**）；
 - **`S×S` 的访存账** → `40-kernels/attention/03-flash-attention-backward.md`；
-- **集合通信原语 / 通信-计算重叠** → `110-communication`）。
+- **集合通信原语 / 通信-计算重叠** → `110-communication`。
 
 ## 参考
 

@@ -320,7 +320,7 @@ DP 只做了前一刀 ⇒ 它的显存上限**卡在单卡**上；
 - **分片带来的通信量**（`2Ψ` / `3Ψ` / `1.5x`） ⇒ `100-parallelism/zero-fsdp/02-communication.md`。
 - **分片检查点（落盘）** ⇒ `90-training/checkpointing/02-sharded-save-and-load.md`
   （★ 与本文的「显存分片」**同名不同指**）。
-- **梯度规约的算法与扩展效率模型** ⇒ `110-communication/collectives`）、
+- **梯度规约的算法与扩展效率模型** ⇒ `110-communication/collectives`、
   `10-foundations/performance-models/02-amdahl-and-scaling.md`（**正文在彼**）。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU、无多卡、无 NCCL**）

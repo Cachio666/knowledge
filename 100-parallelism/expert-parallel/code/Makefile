@@ -28,7 +28,7 @@
 #      `03` 的 `B` 类（`EP > E`）是**本库设计的一个情景**，**不是**转述。
 #    ★★ **另有两条硬边界**：**容量因子的定义与语义**（定义式 / 取整口径 /
 #      dropping vs No-Token-Left-Behind / 丢弃率口径）→ `80-model-architectures/moe/02-capacity-factor.md`
-#      （**全篇 563 行**）；**all-to-all 的通信量分析** → `110-communication/collectives`）
+#      （**全篇 563 行**）；**all-to-all 的通信量分析** → `110-communication/collectives`
 #      与 `20-gpu-architecture/interconnect/03`（★ `40-kernels/moe-kernels/01:243` 已逐字让渡）。
 #
 # ★★★ **本主题最要紧的三处形态风险**（每一条都对应一个程序里的真实现场）：
@@ -76,7 +76,7 @@
 #       —— 那是 `80-model-architectures/moe/01,03` 的正文。
 #   ★★ **通信被实现为一个显式的张量搬运**（all-to-all = **索引搬运的计数**）——
 #     本域的知识对象是**切分策略**，不是通信原语的实现
-#     （通信算法的正文在 `110-communication/collectives` —— ★ ）。
+#     （通信算法的正文在 `110-communication/collectives`）。
 #     ⇒ 一切程序验证的是**切分的代数**（划分算术 / 搬运条目数 / 负载分布 / 组划分），
 #       **不是**任何关于真实集群性能的结论。★ 强制限定语：**「不是 NCCL，也不是真机」**。
 #   ★★ **本主题的定位**（与 `requirements.txt` **抬头那段**同一句，两处同步）：
@@ -86,7 +86,7 @@
 #   ★★ **本主题的禁区**：
 #     **容量因子的定义与语义** → `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）；
 #     **aux loss 的式子 / 路由 gating 的机制** → `80-model-architectures/moe/01,03`；
-#     **all-to-all 的通信量分析** → `110-communication/collectives`（与
+#     **all-to-all 的通信量分析** → `110-communication/collectives`与
 #     `20-gpu-architecture/interconnect/03`；**kernel 侧的 permute / unpermute / grouped GEMM** →
 #     `40-kernels/moe-kernels/02,03` 与 `00-meta/glossary.md` 的 `grouped GEMM` 条；
 #     **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
