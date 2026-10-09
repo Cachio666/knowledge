@@ -32,9 +32,11 @@ r"""01_sampling_and_search.py —— **采样与搜索**：greedy / beam / tempe
   · `A.3` ★★★ **`beam` 不精确**：贪心在 **8/12** 个模型上错过穷举最优、`beam(2)` 在 **2/12** 上仍错过；
   · `B.1` ★★ **beam 的代价 = 活束数 `B`**（每层恰好保留 `B` 条）；
   · `B.2` ★★ **top-k 候选集【定值】vs top-p 【动态】**（同一阈值下大小随分布变）；
-  · `B.3` ★★ **temperature 不改候选集大小**（恒为 `V`），只改熵（单调）；
+  · `B.3` ★★ **temperature 不改候选集大小**（恒为 `V`），只改熵（单调）；★ 且 `T → 0` 退化到 argmax；
   · `C.1`/`C.2` ★★ **两端退化守卫**：`p → 0`、`k = 1` ⇒ 退化成贪心；`p = 1`、`k ≥ V` ⇒ 全集；
-  · `D.4`/`D.5` ★★★ **守卫实验**：改坏 beam / 改坏穷举 ⇒ 断言必须失败。
+  · `C.4` ★★ **失败复现**（`CONTRIBUTING:238`）：`beam` 是【近似】搜索 —— 断言【失败真的发生】；
+  · `D.4`/`D.5` ★★★ **守卫实验**：改坏 beam / 改坏穷举 ⇒ 断言必须失败；
+  · `D.9` ★★★ **术语纪律的两半**：全称必须存在 + **裸写那个被禁裸词的计数 == 显式豁免清单**。
 """
 import ast
 import collections
@@ -69,6 +71,19 @@ TERM_INFLIGHT = "推理批 / 在飞请求数"
 TERM_SCHEDULER = "请求调度器"
 LIMIT_QUOTE = "不是任何真实引擎，也不是真机"
 
+# ★★★ **术语纪律的第二半**（★ 形态 A：「纪律宣称了而断言没盯住」）：
+#   本程序源码里**裸写那个被禁的裸词**（本域唯一的禁用裸词，见抬头的术语纪律）的【计数】
+#   必须**恰好等于**下面这份**显式豁免清单**覆盖的计数 ——
+#   ★★★ 判据是【计数 == 豁免覆盖数】，**不是「≤ N」**（「≤ N」挡不住**新增**一处裸写，正是本轮 `D1` 的形态）。
+#   ★ 每一项都写明【为什么豁免】（★ **本注释块刻意不写那个裸词**，否则它自己也会被计数）：
+#     ① 抬头注释里**提到**这条纪律本身、**并指出**该词在本库的另一个所指 ——
+#        ★ 两处都是 **mention**（它写该词恰恰因为在规定不许写它）。
+#     ② `D.9` 的判据文案里**复述**这条纪律 —— ★ 同为 mention。
+BARE_DECODE_EXEMPT = (
+    "不裸写 `decode`，那是 `60-compilers` 的 decode pass",   # ① 抬头：mention（规定 + 消歧）
+    "**不裸写** `decode`",                                    # ② D.9 文案：mention（复述纪律）
+)
+
 FAILS = []
 MARKS_USED = set()
 _TOTAL = collections.Counter()
@@ -88,11 +103,15 @@ PINNED_M1_BEAM2 = (2, 1, 3, 3)       # ★ 模型 `m1` 上 `beam(2)` 的解（�
 SAMPLE_PEAKED = (0.90, 0.05, 0.03, 0.015, 0.005)   # ★ 尖峰（★ 逐元素写，不用 `*` —— `_walk` 不下钻 BinOp）
 SAMPLE_FLAT = (0.2, 0.2, 0.2, 0.2, 0.2)            # ★ 均匀
 SAMPLE_LOGITS = (0.3, 0.9, 0.1, 0.5)               # ★ 温度-熵演示用的固定 logits
+PINNED_TOPP_PEAKED_05 = 1            # ★ 尖峰上 `top-p = 0.5` 的候选集大小（★ 与 `0.9` 同值 ⇒ 尖峰上 `0.5`/`0.9` 都只给 argmax）
 PINNED_TOPP_PEAKED_09 = 1            # ★ 尖峰上 `top-p = 0.9` 的候选集大小
 PINNED_TOPP_PEAKED_095 = 2           # ★ 尖峰上 `top-p = 0.95` 的候选集大小（★ **同一个分布上**更大）
-PINNED_TOPP_FLAT_09 = 5              # ★ 均匀上 `top-p = 0.9` 的候选集大小（★ 全集）
 PINNED_TOPP_FLAT_05 = 3              # ★ 均匀上 `top-p = 0.5` 的候选集大小
+PINNED_TOPP_FLAT_09 = 5              # ★ 均匀上 `top-p = 0.9` 的候选集大小（★ 全集）
+PINNED_TOPP_FLAT_095 = 5             # ★ 均匀上 `top-p = 0.95` 的候选集大小（★ 全集；与 `0.9` 同值）
 PINNED_ENTROPY = (1.203755, 1.340090, 1.374964)   # ★ `SAMPLE_LOGITS` 在 `T ∈ (0.5,1.0,2.0)` 上的熵
+#   ★★ **退化点的数值替身**（★ 不是实测值，是**取定的阈值**）：
+T_ARGMARG = 1e-6                     # ★ 「`T → 0`」的替身：够小 ⇒ `softmax(z/T)` 压成 argmax 的 delta（`B.3`）
 
 
 def check(name, cond, detail="", detail_fail=None):
@@ -364,13 +383,16 @@ def part_B():
     check("B.2", all(a != b for (_, a, b) in tp_pairs)
           and all(a == b for (_, a, b) in tk_pairs)
           and inv_ok
+          and len(top_p_set(peaked, 0.5)) == PINNED_TOPP_PEAKED_05
           and len(top_p_set(peaked, 0.9)) == PINNED_TOPP_PEAKED_09
           and len(top_p_set(peaked, 0.95)) == PINNED_TOPP_PEAKED_095
+          and len(top_p_set(flat, 0.5)) == PINNED_TOPP_FLAT_05
           and len(top_p_set(flat, 0.9)) == PINNED_TOPP_FLAT_09
-          and len(top_p_set(flat, 0.5)) == PINNED_TOPP_FLAT_05,
+          and len(top_p_set(flat, 0.95)) == PINNED_TOPP_FLAT_095,
           "★★ **判据成立**：★ **top-k 的候选集大小恒为 `k`**（尖峰与均匀相同）；"
           "★★ **top-p 的大小【随分布变】**（尖峰 `p=0.9` 给 `%d`、均匀给 `%d`）——"
-          " 这正是「**动态候选集**」的含义；★ 且保留集合的累计概率恒在 `[p, p+p_max)` 内"
+          " 这正是「**动态候选集**」的含义；★ 且保留集合的累计概率恒在 `[p, p+p_max)` 内；"
+          " ★★ **两张分布 × 三个阈值 = 六格全部逐格钉住**（★ 不是只钉「自己那一列」）"
           % (len(top_p_set(peaked, 0.9)), len(top_p_set(flat, 0.9))),
           "**top-k / top-p 的对照被动过** —— ★ 先查 `top_p_set` 的累积截止与 `top_k_set` 的截断")
 
@@ -391,11 +413,18 @@ def part_B():
     print("     ★★ 读法：**熵随 `T` 单调上升**（`%s`），而 **`|候选集|` 恒为 `%d`** ——"
           % (ents, V))
     print("         ★★ 所以 **temperature 单独用【不降低代价】**；降代价要靠 **top-k / top-p 的截断**。")
-    check("B.3", size_ok and mono
+    # ★★ `T → 0` 的退化点（★ 这是 `§4.4` 那条「T→0 就是 greedy」的**实测落点** —— 不是 `C.1`）：
+    p0 = softmax_temp(lg, T_ARGMARG)
+    degen = (int(np.argmax(p0)) == int(np.argmax(lg)) and float(p0.max()) > 0.999)
+    print("     ★★ **`T → 0`**（取 `T = %g`）：`argmax` = `%d`（= 与 `T` 无关的 argmax `%d`），"
+          "最大概率 = `%.6f` ⇒ ★ **`softmax` 压成 argmax 的 delta**（★ 但它**没裁**候选集 —— 见上表 `|候选集|`）"
+          % (T_ARGMARG, int(np.argmax(p0)), int(np.argmax(lg)), float(p0.max())))
+    check("B.3", size_ok and mono and degen
           and all(abs(e - pin) < 2e-6 for e, pin in zip(ents, PINNED_ENTROPY))
           and 1.0 in specs.SAMPLE_TEMP_GRID,
           "★★ **判据成立**：`T ∈ %s` 上熵 `%s`（**单调升**），而候选集大小**恒为 `%d`**"
-          " —— ★★ **temperature 与 top-k / top-p 是两件不同的事**：前者**重加权**、后者**截断**"
+          " —— ★★ **temperature 与 top-k / top-p 是两件不同的事**：前者**重加权**、后者**截断**；"
+          " ★★ 且 **`T → 0` 退化到 argmax**（`§4.4` 的实测落点，★ **不是** `C.1`）"
           % (specs.SAMPLE_TEMP_GRID, ents, V),
           "**温度-熵的单调性或候选集大小被动过** —— ★ `T` 是否真的只除在 logits 上")
 
@@ -415,16 +444,22 @@ def part_C():
     # ── C.1 ★★ top-p 的两端 ──────────────────────────────────────────
     print()
     print("  ── C.1 ★★ **top-p 的两端**：`p` 极小 ⇒ 单元素（= 贪心）；`p = 1` ⇒ 全集 ──")
-    nvoc = len(peaked)                     # ★ 采样侧的词表大小 = 分布的支集大小（★ 不是 SEARCH_VOCAB）
+    # ★★ **两个「词表大小」不是同一个量**（★ 一个符号一义，`§0.5`/`D5` 的口径）：
+    #   `V = SEARCH_VOCAB = 4` 是**搜索算例**的词表（穷举空间 `V^L` 的底）；
+    #   `nvoc = len(peaked) = 5` 是**采样算例**两个分布的**支集**大小。
+    #   ★ 正文 §2 已点明这一点；★ 采样算例里 `min(k, ·)` 的 `·` 是 `nvoc`，**不是** `V`。
+    nvoc = len(peaked)                     # ★ 采样算例的支集大小 = 5（★ 与 `SEARCH_VOCAB = 4` 是**两个不同的量**）
     tiny_peak = top_p_set(peaked, 1e-6)
     tiny_flat = top_p_set(flat, 1e-6)
     one_peak = top_p_set(peaked, 1.0)
     print("     `p = 1e-6` 于尖峰 ⇒ 大小 %d（元素 %s）；于均匀 ⇒ 大小 %d" % (len(tiny_peak), tiny_peak, len(tiny_flat)))
     print("     `p = 1.0`  于尖峰 ⇒ 大小 %d；于均匀 ⇒ 大小 %d" % (len(one_peak), len(top_p_set(flat, 1.0))))
     check("C.1", len(tiny_peak) == 1 and len(tiny_flat) == 1
-          and tiny_peak[0] == int(np.argmax(peaked)) and len(one_peak) == nvoc,
+          and tiny_peak[0] == int(np.argmax(peaked)) and len(one_peak) == nvoc
+          and nvoc == 5 and nvoc != V,
           "★★ **判据成立**：`p → 0` ⇒ 候选集缩到**单个** token（★ **正是贪心取的那个 argmax**）；"
-          " `p = 1` ⇒ 候选集涨到**整个支集 `%d`** —— ★ 两端都退化成已知的极端" % nvoc,
+          " `p = 1` ⇒ 候选集涨到**整个支集 `%d`** —— ★ 两端都退化成已知的极端；"
+          " ★★ 并钉住「**采样支集 `nvoc = %d` ≠ 搜索词表 `V = %d`**」（两个量、两个符号）" % (nvoc, nvoc, V),
           "**top-p 的端点被动过** —— ★ 先查累积截止（`≥ p`）与是否包含截止那一项")
 
     # ── C.2 ★★ top-k 的两端 ──────────────────────────────────────────
@@ -452,6 +487,26 @@ def part_C():
           "★★ **判据成立**：`L = 1` 时**穷举与贪心恒一致**（★ 免费守卫）——"
           " ★★ 反过来，`A.3` 的「贪心错过最优」**必须靠 `L ≥ 2` 的搜索空间**",
           "**长度 1 时贪心居然不是最优** —— ★ 那说明打分函数或枚举被动过")
+
+    # ── C.4 ★★ **§4.1 的反例：`beam` 是【近似】搜索 —— 断言【失败真的发生】** ──────
+    #   ★★ 与 C.1–C.3（**成功**的退化边界）不同：这一条断言的是**失败成立**（`CONTRIBUTING:238`
+    #      要求 C 类复现「§4 声称会出问题的输入真的跑出问题」）。★ 它与 `A.3` 的数据同源，
+    #      但**角色不同**：`A.3` 是**算法对拍**，本条的落点是**失败模式真的复现**。
+    print()
+    print("  ── C.4 ★★ **§4.1 的反例**：`beam` 是【近似】搜索 —— 断言【失败真的发生】──")
+    g_miss = [s for s in specs.SEARCH_MODEL_SEEDS if greedy(s, L) != exhaustive_best(s, L)]
+    b2_miss = [s for s in specs.SEARCH_MODEL_SEEDS if beam_best(s, L, 2) != exhaustive_best(s, L)]
+    print("     ★ **失败真的发生**：贪心错过穷举最优的模型 **%d/%d**；`beam(2)` 仍错过的 **%d/%d**"
+          % (len(g_miss), len(specs.SEARCH_MODEL_SEEDS), len(b2_miss), len(specs.SEARCH_MODEL_SEEDS)))
+    print("     ★★ 与 C.1–C.3（**成功**的退化边界）不同，这一条断言的是**失败成立** ——")
+    print("        ★ 这正是 `§4.1`「把 `beam` 当成精确搜索」那个**错误前提**会给出错的解。")
+    check("C.4", len(g_miss) >= 1 and len(b2_miss) >= 1,
+          "★★ **失败成立**（★ 与 `CONTRIBUTING:238` 的 C 类口径一致）：**存在模型**使"
+          " `贪心 ≠ 穷举最优`（`%d` 个）**且** `beam(2) ≠ 穷举最优`（`%d` 个）——"
+          " ★★ 于是 `§4.1` 的反例**真的跑得出来**（★ 断言的是「失败复现」，不是「成功行为」）"
+          % (len(g_miss), len(b2_miss)),
+          "**反例不成立** —— ★ 若贪心 / `beam(2)` 全等于穷举，则 `§4.1` 的失败模式"
+          "**无法在本玩具模型上复现**（那 `A.3` 的前提也塌了）")
 
 
 # ===========================================================================
@@ -581,12 +636,15 @@ def part_D():
           and PINNED_GREEDY_MISS == 8 and PINNED_BEAM2_MISS == 2
           and PINNED_M1_GREEDY == (2, 2, 0, 0) and PINNED_M1_EXHAUSTIVE == (2, 1, 3, 3)
           and PINNED_M1_BEAM2 == (2, 1, 3, 3)
-          and PINNED_TOPP_PEAKED_09 == 1 and PINNED_TOPP_PEAKED_095 == 2
-          and PINNED_TOPP_FLAT_09 == 5 and PINNED_TOPP_FLAT_05 == 3
+          and PINNED_TOPP_PEAKED_05 == 1 and PINNED_TOPP_PEAKED_09 == 1
+          and PINNED_TOPP_PEAKED_095 == 2
+          and PINNED_TOPP_FLAT_05 == 3 and PINNED_TOPP_FLAT_09 == 5
+          and PINNED_TOPP_FLAT_095 == 5
           and PINNED_ENTROPY == (1.203755, 1.340090, 1.374964)
+          and abs(T_ARGMARG - 1e-6) < 1e-18
           and abs(SCORE_EPS - 1e-9) < 1e-18,
           "★★★ **程序内常量逐元素 + 分布归一化**钉住（两个分布各 5 个元素、固定 logits 4 个、"
-          " 「错过最优」的两个计数、`m1` 的三个序列、四个 top-p 大小、三个熵值）",
+          " 「错过最优」的两个计数、`m1` 的三个序列、**六个** top-p 大小（六格全钉）、三个熵值、`T → 0` 阈值）",
           "**某个程序内常量被动过**")
 
     # ── D.8 ★★★ 独立性（源码级）：两实现互不引用 ────────────────────────
@@ -606,17 +664,31 @@ def part_D():
 
     # ── D.9 ★★ 术语纪律 + 限定语（★ 机械判定）──────────────────────────
     src = open(__file__, encoding="utf-8").read()
+    # ★★ 被禁裸词（**刻意用拼接**而不是字面量）：★ 若这里写成字面量，**计数代码自己**也会被算进去，
+    #   于是「计数 == 豁免覆盖数」这条**等式**永远差 1。★ 拼接后本文件里**不再出现该裸词的字面量**。
+    WORD = "de" + "code"
+    n_bare = src.count(WORD)                # ★ 源码里**裸写**该词的计数
+    # ★★ 豁免清单**覆盖的**计数 = 每个豁免串的【出现次数】× 该串里该词的【个数】——
+    #   ★ 用**等式**判据，**不是**「≤ N」（「≤ N」挡不住新增一处裸写）。
+    n_exempt = sum(src.count(s) * s.count(WORD) for s in BARE_DECODE_EXEMPT)
     print()
     print("  ── D.9 ★★ **术语纪律**（`§2.2`）：一律写「%s」全称；限定语逐字出现 ──"
           % TERM_AUTOREGRESSIVE)
+    print("     ★★ 源码里**裸写那个被禁裸词** = **%d** 处；豁免清单覆盖 = **%d**（清单 %d 项，逐项理由见模块头）"
+          % (n_bare, n_exempt, len(BARE_DECODE_EXEMPT)))
     check("D.9", TERM_AUTOREGRESSIVE == "自回归解码" and TERM_INFLIGHT == "推理批 / 在飞请求数"
           and TERM_SCHEDULER == "请求调度器"
           and LIMIT_QUOTE == "不是任何真实引擎，也不是真机"
-          and LIMIT_QUOTE in src and TERM_AUTOREGRESSIVE in src,
+          and LIMIT_QUOTE in src and TERM_AUTOREGRESSIVE in src
+          and n_bare == n_exempt
+          and all(s in src for s in BARE_DECODE_EXEMPT),
           "★★ **判据成立**：三条术语常量 `%r` / `%r` / `%r`（★ **不裸写** `decode` / `batch` / "
-          "`scheduler` —— 它们在本库都另有含义）；★ 限定语 `%r` **逐字出现在本程序源码里**"
-          % (TERM_AUTOREGRESSIVE, TERM_INFLIGHT, TERM_SCHEDULER, LIMIT_QUOTE),
-          "**术语或限定语被动过** —— ★ 本域一律写全称、并带最强限定语")
+          "`scheduler` —— 它们在本库都另有含义）；★ 限定语 `%r` **逐字出现在本程序源码里**；"
+          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**"
+          "（★ 清单之外的任何一处裸写都会让它不等 ⇒ **纪律真的被断言盯住了**）"
+          % (TERM_AUTOREGRESSIVE, TERM_INFLIGHT, TERM_SCHEDULER, LIMIT_QUOTE, n_bare, n_exempt),
+          "**术语或限定语被动过，或源码里出现了【豁免清单之外】的裸写** —— "
+          "★ 本域一律写全称；★ 新增的裸写要么改全称、要么进 `BARE_DECODE_EXEMPT` 并写明理由")
 
 
 # ===========================================================================
@@ -634,7 +706,8 @@ def summary():
     print("★★ **A = %d/%d** —— ★★★ **本程序有 A 类**：搜索空间可数（beam vs 穷举）。"
           % (_PASS["A"], _TOTAL["A"]))
     print("★ 判据来源：玩具模型是 **`[E]` 级（本库实现 / 假设）**；"
-          "★ **本程序不引用任何外部来源的数字**（采样参数在框架里的名字回链 `70-frameworks`）。")
+          "★ **本程序不引用任何外部来源的数字** —— ★★ **框架侧的采样 API（参数名与默认值）不在本域**，"
+          "本库**没有**它的正文（见 `specs.SAMPLE_TOPP_GRID` 的注释）。")
     print("★ 本程序只核对「**解码算法的代数与不变量**」——**不是**任何真实模型的采样行为。")
     return 1 if FAILS else 0
 

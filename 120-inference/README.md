@@ -61,6 +61,7 @@
 | **`serving-infra`** | ★ **并行策略本身的正文**（数据/张量/流水/序列/专家/状态六轴） | ★ `100-parallelism` 全域 —— 本域只写**推理与训练的实质差异**（PP 无反向 ⇒ 气泡模型不同；TP 要切 KV cache） |
 | **`engines`** | ★★ **引擎的机制细节**（分页 → `kv-cache/02`；前缀树 → `kv-cache/03`；调度器 → `batching/01`） | ★ 本域其它篇 —— `engines` **只写「各家的选择与差异」** |
 | **全主题** | ★ **训推共用的导出格式与权重账** | `70-frameworks/tensorflow/03` + `90-training/checkpointing/01` |
+| **`decoding-strategies`** | ★ **框架侧的采样 API**（`temperature` / `top-p` 在某个框架里的**参数名与默认值**） | ★★ **本库无此正文**（`70-frameworks` 的三个主题是 dispatch / autograd / 内存，**不涉采样**）—— ★ 这是一条**边界声明**，**不是**「正文在别处」 |
 
 ## 同名不同指（六个 · ★ 每个都已核过）
 

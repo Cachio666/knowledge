@@ -32,10 +32,13 @@ r"""02_speculative_decoding.py —— **投机解码**：三条独立路径 + �
   · `A.1` ★★★ **恒定 `α` 下三条路径一致**（闭式 == 解析；MC 在 `4σ` 内）；
   · `A.2` ★★★ **`α` 随位置变时闭式偏了**：前高后低 **低估**、前低后高 **高估**、几何平均**也修不好**；
   · `A.3` ★★ **任意序列上解析 == MC**（精确公式对**变**接受率也成立）；
-  · `A.4` ★★ **收支平衡点 `α*`**（二分 vs 线性扫描，两条搜索路径）；
-  · `B.*` 代价模型（`γ` 的最优点 · 两个负收益守卫 · 成本分解）；
-  · `C.*` 边界（`α→0` ⇒ `E→1`；`α→1` ⇒ `E=γ+1`；`γ=0` ⇒ `1`）；
-  · `D.4`/`D.5` ★★★ **守卫实验**：改坏解析式 / 改坏 MC ⇒ 断言必须失败。
+  · `A.4` ★★ **收支平衡点 `α*`**（二分 vs 线性扫描 ★ **共享目标函数 `closed_speed`** ⇒ 只证根查找一致性，
+    ★ **弱于** `A.1`/`A.2`，`F4`）；
+  · `B.*` 代价模型（`γ` 的最优点 ★ 七格全钉 · 两个负收益守卫 · 成本分解）；
+  · `C.1`–`C.3` 边界（`α→0` ⇒ `E→1`；`α→1` ⇒ `E=γ+1`；`γ=0` ⇒ `1`）；
+  · `C.4` ★★ **失败复现**（`CONTRIBUTING:238`）：闭式无条件引用 ⇒ 与精确值偏 `> 5%`；
+  · `D.4`/`D.5` ★★★ **守卫实验**：改坏解析式 / 改坏 MC ⇒ 断言必须失败；
+  · `D.9` ★★★ **术语纪律的两半**：全称存在 + **裸写被禁裸词的计数 == 显式豁免清单**。
 """
 import ast
 import collections
@@ -63,6 +66,19 @@ OTHER_THEME_MARKS = ("-- FAIL: kv-cache", "-- FAIL: batching-and-scheduling",
 TERM_AUTOREGRESSIVE = "自回归解码"
 TERM_KV_CACHE = "KV 缓存"
 LIMIT_QUOTE = "不是任何真实引擎，也不是真机"
+
+# ★★★ **术语纪律的第二半**（★ 形态 A：「纪律宣称了而断言没盯住」）：
+#   本程序源码里**裸写那个被禁的裸词**（本域唯一的禁用裸词，见抬头的术语纪律）的【计数】
+#   必须**恰好等于**下面这份**显式豁免清单**覆盖的计数 ——
+#   ★★★ 判据是【计数 == 豁免覆盖数】，**不是「≤ N」**（「≤ N」挡不住**新增**一处裸写，正是本轮 `D1` 的形态）。
+#   ★ 每一项都写明【为什么豁免】（★ **本注释块刻意不写那个裸词**，否则它自己也会被计数）：
+#     ① 抬头注释里**提到**这条纪律本身、**并指出**该词在本库的另一个所指 ——
+#        ★ 两处都是 **mention**（它写该词恰恰因为在规定不许写它）。
+#     ② `D.9` 的判据文案里**复述**这条纪律 —— ★ 同为 mention。
+BARE_DECODE_EXEMPT = (
+    "不裸写 `decode`，那是 `60-compilers` 的 decode pass",   # ① 抬头：mention（规定 + 消歧）
+    "**不裸写** `decode`",                                    # ② D.9 文案：mention（复述纪律）
+)
 
 FAILS = []
 MARKS_USED = set()
@@ -95,6 +111,9 @@ PINNED_ALPHA_STAR = 0.518790063676        # ★ `γ = 4, c = 0.25` 的**收支�
 PINNED_GAMMA_STAR = 3                     # ★ `α = 0.8, c = 0.25` 下**最优草稿长度** `γ*`
 PINNED_SPEED_GAMMA_STAR = 1.686857        # ★ `γ*` 处的加速比
 PINNED_SPEED_GAMMA16 = 0.977482           # ★ `γ = 16` 处**已经亏了**（`< 1`）
+#   ★★ **§1 第四步那张 `γ` 表的【七格】**（★ **逐格钉** —— 不是只钉 `max`；★ 表里**没有** `γ = 5`）：
+PINNED_GAMMA_GRID = (1, 2, 3, 4, 6, 8, 16)                                       # ★ 表里的 `γ` 列
+PINNED_SPEED_GAMMA = (1.4400, 1.6267, 1.6869, 1.6808, 1.5806, 1.4430, 0.9775)    # ★ 对应的加速比（逐格）
 PINNED_TOKENS_LIMIT = 5.0                 # ★ `γ → ∞` 时 `E[#tokens] → α/(1−α) + 1`
 
 
@@ -299,6 +318,12 @@ def part_A():
     # ── A.4 ★★ 收支平衡点 α*：二分 vs 线性扫描 ────────────────────────
     print()
     print("  ── A.4 ★★ **收支平衡接受率 `α*`**（`γ = %d, c = %.2f` ⇒ 解 `加速比 = 1`）──" % (G, specs.SPEC_C))
+    # ★★ **降级声明**（★ `F4`）：本条的**两条搜索路径共享同一个目标函数** `closed_speed` ——
+    #   ⇒ 它**只证「根查找」的一致性**（二分 vs 扫描），**不是** `A.1`/`A.2` 那种
+    #     「**三条互不共享代码**的路径」⇒ ★★ **不与它们并列称 A 类**（`D.8` 只审
+    #     `analytic`/`closed_tokens`/`monte_carlo` 三函数，**不覆盖** `A.4`）。
+    print("     ★★ **降级声明**：本条两条路径**共享目标函数** `closed_speed` ⇒"
+          " 只证「**根查找**」的一致性，**弱于** `A.1`/`A.2`（★ `D.8` 未覆盖本条）。")
     lo, hi = 0.4, 0.6
     for _ in range(200):
         mid = (lo + hi) / 2.0
@@ -342,7 +367,7 @@ def part_B():
     print("  ── B.1 ★★ **草稿长度 `γ` 有一个最优点**（`α = %.1f, c = %.2f`）──" % (AL, specs.SPEC_C))
     print("     %-8s %-16s %-14s %s" % ("γ", "E[#tokens]", "加速比", "备注"))
     rows = []
-    for g in (1, 2, 3, 4, 5, 6, 8, 16):
+    for g in PINNED_GAMMA_GRID:
         tok = closed_tokens(AL, g)
         sp = closed_speed(AL, g, specs.SPEC_C)
         rows.append((g, tok, sp))
@@ -354,16 +379,24 @@ def part_B():
         elif g == 16:
             note = "★★ **已亏**（`< 1`）"
         print("     %-8d %-16.6f %-14.6f %s" % (g, tok, sp, note))
+    # ★★★ **七格逐格钉**（★ 正文 §1 第四步那张表的**每一格**，**不是只钉 `max`** ——
+    #     ★ 这正是本轮 `D2`「整表未被断言」的修补）：
+    cell_ok = all(abs(sp - pin) < 5e-5 for (_, _, sp), pin in zip(rows, PINNED_SPEED_GAMMA))
+    print("     ★★ 七格逐格对照 `PINNED_SPEED_GAMMA` = %s ⇒ %s" % (PINNED_SPEED_GAMMA, cell_ok))
     print("     ★★ 扫描 `γ ∈ [1, 64]` ⇒ **`γ* = %d`**（加速比 **%.6f**）" % best)
     print("     ★★ 读法：`γ` 太小 ⇒ 每轮产出少（`γc+1` 的**分母**小但分子更小）；"
           "`γ` 太大 ⇒ **验证的浪费**（`γc+1`）压过产出 ⇒ ★ **存在最优点**。")
-    check("B.1", best[0] == PINNED_GAMMA_STAR and abs(best[1] - PINNED_SPEED_GAMMA_STAR) < 1e-5
+    check("B.1", cell_ok
+          and best[0] == PINNED_GAMMA_STAR and abs(best[1] - PINNED_SPEED_GAMMA_STAR) < 1e-5
           and abs(closed_speed(AL, 16, specs.SPEC_C) - PINNED_SPEED_GAMMA16) < 1e-5
           and closed_speed(AL, 16, specs.SPEC_C) < 1.0,
           "★★ **判据成立**：`γ` 的扫描给出**内部最优** `γ* = %d`（加速比 `%.6f`）——"
-          " ★★ 两端都变差：`γ = 1` 只 `%.4f`、`γ = 16` 已经 **`%.4f < 1`**（**净亏**）"
-          % (best[0], best[1], closed_speed(AL, 1, specs.SPEC_C), closed_speed(AL, 16, specs.SPEC_C)),
-          "**`γ` 的最优点被动过** —— ★ 先查 `closed_speed` 的 `(γc+1)` 分母与 `Eq.(1)` 的分子")
+          " ★★ 两端都变差：`γ = 1` 只 `%.4f`、`γ = 16` 已经 **`%.4f < 1`**（**净亏**）；"
+          " ★★★ **正文表里的七格（`γ ∈ %s`）逐格钉住**（★ 不是只钉最优点）"
+          % (best[0], best[1], closed_speed(AL, 1, specs.SPEC_C), closed_speed(AL, 16, specs.SPEC_C),
+             PINNED_GAMMA_GRID),
+          "**`γ` 的最优点或表里某一格被动过** —— ★ 先查 `closed_speed` 的 `(γc+1)` 分母"
+          "与 `Eq.(1)` 的分子，以及 `PINNED_GAMMA_GRID`/`PINNED_SPEED_GAMMA` 的逐格对齐")
 
     # ── B.2 ★★ 两个负收益守卫：c ≥ 1（草稿不比目标快）、α 太小 ──────────
     print()
@@ -443,6 +476,26 @@ def part_C():
           "★★ **判据成立**：`γ = 0` ⇒ `E = 1`、**加速比恰好 `1`**（★ 没有草稿就既没有收益、也没有代价）"
           " —— ★ 这退化成普通的**自回归解码**，是投机解码的**中性边界**",
           "**`γ = 0` 的退化被动过** —— ★ 先查空序列上的解析式与闭式分子")
+
+    # ── C.4 ★★ **§4.1 的反例：闭式【不能】无条件引用 —— 断言【失败真的发生】** ──────
+    #   ★★ 与 C.1–C.3（**成功**的退化边界）不同：这一条断言的是**失败成立**（`CONTRIBUTING:238`
+    #      要求 C 类复现「§4 声称会出问题的输入真的跑出问题」）。
+    print()
+    print("  ── C.4 ★★ **§4.1 的反例**：闭式在变接受率下【偏了】—— 断言【失败真的发生】──")
+    desc = linspace_seq(specs.SPEC_ALPHA_DESC_HI, specs.SPEC_ALPHA_DESC_LO, G)
+    asc = desc[::-1]
+    bad_desc = abs(closed_tokens(float(np.mean(desc)), G) - analytic(desc)) / analytic(desc)
+    bad_asc = abs(closed_tokens(float(np.mean(asc)), G) - analytic(asc)) / analytic(asc)
+    print("     ★ 失败**真的发生**：闭式（代入算术平均）对精确值的**相对偏差** ——"
+          " 前高后低 `%.2f%%`、前低后高 `%.2f%%`（★ 两档都 `> 5%%`）"
+          % (100 * bad_desc, 100 * bad_asc))
+    check("C.4", bad_desc > 0.05 and bad_asc > 0.05,
+          "★★ **失败成立**（★ 与 `CONTRIBUTING:238` 的 C 类口径一致）：**把算术平均代进闭式**"
+          " 得到的数与精确值**偏差 `> 5%%`**（前高后低 `%.2f%%`、前低后高 `%.2f%%`）——"
+          " ★★ 于是 `§4.1`「把闭式当无条件」的反例**真的跑得出来**（★ 断言的是「失败复现」）"
+          % (100 * bad_desc, 100 * bad_asc),
+          "**反例不成立** —— ★ 若闭式与精确值在变序列上一致，则 `§4.1` 的失败模式**无法复现**"
+          "（那 `A.2` 的前提也塌了）")
 
 
 # ===========================================================================
@@ -600,6 +653,8 @@ def part_D():
           and abs(PINNED_ALPHA_STAR - 0.518790063676) < 1e-9
           and PINNED_GAMMA_STAR == 3 and abs(PINNED_SPEED_GAMMA_STAR - 1.686857) < 1e-9
           and abs(PINNED_SPEED_GAMMA16 - 0.977482) < 1e-9
+          and PINNED_GAMMA_GRID == (1, 2, 3, 4, 6, 8, 16)
+          and PINNED_SPEED_GAMMA == (1.4400, 1.6267, 1.6869, 1.6808, 1.5806, 1.4430, 0.9775)
           and abs(PINNED_TOKENS_LIMIT - 5.0) < 1e-9
           and abs(NUM_EPS - 1e-12) < 1e-24 and abs(MC_SIGMA - 4.0) < 1e-12,
           "★★★ **程序内常量逐元素**钉住（三条路径的六个数、四个偏差百分数、三个负收益守卫、"
@@ -629,16 +684,28 @@ def part_D():
 
     # ── D.9 ★★ 术语纪律 + 限定语（★ 机械判定）──────────────────────────
     src = open(__file__, encoding="utf-8").read()
+    # ★★ 被禁裸词（**刻意用拼接**而不是字面量）：★ 若这里写成字面量，**计数代码自己**也会被算进去，
+    #   于是「计数 == 豁免覆盖数」这条**等式**永远差 1。★ 拼接后本文件里**不再出现该裸词的字面量**。
+    WORD = "de" + "code"
+    n_bare = src.count(WORD)                # ★ 源码里**裸写**该词的计数
+    n_exempt = sum(src.count(s) * s.count(WORD) for s in BARE_DECODE_EXEMPT)
     print()
     print("  ── D.9 ★★ **术语纪律**（`§2.2`）：一律写「%s」/「%s」全称；限定语逐字出现 ──"
           % (TERM_AUTOREGRESSIVE, TERM_KV_CACHE))
+    print("     ★★ 源码里**裸写那个被禁裸词** = **%d** 处；豁免清单覆盖 = **%d**（清单 %d 项，逐项理由见模块头）"
+          % (n_bare, n_exempt, len(BARE_DECODE_EXEMPT)))
     check("D.9", TERM_AUTOREGRESSIVE == "自回归解码" and TERM_KV_CACHE == "KV 缓存"
           and LIMIT_QUOTE == "不是任何真实引擎，也不是真机"
-          and LIMIT_QUOTE in src and TERM_AUTOREGRESSIVE in src,
+          and LIMIT_QUOTE in src and TERM_AUTOREGRESSIVE in src
+          and n_bare == n_exempt
+          and all(s in src for s in BARE_DECODE_EXEMPT),
           "★★ **判据成立**：两条术语常量 `%r` / `%r`（★ **不裸写** `decode` / `cache` —— "
-          "它们在本库都另有含义）；★ 限定语 `%r` **逐字出现在本程序源码里**"
-          % (TERM_AUTOREGRESSIVE, TERM_KV_CACHE, LIMIT_QUOTE),
-          "**术语或限定语被动过** —— ★ 本域一律写全称、并带最强限定语")
+          "它们在本库都另有含义）；★ 限定语 `%r` **逐字出现在本程序源码里**；"
+          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**"
+          "（★ 清单之外的任何一处裸写都会让它不等）"
+          % (TERM_AUTOREGRESSIVE, TERM_KV_CACHE, LIMIT_QUOTE, n_bare, n_exempt),
+          "**术语或限定语被动过，或源码里出现了【豁免清单之外】的裸写** —— "
+          "★ 本域一律写全称；★ 新增的裸写要么改全称、要么进 `BARE_DECODE_EXEMPT` 并写明理由")
 
 
 # ===========================================================================
