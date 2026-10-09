@@ -1,0 +1,38 @@
+# 120-inference/engines · 运行依赖
+#
+# ★ 只有 numpy。本域**任何第三方框架都不 import**（`CONTRIBUTING` §2「永不 import 目标框架」，
+#   原文的措辞比 torch 宽 —— 本域按宽的口径执行）。`make lint` 用 AST 把关。
+#
+# ★★ **本机口径**（2026-10-09 实测）：默认 `python3` = 3.13.5，**只有 numpy 2.4.4** ——
+#   ★ **没有 `torch`**（`import torch` 会 `ModuleNotFoundError`）⇒ 本域编号程序**一律不 import torch**
+#     （`§0.7 A` 的硬约束 3）。`Makefile` 的 `check-env` 因此**只探测 numpy**。
+#
+# ★★ **本主题的定位**：★★ **只写「各家的选择与差异」，机制一律回链** ——
+#   vLLM · SGLang（RadixAttention）· TensorRT-LLM · llama.cpp。
+#
+# ★★ **本主题的边界**（**机制细节一律回链**）：
+#   **分页** ⇒ `120-inference/kv-cache/02`；**前缀树** ⇒ `kv-cache/03`；
+#   **调度器** ⇒ `batching-and-scheduling/01`；**PagedAttention 的算式** ⇒ `130-quantization/kv-cache-quantization/01:68-84`；
+#   **vLLM 的模型接入与算子注册** ⇒ `45-kernel-lifecycle/requirement-discovery/01:158-214`。
+#
+# ★★★ **判据纪律**：★★ **「没有 A 类」只适用于「引擎的【行为/性能】」** ——
+#   `RadixAttention` 的前缀树 / 块池 / LRU 是**可写独立参照实现**的数据结构 ⇒ `02` **有真 A 类**；
+#   ★ 只有「真实引擎的行为」不可验（用 `nccl` 的 `D` 类处置：一切钉住归 `D`）。
+#
+# ★★ **四类数字纪律**（`CONTRIBUTING` §2）：
+#   · **规格值 / 引文** → `specs.py`（每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`）；
+#     ★★ 本主题跨 **A/B/C 三级**（TRT-LLM `[A]` / vLLM `[B]` / 论文 `[C]`）—— **引用必须带级别**；
+#   · **推导值** → 由编号程序算出（可手算复核）⇒ ★ 按纪律**不进 `specs.py`**；
+#   · **引用值** → 外部来源的实测 ⇒ ★★ 引擎的吞吐/延迟数字**全是引用值**，本机**跑不了**；
+#   · **本机实测值** → 本机真跑的数（**须写 python3 与 numpy 版本**）⇒ ★ **不得把推导写成实测**。
+#   ★★ 本域另加三条落法：**所有数值常量取到 `< 2^53`**（浮点变异是 `v + 1.0`）；
+#     **不做幂次字面量**（`_walk()` 不下钻 `BinOp`）；**字符串一律单行**
+#     （跨行隐式拼接会被 `mutate.py` 的 `_patch()` 整条跳过）。
+#
+# ★★ **「本机无 GPU / 无引擎」的限定语**：本机**无 GPU、无 vLLM / SGLang / TensorRT-LLM / llama.cpp** ⇒
+#   一切数值都是 `python3` + `numpy` 的**玩具规模**真跑，验证的是**数据结构的不变量**
+#   （前缀树 / 块池 / LRU），**不是**任何真实引擎的行为或性能。
+#   ★ 强制限定语：**「不是任何真实引擎，也不是真机」**。
+#
+# 本机实测可跑：python3 3.13.5 / numpy 2.4.4（macOS arm64，**无 GPU**）。
+numpy>=2.0
