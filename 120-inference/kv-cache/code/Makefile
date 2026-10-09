@@ -58,7 +58,7 @@
 #   Makefile / requirements.txt   构建入口
 
 PYTHON  ?= python3
-SCRIPTS :=
+SCRIPTS := 01_capacity_planning 02_block_management 03_prefix_and_eviction
 
 .PHONY: all run lint mutate lines clean check-env
 
