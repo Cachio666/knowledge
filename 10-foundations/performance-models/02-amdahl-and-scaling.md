@@ -425,5 +425,5 @@ N₅₀（IB，无重叠）= 305
 - NVIDIA, *NVIDIA H100 Tensor Core GPU Datasheet* —— NVLink 4 的 900 GB/s 双向规格与 BF16 dense 989.5 TFLOPS。
 - InfiniBand Trade Association, *InfiniBand Architecture Specification* —— NDR 400 Gb/s 的链路速率定义（÷ 8 = 50 GB/s 单向）。
 - NVIDIA, *NCCL Documentation* —— ring / tree 集合通信算法的阶段划分与消息大小选择策略。
-- 本仓库 [110-communication/collectives](../../110-communication/collectives.md) —— all-reduce 的算法族与 `V(N) = 2(N-1)/N × S` 的推导。
+- 本仓库 [110-communication/collectives](../../110-communication/collectives/01-algorithm-family.md) —— all-reduce 的算法族与 `V(N) = 2(N-1)/N × S` 的推导。
 - 本仓库 [10-foundations/performance-models/01-roofline-model.md](01-roofline-model.md) —— 单机内的瓶颈判据（算术强度与 `I*`）。
