@@ -9,7 +9,7 @@
 | kv-cache | ★ **从「账」到「容量规划」**（可用显存 → KV 块数 → 最大并发）· **系统侧的块管理器**（块池 / 引用计数 / copy-on-write）· **前缀共享与淘汰**（hash → 块、驱逐、命中率） |
 | batching-and-scheduling | **迭代级调度**（continuous batching 的机制与收益来源）· **chunked prefill 的分块数权衡** · **抢占与公平** |
 | decoding-strategies | 采样与搜索（greedy / beam / top-k / top-p）· ★★ **speculative decoding**（三条独立路径 + 假设边界）· 并行解码 |
-| engines | vLLM · SGLang（RadixAttention）· TensorRT-LLM · llama.cpp —— ★★ **只写「各家的选择与差异」，机制一律回链** |
+| engines | vLLM · SGLang（RadixAttention）· TensorRT-LLM · llama.cpp —— ★★ **只写「各家的选择与差异」，机制一律回链**。★★ **`llama.cpp`：本次取数无一手来源 ⇒ 只作【边界声明】**（`03` 的 §0.5 / `C.3`，`F3`） |
 | serving-infra | **两个延迟**（TTFT / inter-token latency）· ★★ **推理的 TP/PP/EP 与 PD 分离** · 扩缩容 / 路由 / 可观测性 |
 
 ## 主线

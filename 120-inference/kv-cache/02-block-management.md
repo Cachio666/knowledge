@@ -265,9 +265,9 @@ updated: 2026-10-09
   ★★ 全库**没有**「块管理器」的一手实现可引（本机**无任何引擎**）。
 - **vLLM 的块大小** —— `vllm/config/cache.py` 的 `DEFAULT_BLOCK_SIZE`（`[B]`，
   main 分支，抓取日 **2026-10-09**）。
-- **SGLang 的分页粒度** —— LMSYS 博客（`[B]`，2024-01-17，抓取日 2026-10-09）：
-  逐字「the size of each page is equivalent to one token」。
-  ★★ 与 vLLM 的 `block = 16` **同名不同指**。
+- **块粒度的「同名不同指」**（SGLang 的 `page = 1 token` vs vLLM 的 `block = 16`）——
+  ★★★ **正文在** [engines/02 的 `C.1`](../engines/02-sglang-and-radix.md)
+  （**正文在彼处，此处只回链**，`D1` 订正）；★ 本主题的常量来源见 `specs.py` 的 `# 来源：`。
 - **KDA 下的三概念拆分与 copy-on-write** —— 本库
   `45-kernel-lifecycle/requirement-discovery/01:187`（★ **该处自标「经检索转述」**，
   **非逐字**，**不得**升格为 `[A]`）。

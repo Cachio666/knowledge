@@ -21,7 +21,7 @@
 
 ★★ **禁写清单（本主题）**：
   · 不得引 `design/paged_attention` 当 vLLM 现状（`F7`）；
-  · 不得把 ORCA 的 `36:9×` 或 vLLM 首页的 `23×` 当本库实测（它们是**引用值**，基线各自不同）。
+  · 不得把 ORCA 的 `36:9×` 或 vLLM 首页引的那篇博客的 `23x` 当本库实测（它们是**引用值**，基线各自不同）。
 
 ★ **本主题的禁区**（本主题**一行都不重写**，只回链；★ 机制细节一律回链）：
   · **分页** → `120-inference/kv-cache/02`；**前缀树** → `kv-cache/03`；**调度器** → `batching-and-scheduling/01`；
@@ -191,7 +191,9 @@ VLLM_MAX_NUM_SEQS_QUOTE = "Maximum number of sequences to be processed in a sing
 # 来源：[B] vLLM 官方文档 —— `configuration/engine_args/` 的 `--max-num-seqs`（抓取日 2026-10-09）。
 # 口径：★★ 文档自己说这个 default 是「**mainly for convenience when testing**」⇒ **不是生产默认**。
 # 消费者：`01` 的 `D.5`（引文逐字钉住）。
-# 同值位置：`--max-num-batched-tokens` 的**同句式**（两条各一次 —— **不是同一条**）。
+# 同值位置：`--max-num-batched-tokens` 的**同句式**（★ **≥ 2 处** —— 今日原始 HTML 上 `grep -c`
+#       得 3，**第三处属 `--enable-chunked-prefill`**；★★ **该句式会随文档改版漂移 ⇒ 计数会失效**，
+#       故这里只作**定性提示**、**不写死条数**（与「锚点用名字、不用行号」同一处置）。
 
 VLLM_CHUNKED_PREFILL_DEFAULT_QUOTE = "chunked prefill is enabled by default whenever possible"
 # 来源：[B] vLLM 官方文档 —— `configuration/optimization/`（抓取日 2026-10-09）。
@@ -234,7 +236,9 @@ ORCA_THROUGHPUT_QUOTE = "36:9× throughput improvement at the same level of late
 # 同值位置：无。
 
 VLLM_HOME_23X_BLOG_QUOTE = "How continuous batching enables 23x throughput in LLM inference while reducing p50 latency"
-# 来源：[B] vLLM 官方文档首页「进一步阅读」引的一篇**博客**（Cade Daniel et al.，抓取日 2026-10-09）。
+# 来源：★★★ **双标注**（★ 与 `batching-and-scheduling/01:177` 的标法**统一**，`F1`）——
+#        **载体 = `[B]`**（vLLM 官方文档首页的「进一步阅读」栏目，抓取日 2026-10-09）
+#        + **数字出处 = `[D]`**（该栏目引的 Cade Daniel et al. 的**博客**）。
 # 口径：★★★ 它与 ORCA 的 `36:9×` 是**两个不同来源**（`§0.7 D4` 的订正）⇒ 引用必须**连出处**写（`F4`）。
 # 消费者：`01` 的 `D.5`。
 # 同值位置：无。

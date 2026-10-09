@@ -441,7 +441,7 @@ def part_B():
           % (seq_speed / stat_speed))
     print("        ★★ 文献里的两个数同样必须**连出处与基线一起写**：")
     print("           ORCA（OSDI '22）报 **36:9×**（★ **原文如此**：用冒号、不是小数点，应读作 36.9×；"
-          "对比 FasterTransformer），vLLM 首页引的一篇**博客**报 **23×** ——")
+          "对比 FasterTransformer），vLLM 首页引的一篇**博客**报 **23x** ——")
     print("           ★★★ **它们是引用值，基线是各自论文/博客的条件，`[C]`/`[D]` 级，"
           "与本机模拟器无关**（`F4`）。")
     check("B.4", abs(seq_speed - PINNED_RATIOS[3]) < 2e-3
@@ -665,9 +665,11 @@ def part_D():
           and specs.VLLM_API_SERVER_B200_MAX_SEQS == 1024
           and specs.VLLM_TEST_CONVENIENCE_QUOTE == "The default value here is mainly for convenience when testing. In real usage, this should be set in EngineArgs.create_engine_config."
           and specs.VLLM_MAX_NUM_SEQS_NO_SINGLE_DEFAULT == "vLLM 的 max_num_seqs / max_num_batched_tokens 没有单一默认值：类常量 2048/128 只是兜底，get_batch_defaults() 按显存+场景覆盖，throughput 模式再各自翻倍",
-          "★★★ **引文/取值逐字钉住**：类常量兜底 `128` / `2048`；★ **覆盖值**按设备+场景分档"
+          "★★★ **引文/取值逐字钉住**（★ 本主题的**程序侧回归**）：类常量兜底 `128` / `2048`；★ **覆盖值**按设备+场景分档"
           "（H100 API server `8192`/`1024`；A100/其余 `2048`/`256`；B200 `16384`/`1024`）——"
-          " ★★★ **「vLLM 的 `max_num_seqs` 默认值」没有单一答案**（`[B]` 级，见 `F2`）",
+          " ★★★ **「vLLM 的 `max_num_seqs` 默认值」没有单一答案**（`[B]` 级，见 `F2`）；"
+          "★★ **这张表的【正文】已收到本域 [engines/01-vllm](../../engines/01-vllm.md)**（`CONTRIBUTING` §7）"
+          "—— ★ 本条只是**回归钉住**，**不是正文**",
           "**批参数常量被动过** —— ★ 先查 vLLM 的兜底值与各档覆盖值")
 
     # ── D.7 ★★★ 逐元素钉住 ──────────────────────────────────────────────

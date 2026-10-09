@@ -133,6 +133,10 @@ updated: 2026-10-09
 ★★ **同表还有一列 FIFO**（`B.1` 逐格钉住）：`2 / 4 / 8 / 16` 块上 FIFO 命中 = `138 / 250 / 327 / 384`
 —— ★★★ **注意 `cap = 2`：FIFO `138` > LRU `136`**（★ 两者**无普遍次序**，见 §2（3））。
 
+★★★ **与 `engines/02` 的 LRU【不是同一件事】**（`S3` 互指）—— 那里的缓存单位是**条序列**
+（**数据结构层**，radix tree 判成员）；这里的单位是**块**（**系统侧块管理**，带 `ref == 0` 过滤器
+与「保留区间」那一维）⇒ ★ **命中率口径不同、不可互相套用**。
+
 ★★★ **一个免费的下界**：容量 `≥` 去重键数（`16`）时，**唯一的缺失是每个键的第一次**（**强制缺失**）：
 
 ```
@@ -301,8 +305,9 @@ updated: 2026-10-09
   「we hash each kv-cache block by the tokens in the block and the tokens in the prefix before the block」
   与「**We only cache full blocks.**」。
   ★★ **默认开关值未取到** ⇒ 本文**不断言**「APC 默认开启」。
-- **SGLang 的分页粒度** —— LMSYS 博客（`[B]`，2024-01-17，抓取日 2026-10-09）：
-  「the size of each page is equivalent to one token」。★ 与 vLLM 的 `block = 16` **同名不同指**。
+- **块粒度的「同名不同指」**（SGLang 的 `page = 1 token` vs vLLM 的 `block = 16`）——
+  ★★★ **正文在** [engines/02 的 `C.1`](../engines/02-sglang-and-radix.md)
+  （**正文在彼处，此处只回链**，`D1` 订正）；★ 本主题的常量来源见 `specs.py` 的 `# 来源：`。
 - **KDA（循环模型）下的三概念拆分与 copy-on-write** —— 本库
   `45-kernel-lifecycle/requirement-discovery/01:187`（★ **该处自标「经检索转述」**，**非逐字**）。
 - ★ **一条术语纪律**：本文一律写「**前缀缓存**」（**不裸写 `cache`** —— 库内 `cache` 另有

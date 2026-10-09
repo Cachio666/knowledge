@@ -82,6 +82,47 @@ BARE_ATTRIBUTION_EXEMPT = (
     "**不裸写「业界」**",
 )
 
+# ★★★ **术语纪律的第三半**（★ `D3` 根治：本域抬头宣称「不裸写那两个 ASCII 词」而此前**没有任何断言盯住**，
+#   本主题在自己身上栽了第三次 —— 见计划 `§5` v1.10 ⇒ 现在对它建**同形态的等式**）：
+#   判据 = 【**等式**】「裸写计数 == 显式豁免清单覆盖数」（**不是「≤ N」**）；★ 计数码用**拼接**避免自计。
+#   ★ 裸写 = 被禁 ASCII 词**紧邻中文**（中间只隔空白 / 反引号）。
+#   ★ 豁免清单（**逐项带理由**）：① 下面两条字符串**本身就是**抬头那条纪律的 **mention** ——
+#     它们写该 ASCII 词**恰恰因为在规定不许写它**。★ 它们是**唯一**被豁免的裸写；
+#     ★★ 任何**新增**的裸写都会让等式 `n_bare == n_exempt` 不成立。
+BARE_ASCII_WORDS = ("ca" + "che", "sched" + "uler")
+TERM_BARE_EXEMPT = (
+    "本域一律写「**KV 缓存**」全称（不裸写 `cache`，那是 L1/L2 与 kernel cache）",
+    "本域一律写「**请求调度器**」全称（不裸写 `scheduler`，那是 GPU 的 warp scheduler）",
+)
+
+
+def _is_cjk(ch):
+    """★ 是否 CJK 表意字（★ **不含** CJK 标点 —— 「，」「）」不算「中文语境」）。"""
+    return ch != "" and "一" <= ch <= "鿿"
+
+
+def _count_bare_ascii(src):
+    """★★ 数「**裸写**」：被禁 ASCII 词**紧邻中文**（中间只隔空白 / 反引号）的出现次数。
+
+    ★★★ 这是 `D.9` 的**被测量** —— ★ 判据是**等式**（`_count_bare_ascii(src) == 豁免覆盖数`）。
+    """
+    n = 0
+    for w in BARE_ASCII_WORDS:
+        i = src.find(w)
+        while i != -1:
+            l = i
+            while l > 0 and src[l - 1] in " `\t":
+                l -= 1
+            r = i + len(w)
+            while r < len(src) and src[r] in " `\t":
+                r += 1
+            lc = src[l - 1] if l > 0 else ""
+            rc = src[r] if r < len(src) else ""
+            if _is_cjk(lc) or _is_cjk(rc):
+                n += 1
+            i = src.find(w, i + 1)
+    return n
+
 FAILS = []
 MARKS_USED = set()
 _TOTAL = collections.Counter()
@@ -421,10 +462,11 @@ def part_A():
     print("     ★ 序列 %d 条 · 查询 %d 条（含**所有**已存序列的前缀）· 不一致 = %d 条"
           % (len(seqs), len(queries), len(bad)))
     print("     ★★ 样例（前 3 条已存序列）：%s" % "; ".join("%s⇒%d" % (s, radix.longest_prefix_len(s)) for s, _ in seqs[:3]))
-    check("A.1", not bad and len(queries) >= 40 and len(seqs) == specs.RADIX_N_SEQ,
-          "★★★ **判据成立**：**%d 条查询**上，压缩前缀树与**逐 token 朴素比对**给出的最长前缀**逐条一致**"
+    check("A.1", not bad and len(queries) == 85 and len(seqs) == specs.RADIX_N_SEQ,
+          "★★★ **判据成立**：**%d 条查询**（★ **等式钉住 `== 85`**，`D2` 订正）上，"
+          "压缩前缀树与**逐 token 朴素比对**给出的最长前缀**逐条一致**"
           " —— ★★ 一面走**切分后的边**，一面**逐 token 数**，两条独立路径会合" % len(queries),
-          "**两条路径的最长前缀不一致** —— ★ 先查 `RadixTree.insert` 的**切分**逻辑")
+          "**两条路径的最长前缀不一致（或查询数不是 85）** —— ★ 先查 `gen_queries` 与 `RadixTree.insert` 的**切分**逻辑")
 
     # ── A.2 ★★★ 空间：radix 节点数 < 未压缩 trie 节点数 ─────────────────
     print()
@@ -437,11 +479,12 @@ def part_A():
     print("     总 token 数 = %d · **radix 节点数** = %d · **未压缩 trie 节点数** = %d"
           % (total_tokens, radix.n_nodes, trie.n_nodes))
     print("     ★★ 成员判定在三条路径上一致 = %s" % identical)
-    check("A.2", radix.n_nodes < trie.n_nodes and identical and total_tokens > trie.n_nodes,
-          "★★★ **判据成立**：radix **%d 个节点** < 未压缩 trie **%d 个**（总 token %d）—— ★★ 差的就是"
-          "「一条边挂多个 token」压掉的**链**；★★ 且三条路径的**成员判定**一致"
+    check("A.2", radix.n_nodes == 16 and trie.n_nodes == 31 and total_tokens == 53 and identical,
+          "★★★ **判据成立**：radix **%d 个节点** < 未压缩 trie **%d 个**（总 token %d）—— "
+          "★★ **三格都用等式钉住**（`D2` 订正：此前只有 `<` 不等式，正文的 `16`/`31`/`53` 未被断言钉住）；"
+          "★★ 差的就是「一条边挂多个 token」压掉的**链**；★★ 且三条路径的**成员判定**一致"
           % (radix.n_nodes, trie.n_nodes, total_tokens),
-          "**压缩没有发生** —— ★ 那 `A.1` 的相等就退化成「两条路径都是同一种结构」了")
+          "**压缩没有发生（或三个整数不是 16 / 31 / 53）** —— ★ 那 `A.1` 的相等就退化成「两条路径都是同一种结构」了")
 
     # ── A.3 ★★★ LRU：RadixCache == ListCache ────────────────────────────
     print()
@@ -454,11 +497,13 @@ def part_A():
     print("     容量 = %d 条 · 轨迹 %d 步 · 命中数 = %d" % (cap, len(trace), rhit.count("hit")))
     print("     ★★ 命中/未命中序列一致 = %s · 受害序列一致 = %s"
           % (rhit == lhit, rc.victims == lc.victims))
-    check("A.3", rhit == lhit and rc.victims == lc.victims and rc.victims != []
-          and rhit.count("hit") > 0,
+    check("A.3", rhit == lhit and rc.victims == lc.victims
+          and len(trace) == 120 and len(rc.victims) == 85 and rhit.count("hit") == 31,
           "★★★ **判据成立**：`RadixCache`（成员判定走**压缩树**）与 `ListCache`（**列表扫描**）在 **%d 步**"
-          "轨迹上**命中序列与受害序列都一致**（受害 %d 次）—— ★★ 又两条独立路径" % (len(trace), len(rc.victims)),
-          "**两条路径的淘汰不一致** —— ★ 先查 `RadixCache._rebuild` 与最小时间戳的选择")
+          "轨迹上**命中序列与受害序列都一致**（受害 **%d** 次、命中 **%d** 次）—— "
+          "★★ **三个整数都用等式钉住**（`D2` 订正）；★★ 又两条独立路径"
+          % (len(trace), len(rc.victims), rhit.count("hit")),
+          "**两条路径的淘汰不一致（或 120 / 85 / 31 被改）** —— ★ 先查 `RadixCache._rebuild` 与最小时间戳的选择")
 
 
 # ===========================================================================
@@ -486,9 +531,11 @@ def part_B():
     print("     %-22s %-14d %.4f" % ("压缩前缀树 (radix)", radix.n_nodes, radix.n_nodes / total_tokens))
     print("     %-22s %-14d %.4f" % ("未压缩 trie", trie.n_nodes, trie.n_nodes / total_tokens))
     print("     ★★ **读法**：radix 的 `节点/token` **小于** trie 的 —— 被压掉的是**只有单孩子**的链。")
-    check("B.1", radix.n_nodes / total_tokens < trie.n_nodes / total_tokens
-          and radix.n_nodes >= 2 and trie.n_nodes > radix.n_nodes,
-          "★ **判据成立**：radix `节点/token` = **%.4f** < trie 的 **%.4f**（同一个序列集）"
+    check("B.1", round(radix.n_nodes / total_tokens, 4) == 0.3019
+          and round(trie.n_nodes / total_tokens, 4) == 0.5849
+          and radix.n_nodes == 16 and trie.n_nodes == 31 and total_tokens == 53,
+          "★ **判据成立**：radix `节点/token` = **%.4f** < trie 的 **%.4f**（同一个序列集）—— "
+          "★★ **两个比值都用等式钉住**（`0.3019` / `0.5849`，`D2` 订正：此前只有 `<`）"
           % (radix.n_nodes / total_tokens, trie.n_nodes / total_tokens),
           "**压缩比被动过** —— ★ 先查 `RadixTree` 的切分与 `UncompressedTrie` 的节点计数")
 
@@ -498,20 +545,25 @@ def part_B():
     seqs = gen_seqs(specs.RADIX_SEED, specs.RADIX_N_SEQ, specs.RADIX_SEQ_LEN_GRID, specs.RADIX_ALPHABET)
     trace = gen_trace(specs.RADIX_SEED, seqs, specs.RADIX_ALPHABET)
     rates = {}
+    hits_by_cap = {}
     for cap in specs.RADIX_CAP_GRID:
         lc = ListCache(cap)
         hits = sum(1 for t in trace if lc.access(t) == "hit")
+        hits_by_cap[cap] = hits
         rates[cap] = hits / len(trace)
-    print("     %-10s %-12s" % ("容量(条)", "命中率"))
+    print("     %-10s %-8s %-12s" % ("容量(条)", "命中数", "命中率"))
     for cap in specs.RADIX_CAP_GRID:
-        print("     %-10d %.4f" % (cap, rates[cap]))
+        print("     %-10d %-8d %.4f" % (cap, hits_by_cap[cap], rates[cap]))
     monotone = all(rates[specs.RADIX_CAP_GRID[i]] <= rates[specs.RADIX_CAP_GRID[i + 1]]
                    for i in range(len(specs.RADIX_CAP_GRID) - 1))
     print("     ★★ 单调不降 = %s ；最大容量命中率 = %.4f" % (monotone, rates[specs.RADIX_CAP_GRID[-1]]))
-    check("B.2", monotone and rates[specs.RADIX_CAP_GRID[-1]] > rates[specs.RADIX_CAP_GRID[0]],
-          "★ **判据成立**：命中率随容量**单调不降**（`%.4f → %.4f`）；★ 大容量下仍有未命中的是"
-          "**强制缺失**（首次出现）" % (rates[specs.RADIX_CAP_GRID[0]], rates[specs.RADIX_CAP_GRID[-1]]),
-          "**命中率非单调** —— ★ 先查 `ListCache` 的淘汰与轨迹生成")
+    check("B.2", monotone and hits_by_cap == {2: 17, 4: 31, 8: 46, 16: 65}
+          and {c: round(rates[c], 4) for c in specs.RADIX_CAP_GRID}
+          == {2: 0.1417, 4: 0.2583, 8: 0.3833, 16: 0.5417},
+          "★ **判据成立**：命中率随容量**单调不降**（`%.4f → %.4f`）—— ★★ **四档命中数与命中率都用等式钉住**"
+          "（`D2` 订正：此前只有「单调不增」）；★ 大容量下仍有未命中的是**强制缺失**（首次出现）"
+          % (rates[specs.RADIX_CAP_GRID[0]], rates[specs.RADIX_CAP_GRID[-1]]),
+          "**命中率非单调（或四档命中数不是 17/31/46/65）** —— ★ 先查 `ListCache` 的淘汰与轨迹生成")
 
 
 # ===========================================================================
@@ -770,21 +822,35 @@ def part_D():
     WORD = "业" + "界"
     n_bare = src.count(WORD)
     n_exempt = sum(src.count(s) * s.count(WORD) for s in BARE_ATTRIBUTION_EXEMPT)
+    # ★★★ 第三半：**被禁 ASCII 词**的裸写计数（★ `D3` 的根治）—— 判据同样是**等式**。
+    n_bare_terms = _count_bare_ascii(src)
+    n_exempt_terms = sum(src.count(s) * _count_bare_ascii(s) for s in TERM_BARE_EXEMPT)
     print()
     print("  ── D.9 ★★★ **术语纪律**：一律写「%s」/「%s」全称；限定语逐字出现 ──"
           % (TERM_KV_CACHE, TERM_SCHEDULER))
     print("     ★★ 源码里**裸写那个被禁裸词** = **%d** 处；豁免清单覆盖 = **%d**（清单 %d 项，逐项理由见模块头）"
           % (n_bare, n_exempt, len(BARE_ATTRIBUTION_EXEMPT)))
+    print("     ★★★ 源码里**裸写那两个被禁 ASCII 词**（★ 紧邻中文）= **%d** 处；豁免清单覆盖 = **%d**"
+          % (n_bare_terms, n_exempt_terms))
     check("D.9", TERM_KV_CACHE == "KV 缓存" and TERM_SCHEDULER == "请求调度器"
           and LIMIT_QUOTE == "不是任何真实引擎，也不是真机"
           and LIMIT_QUOTE in src and TERM_KV_CACHE in src
           and BARE_ATTRIBUTION_EXEMPT
           == ("不裸写「" + WORD + "」这类无第二个独立主体的断言", "**不裸写「" + WORD + "」**")
           and n_bare == n_exempt
-          and all(s in src for s in BARE_ATTRIBUTION_EXEMPT),
+          and all(s in src for s in BARE_ATTRIBUTION_EXEMPT)
+          and BARE_ASCII_WORDS == ("ca" + "che", "sched" + "uler")
+          and TERM_BARE_EXEMPT == (
+              "本域一律写「**KV 缓存**」全称（不裸写 `" + BARE_ASCII_WORDS[0] + "`，那是 L1/L2 与 kernel "
+              + BARE_ASCII_WORDS[0] + "）",
+              "本域一律写「**请求调度器**」全称（不裸写 `" + BARE_ASCII_WORDS[1] + "`，那是 GPU 的 warp "
+              + BARE_ASCII_WORDS[1] + "）")
+          and n_bare_terms == n_exempt_terms
+          and all(s in src for s in TERM_BARE_EXEMPT),
           "★★ **判据成立**：两条术语常量 `%r` / `%r`；★ 限定语 `%r` **逐字出现**；"
-          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**"
-          % (TERM_KV_CACHE, TERM_SCHEDULER, LIMIT_QUOTE, n_bare, n_exempt),
+          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**；"
+          " ★★★ **被禁 ASCII 词的裸写计数 `%d` 恰好等于其豁免清单覆盖的 `%d`**"
+          % (TERM_KV_CACHE, TERM_SCHEDULER, LIMIT_QUOTE, n_bare, n_exempt, n_bare_terms, n_exempt_terms),
           "**术语或限定语被动过，或源码里出现了【豁免清单之外】的裸写**")
 
 

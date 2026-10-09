@@ -76,6 +76,47 @@ BARE_ATTRIBUTION_EXEMPT = (
     "**不裸写「业界」**",
 )
 
+# ★★★ **术语纪律的第三半**（★ `D3` 根治：本域抬头宣称「不裸写那两个 ASCII 词」而此前**没有任何断言盯住**，
+#   本主题在自己身上栽了第三次 —— 见计划 `§5` v1.10 ⇒ 现在对它建**同形态的等式**）：
+#   判据 = 【**等式**】「裸写计数 == 显式豁免清单覆盖数」（**不是「≤ N」**）；★ 计数码用**拼接**避免自计。
+#   ★ 裸写 = 被禁 ASCII 词**紧邻中文**（中间只隔空白 / 反引号）。
+#   ★ 豁免清单（**逐项带理由**）：① 下面两条字符串**本身就是**抬头那条纪律的 **mention** ——
+#     它们写该 ASCII 词**恰恰因为在规定不许写它**。★ 它们是**唯一**被豁免的裸写；
+#     ★★ 任何**新增**的裸写都会让等式 `n_bare == n_exempt` 不成立。
+BARE_ASCII_WORDS = ("ca" + "che", "sched" + "uler")
+TERM_BARE_EXEMPT = (
+    "本域一律写「**KV 缓存**」全称（不裸写 `cache`，那是 L1/L2 与 kernel cache）",
+    "本域一律写「**请求调度器**」全称（不裸写 `scheduler`，那是 GPU 的 warp scheduler）",
+)
+
+
+def _is_cjk(ch):
+    """★ 是否 CJK 表意字（★ **不含** CJK 标点 —— 「，」「）」不算「中文语境」）。"""
+    return ch != "" and "一" <= ch <= "鿿"
+
+
+def _count_bare_ascii(src):
+    """★★ 数「**裸写**」：被禁 ASCII 词**紧邻中文**（中间只隔空白 / 反引号）的出现次数。
+
+    ★★★ 这是 `D.9` 的**被测量** —— ★ 判据是**等式**（`_count_bare_ascii(src) == 豁免覆盖数`）。
+    """
+    n = 0
+    for w in BARE_ASCII_WORDS:
+        i = src.find(w)
+        while i != -1:
+            l = i
+            while l > 0 and src[l - 1] in " `\t":
+                l -= 1
+            r = i + len(w)
+            while r < len(src) and src[r] in " `\t":
+                r += 1
+            lc = src[l - 1] if l > 0 else ""
+            rc = src[r] if r < len(src) else ""
+            if _is_cjk(lc) or _is_cjk(rc):
+                n += 1
+            i = src.find(w, i + 1)
+    return n
+
 FAILS = []
 MARKS_USED = set()
 _TOTAL = collections.Counter()
@@ -124,6 +165,16 @@ def n_engine_builds(axes):
     return out
 
 
+def _bump(axes, k):
+    """★ **把第 `k` 条轴加一档**（其余不动）—— ★ 用于 `B.1` 的**逐轴**验证。
+
+    ★★★ **为什么必须逐轴**：`(3, 3, 2)` 里把**任一**轴加一档**不给同一个数** ——
+      轴 0/1（`3` 档）⇒ `4×3×2 = 24`；★ 轴 2（`2` 档）⇒ `3×3×3 = **27**`。
+      ★★ 只测轴 0 会让 **`27` 那一格永远没有断言**（这正是本主题审查抓到的硬伤）。
+    """
+    return tuple(a + 1 if i == k else a for i, a in enumerate(axes))
+
+
 def packed_total(context_lens, n_gen):
     """★ **紧凑（无 padding）输入张量的总长**：`Σ context 段长度 + (gen 段数 × 1 token)`。
 
@@ -152,13 +203,34 @@ def layout_is_ordered(types):
     return True
 
 
-def constraint_is_universal(qualifier_present):
-    """★★★ **「顺序约束是 continuous batching 的【通用约束】」成立吗？** —— 只有当文档**没有**限定语时才成立。
+# ★★★ **顺序约束表述的两个限定标记**（★ 取自 `specs.TRTLLM_INFLIGHT_ORDER_QUALIFIER` 的措辞）：
+#   一条关于该顺序约束的表述，**必须同时带这两个限定**才算成立（`C.1` 判它）——
+#   ★ 否则就是把**该实现当前版本**的约束升格成**通用约束**（`§0.7 C` 事实 8）。
+ORDER_QUALIFIER_MARKERS = ("当前实现", "放宽")
 
-    ★★★ 取数到的原文**带限定语**（「In the current implementation …」＋「may or may not be relaxed」）
-      ⇒ 本函数返回 `False` ⇒ ★★ **把它当通用约束是错的**（`C.1` 判它）。
+# ★★ **术语 → 合法归属**（`C.2` 的「反例 → 被拒」结构）——
+#   `in-flight batching` 是 **NVIDIA 对 TensorRT-LLM 自己**的术语；`iteration-level scheduling`
+#   的**原始出处**是 **ORCA（OSDI '22）**。★ **交叉归属一律被拒**。
+TERM_OWNER = {
+    "in-flight batching": "NVIDIA (TensorRT-LLM)",
+    "iteration-level scheduling": "ORCA (OSDI '22)",
+}
+
+
+def term_owner_is_correct(term, owner):
+    """★ 把一条术语归给 `owner`，**归对了才通过**（★ 归错 ⇒ 被拒）。"""
+    return TERM_OWNER.get(term) == owner
+
+
+def order_claim_is_valid(claim):
+    """★★★ **一条关于顺序约束的表述【成立】吗？** —— 判据：它必须**连着限定语**。
+
+    ★★★ 这是一个**真的「反例 → 被拒」**结构（★ 不是恒真的常量检查）：
+      · **反例（被拒）**：「continuous batching 要求 context 段排在 generation 段之前」
+        —— ★ 缺限定 ⇒ 把**该实现当前版本**的约束说成了**通用约束**；
+      · **正例（通过）**：带 `specs.TRTLLM_INFLIGHT_ORDER_QUALIFIER` 那种限定（含两个标记）。
     """
-    return not qualifier_present
+    return all(mk in claim for mk in ORDER_QUALIFIER_MARKERS)
 
 
 # ===========================================================================
@@ -210,23 +282,33 @@ def part_B():
           "抓取日 **%s**。" % specs.ENGINES_FETCH_DAY)
     print("     逐字（术语）：`%s`" % specs.TRTLLM_INFLIGHT_SYNONYM_QUOTE)
 
-    # ── B.1 ★★ 编译式路线的份数 = 三轴乘积 ───────────────────────────────
+    # ── B.1 ★★ 编译式路线的份数 = 三轴乘积（★ 三轴【逐轴】加一档）────────
     print()
-    print("  ── B.1 ★★ **编译式路线的份数** = 三个配置轴的**乘积** ──")
+    print("  ── B.1 ★★ **编译式路线的份数** = 三个配置轴的**乘积**（★ 三轴**逐轴**加一档）──")
     axes = specs.TRTLLM_CONFIG_AXES
     prod = n_engine_builds(axes)
+    plus_one = [n_engine_builds(_bump(axes, k)) for k in range(len(axes))]
     print("     配置轴取值数：`max_batch_size` = %d · `max_input_len` = %d · `max_output_len` = %d"
           % (axes[0], axes[1], axes[2]))
     print("     ★★ **份数 = %d × %d × %d = %d**（★ 本主题的模型假设：每个组合**各编一份**）"
           % (axes[0], axes[1], axes[2], prod))
-    print("     ★★★ **读法**：**编译式路线的代价是【乘性】的** —— 每加一档配置，份数就乘一次；")
+    print("     ★★★ **三轴逐轴加一档**：%s"
+          % " · ".join("轴%d（%d 档）⇒ %d" % (k, axes[k], plus_one[k]) for k in range(len(axes))))
+    print("       ★★★ **加在哪条轴，代价不同** —— 加在 `%d` 档轴 ⇒ `%d`；加在 `%d` 档轴 ⇒ `%d`。"
+          % (axes[0], plus_one[0], axes[-1], plus_one[-1]))
+    print("     ★★★ **读法**：**编译式路线的代价是【乘性】的** —— 每加一档配置，份数就乘一次（乘的是**其它轴**的乘积）；")
     print("        这与**运行期**决定形态的引擎（只受显存约束）是**两种不同的代价结构**。")
     print("     ★★ 注：本机**无引擎** ⇒ 这是**结构账**，**不是**任何引擎的实测编译次数。")
-    check("B.1", prod == 18 and axes == (3, 3, 2)
-          and n_engine_builds((axes[0] + 1, axes[1], axes[2])) > prod,
-          "★★ **判据成立**：份数 = **%d**（`%d×%d×%d`）；★ 把任一轴加一档 ⇒ 份数 **%d → %d**（乘性增长）"
-          % (prod, axes[0], axes[1], axes[2], prod, n_engine_builds((axes[0] + 1, axes[1], axes[2]))),
-          "**配置轴或乘积被动过** —— ★ 先查 `TRTLLM_CONFIG_AXES` 与 `n_engine_builds`")
+    check("B.1", prod == 18 and axes == (3, 3, 2) and plus_one == [24, 24, 27]
+          and all(p > prod for p in plus_one)
+          and plus_one[-1] != plus_one[0],
+          "★★ **判据成立**：份数 = **%d**（`%d×%d×%d`）；★★★ **三轴逐轴加一档 ⇒ `%s`** —— "
+          "★ 加在 `%d` 档轴上是 **`%d`**、加在 `%d` 档轴上是 **`%d`**（★ **「任一轴加一档 ⇒ 同一个数」是错的**："
+          "`2` 档轴加一档是 **`%d`**，不是 `%d`）"
+          % (prod, axes[0], axes[1], axes[2], plus_one, axes[0], plus_one[0],
+             axes[-1], plus_one[-1], plus_one[-1], plus_one[0]),
+          "**配置轴或乘积被动过** —— ★ 先查 `TRTLLM_CONFIG_AXES` 与 `n_engine_builds`"
+          "（★ 本条必须**逐轴**验，否则某一格的乘积会**永久无断言**）")
 
     # ── B.2 ★★ 顺序约束的结构后果 ───────────────────────────────────────
     print()
@@ -268,37 +350,51 @@ def part_C():
     print("     逐字（约束）：`%s`" % specs.TRTLLM_INFLIGHT_ORDER_CONSTRAINT_QUOTE)
     print("     逐字（限定）：`%s`" % specs.TRTLLM_ORDER_RELAX_QUOTE)
     print("     限定语记录：`%s`" % specs.TRTLLM_INFLIGHT_ORDER_QUALIFIER)
-    print("     判定：「通用约束」⇒ **%s**（应 `False`，★ 因为限定语在）"
-          % constraint_is_universal(bool(specs.TRTLLM_INFLIGHT_ORDER_QUALIFIER)))
+    bare = "continuous batching 要求 context 段排在 generation 段之前"
+    good = specs.TRTLLM_INFLIGHT_ORDER_QUALIFIER
+    print("     ★★★ **反例（确实缺限定）**：`%s`" % bare)
+    print("        ⇒ 判定 **%s**（应 `False` —— ★ 缺「%s」/「%s」两个限定）"
+          % (order_claim_is_valid(bare), ORDER_QUALIFIER_MARKERS[0], ORDER_QUALIFIER_MARKERS[1]))
+    print("     ★ **正例（带限定）**：⇒ 判定 **%s**（应 `True`）" % order_claim_is_valid(good))
     print("     ★★★ **读法**：文档自述该约束**可能在未来版本放宽** ⇒ 它是**该实现当前版本**的，")
     print("        ★★ **不得**说成 continuous batching 的通用约束（`§0.7 C` 事实 8）。")
-    check("C.1", not constraint_is_universal(bool(specs.TRTLLM_INFLIGHT_ORDER_QUALIFIER))
+    check("C.1", (not order_claim_is_valid(bare)) and order_claim_is_valid(good)
           and "current implementation" in specs.TRTLLM_INFLIGHT_ORDER_CONSTRAINT_QUOTE
           and "future version" in specs.TRTLLM_ORDER_RELAX_QUOTE
           and specs.TRTLLM_INFLIGHT_ORDER_QUALIFIER
           == ("该顺序约束（context 段必须排在 generation 段之前）是 TensorRT-LLM 当前实现的约束，"
               "文档自述可能在未来版本放宽，不得说成 continuous batching 的通用约束"),
-          "★★★ **判据成立**：把该顺序约束当**通用约束**会被拒 —— 原文写的是「**In the current "
-          "implementation**」，且自述「**may or may not be relaxed in a future version**」",
+          "★★★ **判据成立**：一条**确实缺限定**的表述 `%s` **被拒**（★ 不是恒真的常量检查）；"
+          "★ 带限定的表述通过 —— 原文写的是「**In the current implementation**」，"
+          "且自述「**may or may not be relaxed in a future version**」" % bare,
           "**顺序约束或其限定语被动过** —— ★ 先查 `TRTLLM_INFLIGHT_ORDER_CONSTRAINT_QUOTE` / "
-          "`TRTLLM_ORDER_RELAX_QUOTE` / `TRTLLM_INFLIGHT_ORDER_QUALIFIER`")
+          "`TRTLLM_ORDER_RELAX_QUOTE` / `TRTLLM_INFLIGHT_ORDER_QUALIFIER` / `order_claim_is_valid`")
 
     # ── C.2 ★★★ 把 in-flight batching 当成 ORCA 的原始术语 ──────────────
     print()
     print("  ── C.2 ★★★ **把 `in-flight batching` 当成 ORCA 的原始术语**──")
     print("     逐字（NVIDIA）：`%s`" % specs.TRTLLM_INFLIGHT_SYNONYM_QUOTE)
     print("     逐字（ORCA）：`%s`" % specs.ORCA_ITERATION_LEVEL_QUOTE)
+    mis = term_owner_is_correct("in-flight batching", "ORCA (OSDI '22)")
+    print("     ★★★ **反例（归错主体）**：把 `in-flight batching` 归给 `ORCA` ⇒ 判定 **%s**（应 `False`）" % mis)
+    print("     ★ **正例**：`in-flight batching` ⇒ NVIDIA(TensorRT-LLM)；`iteration-level scheduling`"
+          " ⇒ ORCA ⇒ 判定 **%s**（应 `True`）"
+          % (term_owner_is_correct("in-flight batching", "NVIDIA (TensorRT-LLM)")
+             and term_owner_is_correct("iteration-level scheduling", "ORCA (OSDI '22)")))
     print("     ★★★ **读法**：`in-flight batching` 是 **NVIDIA 对 TensorRT-LLM 自己**的术语")
     print("        （`[A]` 级，且它**自己**把三者声明为同义）；而**原始术语** `iteration-level scheduling`")
     print("        的出处是 **ORCA（OSDI '22，`[C]`）** ⇒ ★★ **两者不可混**（`F3` 的邻形）。")
-    check("C.2", "also known as continuous batching or iteration-level batching"
+    check("C.2", (not mis)
+          and term_owner_is_correct("in-flight batching", "NVIDIA (TensorRT-LLM)")
+          and term_owner_is_correct("iteration-level scheduling", "ORCA (OSDI '22)")
+          and "also known as continuous batching or iteration-level batching"
           in specs.TRTLLM_INFLIGHT_SYNONYM_QUOTE
           and "granularity of iteration" in specs.ORCA_ITERATION_LEVEL_QUOTE
           and specs.TRTLLM_INFLIGHT_SYNONYM_QUOTE != specs.ORCA_ITERATION_LEVEL_QUOTE,
           "★★★ **判据成立**：`in-flight batching`（NVIDIA，`[A]`）与 `iteration-level scheduling`"
-          "（ORCA，`[C]`）是**两条不同出处的术语** —— ★ NVIDIA 自己声明三者同义，"
-          "但**原始术语**归 ORCA",
-          "**两条术语之一被动过** —— ★ 先查 `TRTLLM_INFLIGHT_SYNONYM_QUOTE` / `ORCA_ITERATION_LEVEL_QUOTE`")
+          "（ORCA，`[C]`）是**两条不同出处的术语** —— ★ **交叉归属会被拒**（反例→被拒），"
+          "★ 但**原始术语**归 ORCA",
+          "**两条术语之一被动过** —— ★ 先查 `TRTLLM_INFLIGHT_SYNONYM_QUOTE` / `ORCA_ITERATION_LEVEL_QUOTE` / `TERM_OWNER`")
 
     # ── C.3 ★★★ llama.cpp：一手来源【未取到】⇒ 不得自造引文 ─────────────
     print()
@@ -416,22 +512,36 @@ def part_D():
     WORD = "业" + "界"
     n_bare = src.count(WORD)
     n_exempt = sum(src.count(s) * s.count(WORD) for s in BARE_ATTRIBUTION_EXEMPT)
+    # ★★★ 第三半：**被禁 ASCII 词**的裸写计数（★ `D3` 的根治）—— 判据同样是**等式**。
+    n_bare_terms = _count_bare_ascii(src)
+    n_exempt_terms = sum(src.count(s) * _count_bare_ascii(s) for s in TERM_BARE_EXEMPT)
     print()
     print("  ── D.9 ★★★ **术语纪律**：一律写「%s」/「%s」全称；限定语逐字出现 ──"
           % (TERM_KV_CACHE, TERM_SCHEDULER))
     print("     ★★ 源码里**裸写那个被禁裸词** = **%d** 处；豁免清单覆盖 = **%d**（清单 %d 项，逐项理由见模块头）"
           % (n_bare, n_exempt, len(BARE_ATTRIBUTION_EXEMPT)))
+    print("     ★★★ 源码里**裸写那两个被禁 ASCII 词**（★ 紧邻中文）= **%d** 处；豁免清单覆盖 = **%d**"
+          % (n_bare_terms, n_exempt_terms))
     check("D.9", TERM_KV_CACHE == "KV 缓存" and TERM_SCHEDULER == "请求调度器"
           and LIMIT_QUOTE == "不是任何真实引擎，也不是真机"
           and LIMIT_QUOTE in src and TERM_KV_CACHE in src
           and BARE_ATTRIBUTION_EXEMPT
           == ("不裸写「" + WORD + "」这类无第二个独立主体的断言", "**不裸写「" + WORD + "」**")
           and n_bare == n_exempt
-          and all(s in src for s in BARE_ATTRIBUTION_EXEMPT),
-          "★★ **判据成立**：两条术语常量 `%r` / `%r`（★ **不裸写** `cache` / `scheduler`）；"
+          and all(s in src for s in BARE_ATTRIBUTION_EXEMPT)
+          and BARE_ASCII_WORDS == ("ca" + "che", "sched" + "uler")
+          and TERM_BARE_EXEMPT == (
+              "本域一律写「**KV 缓存**」全称（不裸写 `" + BARE_ASCII_WORDS[0] + "`，那是 L1/L2 与 kernel "
+              + BARE_ASCII_WORDS[0] + "）",
+              "本域一律写「**请求调度器**」全称（不裸写 `" + BARE_ASCII_WORDS[1] + "`，那是 GPU 的 warp "
+              + BARE_ASCII_WORDS[1] + "）")
+          and n_bare_terms == n_exempt_terms
+          and all(s in src for s in TERM_BARE_EXEMPT),
+          "★★ **判据成立**：两条术语常量 `%r` / `%r`（★ **不裸写**那两个 ASCII 词）；"
           "★ 限定语 `%r` **逐字出现在本程序源码里**；"
-          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**"
-          % (TERM_KV_CACHE, TERM_SCHEDULER, LIMIT_QUOTE, n_bare, n_exempt),
+          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**；"
+          " ★★★ **被禁 ASCII 词的裸写计数 `%d` 恰好等于其豁免清单覆盖的 `%d`**"
+          % (TERM_KV_CACHE, TERM_SCHEDULER, LIMIT_QUOTE, n_bare, n_exempt, n_bare_terms, n_exempt_terms),
           "**术语或限定语被动过，或源码里出现了【豁免清单之外】的裸写**")
 
 

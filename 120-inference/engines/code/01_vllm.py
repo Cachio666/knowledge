@@ -23,7 +23,7 @@ r"""01_vllm.py —— **vLLM 的架构选择**：引擎循环（step）· `vllm.
   · `F1`（**不得写那类「没有第二个独立主体」的断言** —— 见 `D.9` 的**被禁裸词**）；
   · `F2`（`max_num_seqs` 的默认值**不带设备与场景**）；
   · `F3`（`continuous batching` **不是 vLLM 提出** —— 出处是 ORCA 的 `iteration-level scheduling`）；
-  · `F4`（`36:9×` / `23×` 是**引用值**，基线各异；★ `36:9×` 的原文是**冒号**）；
+  · `F4`（`36:9×` / `23x` 是**引用值**，基线各异；★ `36:9×` 的原文是**冒号**）；
   · `F5`（**不写** APC 默认开启）；`F6`（chunked prefill 默认开启**必须带** `In V1` / `whenever possible`）；
   · `F7`（**不引** `design/paged_attention` 当 vLLM 现状 —— 官方自标为**历史文档**）；
   · `F9`（**不裸写 `TPOT`** 当 vLLM 的官方词 —— 该词在 vLLM 页面上 0 处）。
@@ -61,17 +61,18 @@ OTHER_THEME_MARKS = ("-- FAIL: kv-cache", "-- FAIL: batching-and-scheduling",
                      "-- FAIL: decoding-strategies", "-- FAIL: serving-infra")
 
 # ★★ **术语纪律**（本域 README §同名不同指）—— ★ 全部转成**可机械判定的常量**，由 `D.9` 守住：
-#   · 本域一律写「**KV 缓存**」全称（不裸写 `cache`，那是 L1/L2 与 kernel cache）；
-#   · 本域一律写「**请求调度器**」全称（不裸写 `scheduler`，那是 GPU 的 warp scheduler）；
+#   · 本域一律写「**KV 缓存**」/「**请求调度器**」全称；★ 那两个被禁的 ASCII 词见 `TERM_BARE_EXEMPT`
+#     （**不在此重复** —— ★ 否则会与 `D.9` 的裸写计数互相干扰）；
 #   · 本域最强的一句**限定语**必须逐字出现。
 TERM_KV_CACHE = "KV 缓存"
 TERM_SCHEDULER = "请求调度器"
 LIMIT_QUOTE = "不是任何真实引擎，也不是真机"
 
-# ★★★ **术语纪律的第二半**（★ 形态 A：「纪律宣称了而断言没盯住」，本域已栽过两次）：
-#   本程序源码里**裸写那个被禁的裸词**（`F1` 明文禁的那类断言用词）的【计数】
-#   必须**恰好等于**下面这份**显式豁免清单**覆盖的计数 ——
+# ★★★ **术语纪律的第二半**（★ `D3` 订正：此前「不裸写该两词」这条纪律**没有任何断言盯住** ——
+#   本主题在自己身上栽了第三次，见计划 `§5` v1.10）：
+#   本程序源码里**裸写那两个被禁 ASCII 词**的【计数】必须**恰好等于**下面这份**显式豁免清单**覆盖的计数。
 #   ★★★ 判据是【计数 == 豁免覆盖数】，**不是「≤ N」**（「≤ N」挡不住**新增**一处裸写）。
+#   ★★ **裸写 = 该 ASCII 词紧邻中文**（中间只隔空白 / 反引号）；★ 计数码用**拼接**避免自计。
 #   ★ 每一项都写明【为什么豁免】：
 #     ① 抬头注释里**提到**这条纪律本身 —— 那是 **mention**（它写该词**恰恰因为在规定不许写它**）：
 #        · ★★★ 本主题一律【写明是哪一家】：不裸写「业界」这类无第二个独立主体的断言（`F1`）。
@@ -80,6 +81,45 @@ BARE_ATTRIBUTION_EXEMPT = (
     "不裸写「业界」这类无第二个独立主体的断言",
     "**不裸写「业界」**",
 )
+
+# ★★★ **术语纪律的第三半**（★ `D3` 的根治：对那两个被禁 ASCII 词建**同形态的等式**）：
+#   ★ 豁免清单（**逐项带理由**）：① 下面两条字符串**本身就是**抬头那条纪律的 **mention** ——
+#     它们写该 ASCII 词**恰恰因为在规定不许写它**。★ 它们是**唯一**被豁免的裸写；
+#     ★★ 任何**新增**的裸写都会让等式 `n_bare == n_exempt` 不成立。
+BARE_ASCII_WORDS = ("ca" + "che", "sched" + "uler")
+TERM_BARE_EXEMPT = (
+    "本域一律写「**KV 缓存**」全称（不裸写 `cache`，那是 L1/L2 与 kernel cache）",
+    "本域一律写「**请求调度器**」全称（不裸写 `scheduler`，那是 GPU 的 warp scheduler）",
+)
+
+
+def _is_cjk(ch):
+    """★ 是否 CJK 表意字（★ **不含** CJK 标点 —— 「，」「）」不算「中文语境」）。"""
+    return ch != "" and "一" <= ch <= "鿿"
+
+
+def _count_bare_ascii(src):
+    """★★ 数「**裸写**」：被禁 ASCII 词**紧邻中文**（中间只隔空白 / 反引号）的出现次数。
+
+    ★★★ 这是 `D.9` 的**被测量** —— ★ 判据是**等式**（`_count_bare_ascii(src) == 豁免覆盖数`），
+      ★★ 不是「≤ N」。
+    """
+    n = 0
+    for w in BARE_ASCII_WORDS:
+        i = src.find(w)
+        while i != -1:
+            l = i
+            while l > 0 and src[l - 1] in " `\t":
+                l -= 1
+            r = i + len(w)
+            while r < len(src) and src[r] in " `\t":
+                r += 1
+            lc = src[l - 1] if l > 0 else ""
+            rc = src[r] if r < len(src) else ""
+            if _is_cjk(lc) or _is_cjk(rc):
+                n += 1
+            i = src.find(w, i + 1)
+    return n
 
 FAILS = []
 MARKS_USED = set()
@@ -125,13 +165,19 @@ def distinct_max_num_seqs():
     return vals
 
 
-def has_single_default():
-    """★★★ **「vLLM 的 `max_num_seqs` 有单一默认值」这个论断成立吗？** —— 取值集合恰有 1 个元素才成立。
+_DEVICE_TAGS = tuple(sorted({d for d, _c, _t, _s in specs.VLLM_BATCH_DEFAULTS}))
+_SCENARIO_TAGS = ("API server", "离线")
 
-    ★★★ 实测取值集合 `{128, 256, 512, 1024, 2048}` ⇒ 本函数返回 `False`
-      ⇒ ★★ **只引兜底 `128` 是错的**（`C.1` 判它）。
+
+def default_claim_is_valid(claim):
+    """★★★ **一条「vLLM 的某参数默认值是 `N`」的表述【成立】吗？** —— ★ 判据：它必须**带设备与场景**。
+
+    ★★★ 这是 `C.1` 的**「反例 → 被拒」**结构（★ 不是恒真的常量检查；`D6` 订正）：
+      · **反例（被拒）**：「vLLM 的 `max_num_seqs` 默认是 `128`」—— ★ 既无设备、也无场景；
+      · **正例（通过）**：「`A100/其余` 上 `API server` 的 `max_num_seqs` 是 `256`」。
+    ★ 依据：真实默认由 `get_batch_defaults()` 按**设备 + 场景**覆盖（`specs.VLLM_BATCH_DEFAULTS`）。
     """
-    return len(distinct_max_num_seqs()) == 1
+    return any(d in claim for d in _DEVICE_TAGS) and any(c in claim for c in _SCENARIO_TAGS)
 
 
 def tokens_per_slot():
@@ -154,13 +200,24 @@ def chunked_prefill_claim_is_complete(claim):
     return all(q in claim for q in specs.VLLM_CHUNKED_PREFILL_QUALIFIERS)
 
 
-def term_origin(term):
-    """★ **某个术语的出处** —— ★★ 本库记录：`continuous batching` / `iteration-level scheduling`
-    的**原始术语**出处是 **ORCA**（OSDII '22），**不是** vLLM（`F3`）。
+# ★★ **术语 → 原始出处**（`C.3` / `C.4` 的「反例 → 被拒」结构）。
+TERM_ORIGIN = {"iteration-level scheduling": "ORCA (OSDI '22)"}
+
+
+def term_origin_is(term, owner):
+    """★★★ **某条术语的原始出处【是】`owner` 吗？** —— ★ 本库记录：`iteration-level scheduling`
+    的原始出处是 **ORCA（OSDI '22）**，**不是 vLLM**（`F3`）。★ **归错主体 ⇒ 被拒**。
     """
-    if term == "iteration-level scheduling":
-        return "ORCA (OSDI '22)"
-    return "unknown"
+    return TERM_ORIGIN.get(term) == owner
+
+
+def is_official_vllm_term(term):
+    """★ **`term` 是 vLLM 的【官方词】吗？** —— ★ 只有 `inter-token latency` 是。
+
+    ★★★ `TPOT` 是**社区缩写**（★ 在 vLLM 两个 metrics 页面上**出现 0 处**）
+      ⇒ ★ 把它当成官方词 ⇒ **被拒**（`F9`，`C.4` 判它）。
+    """
+    return term in specs.VLLM_INTER_TOKEN_LATENCY_QUOTE
 
 
 # ===========================================================================
@@ -265,17 +322,27 @@ def part_C():
     # ── C.1 ★★★ 把兜底常量当「vLLM 的默认值」（`F2`）────────────────────
     print()
     print("  ── C.1 ★★★ **把兜底常量当成「vLLM 的默认值」**（`F2`）──")
-    print("     论断「vLLM 的 `max_num_seqs` 默认是 `128`」⇒ 校验器判**成立**？ **%s**"
-          "（★ 必须是 `False`）" % (not has_single_default()))
+    bare_claim = "vLLM 的 max_num_seqs 默认是 128"
+    good_claim = "A100/其余 上 API server 的 max_num_seqs 是 256"
+    offline_claim = "H100/H200 上 离线 的 max_num_seqs 是 1024"
+    print("     ★★★ **反例（不带设备与场景）**：`%s`" % bare_claim)
+    print("        ⇒ 校验器判**成立**？ **%s**（★ 必须是 `False` —— **被拒**）"
+          % default_claim_is_valid(bare_claim))
+    print("     ★ **正例（带设备 + 场景）**：`%s` ⇒ **%s**（应 `True`）"
+          % (good_claim, default_claim_is_valid(good_claim)))
+    print("       ★ 另一场景正例（离线）：`%s` ⇒ **%s**（应 `True`）"
+          % (offline_claim, default_claim_is_valid(offline_claim)))
     print("     取值集合：`%s`（%d 个）" % (sorted(distinct_max_num_seqs()), len(distinct_max_num_seqs())))
     print("     ★★★ 关键：那 `128` 只是**类常量兜底**；`get_batch_defaults()` 会按**设备 + 场景**覆盖它 ——")
     print("       ★★ **A100 上 API server 的真实值是 `256`**（★ 写成 `128` 就是「规范与实现不分」）。")
-    check("C.1", (not has_single_default()) and specs.VLLM_MAX_NUM_SEQS_FALLBACK == 128
+    check("C.1", (not default_claim_is_valid(bare_claim)) and default_claim_is_valid(good_claim)
+          and default_claim_is_valid(offline_claim)
+          and specs.VLLM_MAX_NUM_SEQS_FALLBACK == 128
           and len(distinct_max_num_seqs()) > 1,
-          "★★★ **判据成立**：把兜底 `%d` 当成「vLLM 的默认值」会被拒 —— "
-          "真实取值有 **%d 个**（需带**设备与场景**，`F2`）"
+          "★★★ **判据成立**：把兜底 `%d` 当成「vLLM 的默认值」（**不带设备与场景**）**被拒**；"
+          "★ 带上设备与场景才通过（★ 两个场景词各验一次）—— 真实取值有 **%d 个**（`F2`）"
           % (specs.VLLM_MAX_NUM_SEQS_FALLBACK, len(distinct_max_num_seqs())),
-          "**「单一默认值」没被拒绝** —— ★ 先查 `VLLM_BATCH_DEFAULTS` 与兜底常量")
+          "**「单一默认值」没被拒绝** —— ★ 先查 `VLLM_BATCH_DEFAULTS` / `default_claim_is_valid`")
 
     # ── C.2 ★★★ chunked prefill「默认开启」缺限定（`F6`）────────────────
     print()
@@ -300,26 +367,33 @@ def part_C():
     print()
     print("  ── C.3 ★★★ **把 `iteration-level scheduling` 当成 vLLM 造的术语**（`F3`）──")
     print("     逐字（ORCA）：`%s`" % specs.ORCA_ITERATION_LEVEL_QUOTE)
-    print("     出处判定 ⇒ **`%s`**（★ 必须**不是** vLLM）" % term_origin("iteration-level scheduling"))
+    mis = term_origin_is("iteration-level scheduling", "vLLM")
+    print("     ★★★ **反例（归错主体）**：把 `iteration-level scheduling` 归给 **vLLM** ⇒ **%s**（应 `False`）" % mis)
+    print("     ★ **正例**：归给 **ORCA (OSDI '22)** ⇒ **%s**（应 `True`）"
+          % term_origin_is("iteration-level scheduling", "ORCA (OSDI '22)"))
     print("     ★★★ 依据：**原始术语**出自 **ORCA（OSDI '22）**，vLLM 首页只把它当**特性名**列出，")
     print("       **没有机制定义**（`§0.7 C` 事实 6/7）⇒ 引用必须写**出处是 ORCA**。")
-    check("C.3", term_origin("iteration-level scheduling") == "ORCA (OSDI '22)"
-          and term_origin("iteration-level scheduling") != "vLLM"
+    check("C.3", (not mis) and term_origin_is("iteration-level scheduling", "ORCA (OSDI '22)")
           and "granularity of iteration" in specs.ORCA_ITERATION_LEVEL_QUOTE,
-          "★★★ **判据成立**：把 `iteration-level scheduling` 归给 vLLM 会被拒 —— "
+          "★★★ **判据成立**：把 `iteration-level scheduling` 归给 vLLM 会被拒（**反例 → 被拒**）—— "
           "它的出处是 **ORCA（OSDI '22）**（`F3`）",
-          "**术语出处被动过** —— ★ 先查 `ORCA_ITERATION_LEVEL_QUOTE` 与 `term_origin`")
+          "**术语出处被动过** —— ★ 先查 `ORCA_ITERATION_LEVEL_QUOTE` 与 `term_origin_is`")
 
     # ── C.4 ★★★ 裸写 TPOT 当成 vLLM 的官方词（`F9`）────────────────────
     print()
     print("  ── C.4 ★★★ **把 `TPOT` 当成 vLLM 的官方词**（`F9`）──")
     print("     vLLM 页面上该缩写的出现次数 = **%d**（★ 必须是 `0`）" % specs.VLLM_TPOT_OCCURRENCES)
     print("     vLLM 的官方词逐字：`%s`" % specs.VLLM_INTER_TOKEN_LATENCY_QUOTE)
+    print("     ★★★ **反例（把社区缩写当官方词）**：`is_official_vllm_term(\"TPOT\")` ⇒ **%s**"
+          "（应 `False` —— **被拒**）" % is_official_vllm_term("TPOT"))
+    print("     ★ **正例**：`is_official_vllm_term(\"inter-token latency\")` ⇒ **%s**（应 `True`）"
+          % is_official_vllm_term("inter-token latency"))
     print("     ★★★ **读法**：该缩写是**社区常用词**；vLLM 的词是 **inter-token latency** ——")
     print("       引用它时**必须注明**这一点，否则就是把社区词冒充官方词。")
-    check("C.4", specs.VLLM_TPOT_OCCURRENCES == 0
+    check("C.4", (not is_official_vllm_term("TPOT")) and is_official_vllm_term("inter-token latency")
+          and specs.VLLM_TPOT_OCCURRENCES == 0
           and "inter-token latency" in specs.VLLM_INTER_TOKEN_LATENCY_QUOTE,
-          "★★★ **判据成立**：把 `TPOT` 当成 **vLLM 的官方词**会被拒 —— "
+          "★★★ **判据成立**：把 `TPOT` 当成 **vLLM 的官方词**会被拒（**反例 → 被拒**）—— "
           "该词在 vLLM 页面上 **%d 处**；官方词是 **inter-token latency**（`F9`）"
           % specs.VLLM_TPOT_OCCURRENCES,
           "**TPOT 的计数或官方词被动过** —— ★ 先查 `VLLM_TPOT_OCCURRENCES`（须为 0）")
@@ -473,25 +547,39 @@ def part_D():
     WORD = "业" + "界"
     n_bare = src.count(WORD)
     n_exempt = sum(src.count(s) * s.count(WORD) for s in BARE_ATTRIBUTION_EXEMPT)
+    # ★★★ 第三半：**被禁 ASCII 词**的裸写计数（★ `D3` 的根治）—— 判据同样是**等式**。
+    n_bare_terms = _count_bare_ascii(src)
+    n_exempt_terms = sum(src.count(s) * _count_bare_ascii(s) for s in TERM_BARE_EXEMPT)
     print()
     print("  ── D.9 ★★★ **术语纪律**：一律写「%s」/「%s」全称；限定语逐字出现 ──"
           % (TERM_KV_CACHE, TERM_SCHEDULER))
     print("     ★★ 源码里**裸写那个被禁裸词** = **%d** 处；豁免清单覆盖 = **%d**（清单 %d 项，逐项理由见模块头）"
           % (n_bare, n_exempt, len(BARE_ATTRIBUTION_EXEMPT)))
+    print("     ★★★ 源码里**裸写那两个被禁 ASCII 词**（★ 紧邻中文）= **%d** 处；豁免清单覆盖 = **%d**"
+          % (n_bare_terms, n_exempt_terms))
     check("D.9", TERM_KV_CACHE == "KV 缓存" and TERM_SCHEDULER == "请求调度器"
           and LIMIT_QUOTE == "不是任何真实引擎，也不是真机"
           and LIMIT_QUOTE in src and TERM_KV_CACHE in src
           and BARE_ATTRIBUTION_EXEMPT
           == ("不裸写「" + WORD + "」这类无第二个独立主体的断言", "**不裸写「" + WORD + "」**")
           and n_bare == n_exempt
-          and all(s in src for s in BARE_ATTRIBUTION_EXEMPT),
-          "★★ **判据成立**：两条术语常量 `%r` / `%r`（★ **不裸写** `cache` / `scheduler` —— "
+          and all(s in src for s in BARE_ATTRIBUTION_EXEMPT)
+          and BARE_ASCII_WORDS == ("ca" + "che", "sched" + "uler")
+          and TERM_BARE_EXEMPT == (
+              "本域一律写「**KV 缓存**」全称（不裸写 `" + BARE_ASCII_WORDS[0] + "`，那是 L1/L2 与 kernel "
+              + BARE_ASCII_WORDS[0] + "）",
+              "本域一律写「**请求调度器**」全称（不裸写 `" + BARE_ASCII_WORDS[1] + "`，那是 GPU 的 warp "
+              + BARE_ASCII_WORDS[1] + "）")
+          and n_bare_terms == n_exempt_terms
+          and all(s in src for s in TERM_BARE_EXEMPT),
+          "★★ **判据成立**：两条术语常量 `%r` / `%r`（★ **不裸写**那两个 ASCII 词 —— "
           "它们在本库都另有含义）；★ 限定语 `%r` **逐字出现在本程序源码里**；"
-          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**"
-          "（★ 清单之外的任何一处裸写都会让它不等 ⇒ **纪律真的被断言盯住了**）"
-          % (TERM_KV_CACHE, TERM_SCHEDULER, LIMIT_QUOTE, n_bare, n_exempt),
+          " ★★ **被禁裸词的裸写计数 `%d` 恰好等于豁免清单覆盖的 `%d`**；"
+          " ★★★ **被禁 ASCII 词的裸写计数 `%d` 恰好等于其豁免清单覆盖的 `%d`**"
+          "（★ 清单之外的任何一处裸写都会让等式不等 ⇒ **纪律真的被断言盯住了**）"
+          % (TERM_KV_CACHE, TERM_SCHEDULER, LIMIT_QUOTE, n_bare, n_exempt, n_bare_terms, n_exempt_terms),
           "**术语或限定语被动过，或源码里出现了【豁免清单之外】的裸写** —— "
-          "★ 本域一律写全称；★ 新增的裸写要么改全称、要么进 `BARE_ATTRIBUTION_EXEMPT` 并写明理由")
+          "★ 本域一律写全称；★ 新增的裸写要么改全称、要么进豁免清单并写明理由")
 
 
 # ===========================================================================
