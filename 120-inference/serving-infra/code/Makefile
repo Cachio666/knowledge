@@ -4,9 +4,10 @@
 #   编号程序是纯 `.py`，**默认 `python3` 下可跑** ⇒ **三类断言放在编号程序内部**，
 #   失败时以**非零退出码**结束。**没有 `verify.py`**，也**没有** `meta_falsify.py`。
 #
-# ★★ **Chunk 0 只落骨架**：本目录**尚无任何编号程序** ⇒ `SCRIPTS` 为空，
-#    `make run` 走**空分母**分支（★ **它不构成证据**）。编号程序从 Chunk 5 起落盘，
-#    届时把它们的名字（去 `.py` 后缀）填进下面的 `SCRIPTS`。
+# ★★ **本目录的编号程序已随 Chunk 5 落盘**（提交日 2026-10-09）——
+#    `SCRIPTS` 已填 **3 个**（`01_latency_and_slo` / `02_inference_parallelism_and_pd` /
+#    `03_scaling_and_observability`），`make run` 走**非空分母**分支，跑满三个程序。
+#    ★ 空分母分支仍然保留（`SCRIPTS` 为空时的自我保护），但**本主题走不到它**。
 #
 #    本主题的定位：**两个延迟**（TTFT / inter-token latency）与它们的冲突 ·
 #      ★★ **推理的 TP/PP/EP 与 PD 分离** · **扩缩容 / 路由 / 可观测性**。
@@ -20,6 +21,8 @@
 #     ★★ `02-inference-parallelism-and-pd` **必须接住**（★ 与训练的**实质差异**：PP 无反向 ⇒ 气泡模型不同；
 #     TP 要**切 KV cache**）—— ★ 建成后这两处要**反向回链**到本域。
 #   ★★ **判据纪律（本主题最容易写错的一条）**：**不能整主题标「无 A」** ——
+#     ★★ **三个程序【都有】真 A 类**（`01` 模拟器 vs 闭式 · `02` 流水线/KV 头切分/PD 临界 ·
+#     `03` 路由 vs 随机 + 排队 vs `M/M/1` 闭式）——
 #     **排队与负载均衡本质是可独立参照的算法** ⇒ **有 A 类**；
 #     ★ **只有**「**真实网络 / 多机的行为**」**不可测**（本机单机，无真网络 —— `§0.7 D7`）。
 #   ★★ **禁写清单**：不得裸写 `TPOT` 当成 vLLM 官方词（**vLLM 页面上 `TPOT` 0 处**）；
@@ -51,7 +54,7 @@
 #                   ★★ 每条常量**都必须有消费者**（无消费者的常量是 `make mutate` 的漏网候选）。
 #                   ★★ 所有数值常量**一律 `< 2^53`**、**不做幂次字面量**、**字符串一律单行**
 #                     （跨行隐式拼接会被 `ast` 折成一个 `Constant` ⇒ `mutate.py` 静默计入「跳过」）。
-#   mutate.py       ★ **叶子级变异测试**（与编号程序同时落；**本目录尚未落**）。用 **AST** 从编号程序里
+#   mutate.py       ★ **叶子级变异测试**（与编号程序同时落；**本目录已落**）。用 **AST** 从编号程序里
 #                   读出 `ASSERT_FAIL_MARK`（**不得写死**），逐个叶子改值，看断言是否捕获（只在副本上做）。
 #                   盲区：①只变异常量 ②负字面量不进分母 ③前缀式检查漏网 ④`_walk` 不下钻 `BinOp`
 #                         ⑤`None` 计为「跳过」 ⑥浮点变异是 `v + 1.0`（大浮点吞掉它 ⇒ **常量 < 2^53**）
@@ -59,7 +62,7 @@
 #   Makefile / requirements.txt   构建入口
 
 PYTHON  ?= python3
-SCRIPTS :=
+SCRIPTS := 01_latency_and_slo 02_inference_parallelism_and_pd 03_scaling_and_observability
 
 .PHONY: all run lint mutate lines clean check-env
 
