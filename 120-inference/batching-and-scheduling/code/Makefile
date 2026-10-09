@@ -4,9 +4,10 @@
 #   编号程序是纯 `.py`，**默认 `python3` 下可跑** ⇒ **三类断言放在编号程序内部**，
 #   失败时以**非零退出码**结束。**没有 `verify.py`**，也**没有** `meta_falsify.py`。
 #
-# ★★ **Chunk 0 只落骨架**：本目录**尚无任何编号程序** ⇒ `SCRIPTS` 为空，
-#    `make run` 走**空分母**分支（★ **它不构成证据**）。编号程序从 Chunk 2 起落盘，
-#    届时把它们的名字（去 `.py` 后缀）填进下面的 `SCRIPTS`。
+# ★★ **本目录的编号程序已随 Chunk 2 落盘**（提交日 2026-10-09）——
+#    `SCRIPTS` 已填 **3 个**（`01_iteration_level_scheduling` / `02_chunked_prefill` /
+#    `03_preemption_and_fairness`），`make run` 走**非空分母**分支，跑满三个程序。
+#    ★ 空分母分支仍然保留（`SCRIPTS` 为空时的自我保护），但**本主题走不到它**。
 #
 #    本主题的定位：**迭代级调度**的机制与收益来源（continuous batching）·
 #      **chunked prefill 的分块数权衡**（`k* = ⌈t_p/t_d⌉`）· **抢占与公平**。
@@ -46,7 +47,7 @@
 #                   ★★ 每条常量**都必须有消费者**（无消费者的常量是 `make mutate` 的漏网候选）。
 #                   ★★ 所有数值常量**一律 `< 2^53`**、**不做幂次字面量**、**字符串一律单行**
 #                     （跨行隐式拼接会被 `ast` 折成一个 `Constant` ⇒ `mutate.py` 静默计入「跳过」）。
-#   mutate.py       ★ **叶子级变异测试**（与编号程序同时落；**本目录尚未落**）。用 **AST** 从编号程序里
+#   mutate.py       ★ **叶子级变异测试**（与编号程序同时落；**本目录已落**）。用 **AST** 从编号程序里
 #                   读出 `ASSERT_FAIL_MARK`（**不得写死**），逐个叶子改值，看断言是否捕获（只在副本上做）。
 #                   盲区：①只变异常量 ②负字面量不进分母 ③前缀式检查漏网 ④`_walk` 不下钻 `BinOp`
 #                         ⑤`None` 计为「跳过」 ⑥浮点变异是 `v + 1.0`（大浮点吞掉它 ⇒ **常量 < 2^53**）
@@ -54,7 +55,7 @@
 #   Makefile / requirements.txt   构建入口
 
 PYTHON  ?= python3
-SCRIPTS :=
+SCRIPTS := 01_iteration_level_scheduling 02_chunked_prefill 03_preemption_and_fairness
 
 .PHONY: all run lint mutate lines clean check-env
 
