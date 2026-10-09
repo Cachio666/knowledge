@@ -416,7 +416,7 @@ def part_B():
           "—— 那是**通信-计算重叠**，")
     print("        在**单进程**形态下**没有可跑的判据**（写成判据就是「要求实现者复现跑不了的东西」= `P3`）")
     print("        ⇒ 本程序**只写接口**：桶数 `k` ⇒ 通信**启动 `k` 次**、每次搬 `Ψ/k` 个元素；")
-    print("        ★ **能藏多少** 的正文在 `110-communication` 的 `overlap` 主题（**未建成**），此处回链。")
+    print("        ★ **能藏多少** 的正文在 `110-communication` 的 `overlap` 主题，此处回链。")
     print("     ⇒ 一个可算的**接口级**关系（不是判据）：`启动次数 × 每次元素数 == Ψ` = `%d × %d == %d`"
           % (BUCKET_COUNTS[-1], DIM // BUCKET_COUNTS[-1], DIM))
     check("B.2", BUCKET_COUNTS[-1] * (DIM // BUCKET_COUNTS[-1]) == DIM

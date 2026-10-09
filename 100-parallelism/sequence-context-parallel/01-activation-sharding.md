@@ -267,7 +267,7 @@ updated: 2026-10-08
     `40-kernels/attention/03-flash-attention-backward.md` 与 `00-meta/glossary.md` 的 `flash attention` 条；
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`；
-  · **集合通信原语的算法与复杂度** → `110-communication/collectives`（**未建成**）与
+  · **集合通信原语的算法与复杂度** → `110-communication/collectives`）与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:209`；
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:417`

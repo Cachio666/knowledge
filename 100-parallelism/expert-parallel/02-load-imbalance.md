@@ -160,7 +160,7 @@ updated: 2026-10-08
 | **`EP` 的约束**、EP 与 TP/DP 的组合 | [03-ep-and-other-axes](03-ep-and-other-axes.md) |
 | **容量因子的定义与语义**（定义式 / 取整口径 / dropping vs NTLB / 丢弃率口径） | `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**） |
 | **aux loss 的式子 / 专家粒度** | `80-model-architectures/moe/01`、`03` |
-| **all-to-all 的通信量分析** | `110-communication/collectives`（未建成）、`20-gpu-architecture/interconnect/03` |
+| **all-to-all 的通信量分析** | `110-communication/collectives`（、`20-gpu-architecture/interconnect/03` |
 
 ## 4. 踩坑与失败模式
 
@@ -280,7 +280,7 @@ updated: 2026-10-08
     丢弃率口径）→ `80-model-architectures/moe/02-capacity-factor.md`（**全篇 563 行**）；
   · **aux loss 的式子 / 路由 gating 的机制 / 专家粒度** →
     `80-model-architectures/moe/01-gating-and-routing.md`、`03-balance-and-granularity.md`；
-  · **all-to-all 的通信量分析** → `110-communication/collectives`（**未建成**）与
+  · **all-to-all 的通信量分析** → `110-communication/collectives`）与
     `20-gpu-architecture/interconnect/03`（★ `40-kernels/moe-kernels/01:243` 已**逐字让渡**）；
   · **集合通信原语的算法与复杂度** → `10-foundations/performance-models/02-amdahl-and-scaling.md:209`。
 

@@ -54,7 +54,7 @@ updated: 2026-09-23
 |---|---|
 | **头怎么分给设备**（QKV 列并行、每个 head 本地算、以及「立即」的作用域） | ★★★ **注意力变体的结构**（MHA / MQA / GQA 的定义、KV head 与 Q head 的**配比**）→ `80-model-architectures/attention-variants/01-mha-mqa-gqa.md` |
 | **vocab 并行**的两侧：输入 embedding 列切 ⇒ 一次 all-reduce；输出侧 `b×s×v` 的 all-gather 与融合交叉熵 | ★★★ **TP 的通信模式与规模上限**（通信在每一层内部 · ∝ 激活 · 限于单节点 8 卡）—— 已由 `10-foundations/performance-models/02-amdahl-and-scaling.md:223` **逐字写完** ⇒ **本文不重写它的【结论】**（★ 本文在 §2 的 `output Linear` 那一行**复述**了「一层的**前向**共 `2` 次」那一句，并**回链**到 `01`/`03`） |
-| **「不整除」的三种处置**及其后果（抛错 / 截断 / 补齐） | **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S`）→ `110-communication/collectives`（**未建成**）、`performance-models/02:209` |
+| **「不整除」的三种处置**及其后果（抛错 / 截断 / 补齐） | **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S`）→ `110-communication/collectives`）、`performance-models/02:209` |
 | **「补齐」为什么要配「屏蔽」**（本库构造的反例） | **GEMM 的 tiling / 分块**（本域只写「矩阵怎么切到设备上」）→ `40-kernels/gemm/`、`30-gpu-programming/cutlass/02-hierarchical-tiling.md` |
 | —— | **`S×S` 矩阵的访存账 / 注意力内核** → `40-kernels/attention/`；**注意力的数值细节** → `10-foundations/floating-point/` |
 

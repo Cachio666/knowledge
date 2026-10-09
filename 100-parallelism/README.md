@@ -72,10 +72,10 @@
 
 | 主题 | 本域**不写** | 那里的正文 |
 |---|---|---|
-| **全主题** | **集合通信原语的算法与复杂度**（ring / tree allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter / all-gather 的阶段划分） | `10-foundations/performance-models/02-amdahl-and-scaling.md` 与 `110-communication/collectives`（**未建成**） |
+| **全主题** | **集合通信原语的算法与复杂度**（ring / tree allreduce、`V(N) = 2(N−1)/N × S`、reduce-scatter / all-gather 的阶段划分） | `10-foundations/performance-models/02-amdahl-and-scaling.md` 与 `110-communication/collectives`） |
 | **全主题** | **拓扑受限的集合通信**（bisection 下界、all-to-all 跨切口量 `∝ N`、分层） | `20-gpu-architecture/interconnect/03-collectives-on-topology.md` |
 | **全主题** | **链路带宽的三种口径**与 NVLink / IB 的规格值 | `20-gpu-architecture/interconnect/01-bandwidth-conventions.md` |
-| **全主题** | **通信-计算重叠的机制**（双缓冲、分块流水、异步落盘） | `110-communication` 的 `overlap` 主题（**未建成**） |
+| **全主题** | **通信-计算重叠的机制**（双缓冲、分块流水、异步落盘） | `110-communication` 的 `overlap` 主题 |
 | **全主题** | **Amdahl / Gustafson / `N₅₀` / 扩展效率的模型** | `10-foundations/performance-models/02-amdahl-and-scaling.md` |
 | `zero-fsdp` | **`16Ψ` 的组成与字节分解**（`2Ψ+2Ψ+KΨ=16Ψ`） | `90-training/checkpointing/01-state-and-bytes.md`（**本域只写「分片后」的账**） |
 | `data-parallel` | **梯度累积与 batch 放大的等价性**（含归一化层时的失效） | `90-training/autograd-and-backward/03-gradient-lifecycle.md` |

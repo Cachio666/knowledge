@@ -296,7 +296,7 @@ GPipe 原文写的是 `O((K−1)/(M+K−1))`。★ 引它时必须**照抄那个
 - **重算换显存的机制** → `90-training/autograd-and-backward/02-gradient-checkpointing.md`（此处回链）；
 - **多机扩展的天花板**（Amdahl / `N₅₀`）→ `10-foundations/performance-models/02-amdahl-and-scaling.md`；
 - ★★ **点对点通信的实现**与**通信-计算重叠的机制**（本文只出现「流水线级之间要互传激活」这个事实）
-  → `110-communication/` 的 `overlap` 主题（**未建成**）—— ★ 本文**一行都不重写**它。
+  → `110-communication/` 的 `overlap` 主题—— ★ 本文**一行都不重写**它。
 
 ★★ **一处同名不同指**（必须写明）：本文的 **micro-batch** 是「**把一个 batch 切成 `m` 份、
 让流水线里同时有多份在飞**」的意思；★ 它与

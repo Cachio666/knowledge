@@ -1,7 +1,7 @@
 # 实施进度表
 
-> 最后更新：2026-10-08
-> 进度：56 / 65 主题完成
+> 最后更新：2026-10-09
+> 进度：60 / 65 主题完成
 
 状态标记：`- [x]` 完成 · `- [ ] <topic> (进行中)` 进行中 · `- [ ] <topic>` 未开始
 
@@ -79,10 +79,10 @@
 - [x] zero-fsdp
 
 ## 110-communication
-- [ ] collectives
-- [ ] nccl
-- [ ] network-topology
-- [ ] overlap
+- [x] collectives
+- [x] nccl
+- [x] network-topology
+- [x] overlap
 
 ## 120-inference
 - [ ] kv-cache

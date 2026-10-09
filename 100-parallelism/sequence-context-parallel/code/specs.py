@@ -405,7 +405,7 @@ CP_RING_P2P_QUOTE = "The all-gather and reduce-scatter are implemented as point-
 # 口径：★★ **「环」在 CP 里是【实现选择】**（把 all-gather / reduce-scatter 落成点对点环传），
 #       与 `RING_SEND_KV_QUOTE` 描述的是同一件事。
 #       ★★ **禁止重写集合通信原语的算法与复杂度**（域 README 的硬边界：正文在
-#         `110-communication/collectives`（未建成）与 `10-foundations/performance-models/02`）。
+#         `110-communication/collectives`（与 `10-foundations/performance-models/02`）。
 # 消费者：`03_constraints.py` 的 `D.2`、`B.1` 的说明文案。
 # 同值位置：`RING_SEND_KV_QUOTE`（同一机制的两种措辞：论文侧 / 实现文档侧）。
 

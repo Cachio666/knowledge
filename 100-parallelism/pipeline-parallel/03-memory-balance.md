@@ -277,7 +277,7 @@ PP 里常用**重算**来压首尾那一级偏高的**显存**（把激活丢掉
   `100-parallelism/expert-parallel/02-load-imbalance.md`；
 - **重算换显存的机制** → `90-training/autograd-and-backward/02-gradient-checkpointing.md`（此处回链）；
 - ★ **点对点通信的实现**与**通信-计算重叠的机制**（本文只用到「首尾两级要互传激活」这个事实）
-  → `110-communication/` 的 `overlap` 主题（**未建成**）—— ★ 本文**一行都不重写**它。
+  → `110-communication/` 的 `overlap` 主题—— ★ 本文**一行都不重写**它。
 
 ## 参考
 

@@ -245,7 +245,22 @@
   - [03-fsdp-and-correctness](../100-parallelism/zero-fsdp/03-fsdp-and-correctness.md)
 
 ## 110-communication
-尚未开始。
+- [collectives](../110-communication/collectives/) —— 集合通信的算法族 / 两段式的阶段划分 / all-to-all 与 P2P 原语
+  - [01-algorithm-family](../110-communication/collectives/01-algorithm-family.md)
+  - [02-stages-and-costs](../110-communication/collectives/02-stages-and-costs.md)
+  - [03-all-to-all-and-p2p](../110-communication/collectives/03-all-to-all-and-p2p.md)
+- [nccl](../110-communication/nccl/) —— NCCL 的算法与协议取值 / 拓扑感知 / 报错归因（★ 全靠 [B] 级）
+  - [01-architecture-and-selection](../110-communication/nccl/01-architecture-and-selection.md)
+  - [02-topology-awareness](../110-communication/nccl/02-topology-awareness.md)
+  - [03-failures-and-limits](../110-communication/nccl/03-failures-and-limits.md)
+- [network-topology](../110-communication/network-topology/) —— 胖树与 Clos 的参数化 / rail-optimized / RoCE 与 PFC·ECN
+  - [01-fat-tree-and-clos](../110-communication/network-topology/01-fat-tree-and-clos.md)
+  - [02-rail-optimized](../110-communication/network-topology/02-rail-optimized.md)
+  - [03-roce-and-infiniband](../110-communication/network-topology/03-roce-and-infiniband.md)
+- [overlap](../110-communication/overlap/) —— 双缓冲与通信分块 / 「能藏多少」的判据 / 异步落盘
+  - [01-mechanisms](../110-communication/overlap/01-mechanisms.md)
+  - [02-how-much-can-hide](../110-communication/overlap/02-how-much-can-hide.md)
+  - [03-async-io](../110-communication/overlap/03-async-io.md)
 
 ## 120-inference
 尚未开始。

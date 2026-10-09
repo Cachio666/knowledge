@@ -38,12 +38,12 @@ r"""02_communication.py —— **ZeRO 三个阶段的通信量**。
 ★★★ **本主题的禁区（回链，一行都不重写）**：
   · **集合通信原语的算法与复杂度**（ring all-reduce 的 `V(N) = 2(N−1)/N × S`、阶段划分）→
     `10-foundations/performance-models/02-amdahl-and-scaling.md:209,428` 与
-    `110-communication/collectives`（**未建成**）；
+    `110-communication/collectives`）；
   · **拓扑受限的集合通信**（bisection 下界 / 分层）→
     `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；
   · **链路带宽的三种口径**与 NVLink / IB 的规格值 →
     `20-gpu-architecture/interconnect/01-bandwidth-conventions.md`；
-  · **通信-计算重叠的机制** → `110-communication/overlap/`（`overlap`，**未建成**）；
+  · **通信-计算重叠的机制** → `110-communication/overlap/`（`overlap`）；
   · ★★★ **`16Ψ` 的单卡口径与它的字节分解** → `90-training/checkpointing/01-state-and-bytes.md`
     （**本域只写「分片后」的账**）。
 
@@ -320,11 +320,11 @@ def preflight():
     print("  ★★★ **本主题的禁区回链（本程序一行都不重写）**：")
     print("      · **集合通信原语的算法与复杂度**（`V(N) = 2(N−1)/N × S`、阶段划分）→ "
           "`10-foundations/performance-models/02-amdahl-and-scaling.md:209,428`、"
-          "`110-communication/collectives`（未建成）")
+          "`110-communication/collectives`（")
     print("      · **拓扑受限的集合通信**（bisection 下界 / 分层）→ "
           "`20-gpu-architecture/interconnect/03-collectives-on-topology.md`；"
           "**链路带宽的三种口径** → 同域 `interconnect/01`")
-    print("      · **通信-计算重叠的机制** → `110-communication/overlap/`（`overlap`，未建成）")
+    print("      · **通信-计算重叠的机制** → `110-communication/overlap/`（`overlap`，")
     print("      · **`16Ψ` 的单卡口径与它的字节分解** → "
           "`90-training/checkpointing/01-state-and-bytes.md`（本域只写「分片后」的账）")
     before = len(FAILS)

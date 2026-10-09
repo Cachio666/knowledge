@@ -63,16 +63,16 @@
 
 | 英文 | 中文 | 说明 |
 |---|---|---|
-| NVLink | — | NVIDIA 的 GPU 间高速互联，带宽显著高于 PCIe。**厂商标称的每 GPU 带宽全部是「双向合计」**：H100 的 900 GB/s = 450 发送 + 450 接收，**任何单向搬运的天花板是 450**。做「搬运 X 字节要多久」的推导时用错会差 2 倍。 |
-| NVSwitch | — | 连接多张 GPU 的交换芯片，构成**全互联（full bisection）**拓扑。它的价值不只是「更宽」，而是**路径均匀性**——任意 GPU 对都能拿到满带宽，而 ring 下只有相邻对能。 |
-| PCIe | — | 通用外设互联总线，GPU 与主机通信的主要通道。**一个「带宽」有三种口径**：线速率（`GT/s × lane ÷ 8`，不可达）、载荷（扣编码）、营销取整。8b/10b 只用于 Gen1/2，**Gen3 起改用 128b/130b**，所以「标称 vs 有效」的差额从前两代的 20% 掉到 1.5%。**NVIDIA 自己用的是标称值。** |
-| bisection bandwidth | 对分带宽 | 把网络均切成两半时，**跨越切口的链路总容量**。ring 的 bisection **不随 N 增长**（恒为 `L × b`），全互联随 `N²` 增长。集合通信的下界由它给出。官方直述值：HGX A100 8-GPU = 2.4 TB/s，HGX H100 8-GPU = 3.6 TB/s（恰为聚合端口带宽的一半）。 |
-| NVLink Domain | NVLink 域 | 官方定义是「能通过 NVLink 互相通信的节点集合」，**是跨 OS 实例的概念**。逐代：DGX-1 8 → DGX-2 16 → HGX A100/H100 8 → H100 + NVLink Switch System 256 → GB200 NVL72 72 → 多机架 576。**「A100 SuperPOD 的 256 卡」不是 NVLink 域**（跨节点走 InfiniBand，域仍是 8）。 |
-| P2P (peer-to-peer) | 对等访问 | GPU 之间直接走 PCIe 交换数据，不经主机内存。**失败是静默的**——PCIe peer 写是无 ACK 的 posted transaction，丢包只体现在 host kernel log，GPU 侧看到的是 hang 或静默数据损坏。**ACS 与 IOMMU 都会破坏它**（Grace Hopper/DGX 平台例外，应保持 IOMMU 开启）。 |
-| algbw / busbw | 算法带宽 / 总线带宽 | nccl-tests 的两个指标。`busbw = algbw × 修正系数`（AllReduce 是 `2(n-1)/n`，ReduceScatter/AllGather/AlltoAll 是 `(n-1)/n`，Broadcast/Reduce 是 1）。**只有 busbw 能与硬件峰值对比，且上限是单向的那一列（H100 = 450 GB/s），不是 900。** 但它在 NVLS/SHARP 下会高估。 |
-| all-to-all | 全交换 | 每个 rank 把数据分给所有其他 rank，没有归约可做。跨切口量 `∝ N`（all-reduce 是常数 `2S`），**跨界占比恒为 1/4 而不随 N 下降**——所以它是 bisection-bound 的，规模越大越吃拓扑。 |
-| scale-up / scale-out | 纵向 / 横向扩展 | 两套**并行**网络，不可合并。GB200 NVL72 的 130 TB/s 是 scale-up（NVLink 机架内），scale-out 是 72 × 800 Gb/s = 7.2 TB/s，**两者差 18 倍**。 |
-| InfiniBand | — | 机间互联。EDR 100 / HDR 200 / NDR 400 / XDR 800 Gb/s，按 `Gb/s ÷ 8` 换算是**未扣协议开销的上界**。节点内 vs 节点间每 GPU 双向带宽之比：H100 是 18:1，**按单向比则是 9:1——两个数都对，取决于表达什么**。 |
+| NVLink | — | NVIDIA 的 GPU 间高速互联，带宽显著高于 PCIe。**厂商标称的每 GPU 带宽全部是「双向合计」**：H100 的 900 GB/s = 450 发送 + 450 接收，**任何单向搬运的天花板是 450**。做「搬运 X 字节要多久」的推导时用错会差 2 倍。（正文在 `20-gpu-architecture/interconnect/01-bandwidth-conventions.md`） |
+| NVSwitch | — | 连接多张 GPU 的交换芯片，构成**全互联（full bisection）**拓扑。它的价值不只是「更宽」，而是**路径均匀性**——任意 GPU 对都能拿到满带宽，而 ring 下只有相邻对能。（正文在 `20-gpu-architecture/interconnect/02-topology-and-bisection.md`） |
+| PCIe | — | 通用外设互联总线，GPU 与主机通信的主要通道。**一个「带宽」有三种口径**：线速率（`GT/s × lane ÷ 8`，不可达）、载荷（扣编码）、营销取整。8b/10b 只用于 Gen1/2，**Gen3 起改用 128b/130b**，所以「标称 vs 有效」的差额从前两代的 20% 掉到 1.5%。**NVIDIA 自己用的是标称值。**（正文在 `20-gpu-architecture/interconnect/01-bandwidth-conventions.md`） |
+| bisection bandwidth | 对分带宽 | 把网络均切成两半时，**跨越切口的链路总容量**。ring 的 bisection **不随 N 增长**（恒为 `L × b`），全互联随 `N²` 增长。集合通信的下界由它给出。官方直述值：HGX A100 8-GPU = 2.4 TB/s，HGX H100 8-GPU = 3.6 TB/s（恰为聚合端口带宽的一半）。（★ 通用推导与 ring / mesh 的公式在 `20-gpu-architecture/interconnect/02-topology-and-bisection.md`；★ **胖树的参数化在 `110-communication/network-topology/01-fat-tree-and-clos.md`**） |
+| NVLink Domain | NVLink 域 | 官方定义是「能通过 NVLink 互相通信的节点集合」，**是跨 OS 实例的概念**。逐代：DGX-1 8 → DGX-2 16 → HGX A100/H100 8 → H100 + NVLink Switch System 256 → GB200 NVL72 72 → 多机架 576。**「A100 SuperPOD 的 256 卡」不是 NVLink 域**（跨节点走 InfiniBand，域仍是 8）。（正文在 `20-gpu-architecture/interconnect/02-topology-and-bisection.md` —— ★ **`C2` 已裁定它归上游，本域不重写**） |
+| P2P (peer-to-peer) | 对等访问 | GPU 之间直接走 PCIe 交换数据，不经主机内存。**失败是静默的**——PCIe peer 写是无 ACK 的 posted transaction，丢包只体现在 host kernel log，GPU 侧看到的是 hang 或静默数据损坏。**ACS 与 IOMMU 都会破坏它**（Grace Hopper/DGX 平台例外，应保持 IOMMU 开启）。（★ **P2P 作为集合通信的基础原语**的正文在 `110-communication/collectives/03-all-to-all-and-p2p.md`；★ ACS/IOMMU 的硬件细节在 `20-gpu-architecture/interconnect/01`） |
+| algbw / busbw | 算法带宽 / 总线带宽 | nccl-tests 的两个指标。`busbw = algbw × 修正系数`（AllReduce 是 `2(n-1)/n`，ReduceScatter/AllGather/AlltoAll 是 `(n-1)/n`，Broadcast/Reduce 是 1）。**只有 busbw 能与硬件峰值对比，且上限是单向的那一列（H100 = 450 GB/s），不是 900。** 但它在 NVLS/SHARP 下会高估。（★ 修正系数表与 `busbw` 高估的正文在 `20-gpu-architecture/interconnect/04-measuring-bandwidth.md`；★ **`all-to-all` 各算法的载荷口径在 `110-communication/collectives/03-all-to-all-and-p2p.md`**） |
+| all-to-all | 全交换 | 每个 rank 把数据分给所有其他 rank，没有归约可做。跨切口量 `∝ N`（all-reduce 是常数 `2S`），**跨界占比恒为 1/4 而不随 N 下降**——所以它是 bisection-bound 的，规模越大越吃拓扑。（★ **跨切口量 `∝ N`** 的正文在 `20-gpu-architecture/interconnect/03-collectives-on-topology.md`；★ **各算法的总搬运量口径**在 `110-communication/collectives/03-all-to-all-and-p2p.md`） |
+| scale-up / scale-out | 纵向 / 横向扩展 | 两套**并行**网络，不可合并。GB200 NVL72 的 130 TB/s 是 scale-up（NVLink 机架内），scale-out 是 72 × 800 Gb/s = 7.2 TB/s，**两者差 18 倍**。（★ 正文在 `110-communication/network-topology/02-rail-optimized.md` 与 `20-gpu-architecture/interconnect/01-bandwidth-conventions.md`） |
+| InfiniBand | — | 机间互联。EDR 100 / HDR 200 / NDR 400 / XDR 800 Gb/s，按 `Gb/s ÷ 8` 换算是**未扣协议开销的上界**。节点内 vs 节点间每 GPU 双向带宽之比：H100 是 18:1，**按单向比则是 9:1——两个数都对，取决于表达什么**。（★ 代际速率的正文在 `20-gpu-architecture/interconnect/01`；★ **RoCE / PFC / ECN 与 SHARP 的机制在 `110-communication/network-topology/03-roce-and-infiniband.md`**） |
 
 ## 精度与量化
 
@@ -260,12 +260,12 @@
 | 流水线并行的气泡 (bubble) | 流水线气泡 | 流水线**设备之间**的空闲时间。★★ **与「GPU 硬件与执行模型」节 `TLP` 条里的「流水线气泡」不是同一个量** —— 那条是 SM **内部**指令流水线的气泡，这条是**设备之间**的等待。★ 两个流传很广的公式**不矛盾**（同一个气泡的两种分母）：GPipe 的 `O((K−1)/(M+K−1))`（分母 = **总时间**）与 Megatron 的 `(p−1)/m`（分母 = **理想时间**），换算恒等式 `b_m = b_g/(1−b_g)`。（正文在 `100-parallelism/pipeline-parallel/01`） |
 | 1F1B | — | 流水线调度：每 stage 交替做一个前向（`F`）与一个反向（`B`），使**未完成的前向**最多积压 `p` 个（GPipe 是全前向再全反向 ⇒ 积压 `m` 个）。★★ **它换的是显存、不是气泡**（原话：`The time spent in the bubble is the same for this new schedule`）。★ 术语警告：**`virtual pipeline stages`（VPP）不在 Megatron 论文里** —— 那里的词是 **interleaved** 与 **model chunk**。（正文在 `100-parallelism/pipeline-parallel/02`） |
 | 3D 并行 | — | `DP × TP × PP` 三个轴同时用。★ 配置建议：**TP 用到「单节点内的卡数」为止**（跨节点时 TP 的通信 `∝ 激活`、太贵），再往上用 PP、最后用 DP 把算力填满。（★ 配置建议的正文在 `10-foundations/performance-models/02-amdahl-and-scaling.md` 的「3D 并行」那一段；本域 `100-parallelism/tensor-parallel/03` **只回链、不重写它的结论**） |
-| bucket | 分桶 | ★★ **两个含义**：**① 梯度分桶**（DDP）—— 梯度按大小装桶、**桶满即发起通信**，让通信尽早开始（★「能藏多少」属**通信-计算重叠**，本库该主题**未建成**）；**② 形状分桶**（JAX 的 `jit`）—— **输入形状**不同的调用分到不同编译产物。★ **同名不同指**：一个是**梯度**的分组、一个是**形状**的分组。★ 本域正文一律写「**梯度分桶**」。（① 的正文在 `100-parallelism/data-parallel/02`；② 的正文在 `70-frameworks/jax/01-jit-and-tracing.md`） |
+| bucket | 分桶 | ★★ **两个含义**：**① 梯度分桶**（DDP）—— 梯度按大小装桶、**桶满即发起通信**，让通信尽早开始（★「能藏多少」属**通信-计算重叠** —— 正文在 `110-communication/overlap/`）；**② 形状分桶**（JAX 的 `jit`）—— **输入形状**不同的调用分到不同编译产物。★ **同名不同指**：一个是**梯度**的分组、一个是**形状**的分组。★ 本域正文一律写「**梯度分桶**」。（① 的正文在 `100-parallelism/data-parallel/02`；② 的正文在 `70-frameworks/jax/01-jit-and-tracing.md`） |
 
 ## 训练与推理系统
 
 > ★ **本节与 `120-inference` 共享**：**训练部分**的正文在 `90-training`；
-> **推理部分**的正文在 `120-inference`（未建成）。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
+> **推理部分**的正文在 `120-inference`（。⇒ 下表每条都在自己的「说明」列里回链到正文所在处。
 > （★ 另两条不属本节的归口：`ZeRO` / `FSDP` 的正文在 `100-parallelism` 的 `zero-fsdp`，此处只回链。）
 > ★★ **六个切分轴的【正文】**已归口到上面新增的「**并行策略**」节；★ 其中 `ZeRO` / `FSDP` 的**词条**留在本节（它们的正文在 `100-parallelism/zero-fsdp/`）。
 
@@ -293,3 +293,24 @@
 | loss spike | 损失尖峰 | 训练中 loss 在某一两步突然放大。★ **本库的立场**：机制层**没有一手结论** —— 能写的只有**现象**（Adam 的更新量在 spike 那一步**变小**、随后几百步被压低）、**已被证伪**的归因（坏数据；以及「开了 clip 就不会 spike」）、和**仍是假设**的归因（梯度范数突增）。（正文在 `90-training/initialization-and-stability/03-instability-and-spikes.md`，此处回链） |
 | 重算换显存 (gradient checkpointing / recompute) | 重算换显存 | 前向**丢掉**中间激活、反向时**重算**它们，把 `n` 层的激活账压到 `O(√n)`；代价记在**时间**上（前向次数从 `n` 到 `2n − ⌈√n⌉`）。★ **两个口径必须分开**：`O(√n)` 是**内存**、`≈2n` 是**前向次数**。★★ **中文「检查点」不得用于它**；英文 `checkpointing` 在这里只在**论文术语**（Chen 2016）的意义上用。（正文在 `90-training/autograd-and-backward/02-gradient-checkpointing.md`，此处回链；★ 与本节的 `sharded checkpoint` 是**同名不同指**） |
 | sharded checkpoint | 分片检查点 | 把训练状态切成 `N` 份分别落盘。★ **它不省总字节**（多出 `N × 每片头开销`），省的是**单卡峰值**；★ 而「拼得回来」**完全依赖元数据**（头里的 `start` / 摘要 / 覆盖率或全局元数据，**三层缺一不可**）。★ 检查点**不含梯度** ⇒ 它的字节账与「训练显存」（ZeRO 那个 `16Ψ`）**差一个梯度项**。（正文在 `90-training/checkpointing/02-sharded-save-and-load.md` 与 `90-training/checkpointing/01-state-and-bytes.md`，此处回链）★★ **注意「分片」这个词在这里指【落盘】** —— `ZeRO` / `FSDP` 的「**显存分片**」指【放进显存】，二者**同名不同指**，不要混。 |
+
+## 通信（110）
+
+> ★ **本节是 `110-communication` 的归口**（★ **追加在文件末尾** —— 本域纪律：**不在中间插节**，
+> 因为中间插节会把下游的**行号锚点**整体下移）。
+> ★★ **本节不另立**已在「互联与多卡」节的词条（`all-reduce` / `all-to-all` / `bisection bandwidth` /
+> `NVLink Domain` / `algbw`-`busbw` / `P2P` / `InfiniBand` / `scale-up`-`scale-out`）—— 本域已在那 10 条上**补了回链**。
+
+| 英文 | 中文 | 说明 |
+|---|---|---|
+| ring allreduce | 环形全规约 | 集合通信最常用的 allreduce 算法：**两段式**（reduce-scatter + all-gather），每段 `N−1` 步 ⇒ 共 `2(N−1)` 步。★ 每卡搬运量 `V(N) = 2(N−1)/N × S`，**随 `N` 饱和到 `2S`**（★ **推导在 `10-foundations/performance-models/02-amdahl-and-scaling.md`，本库只此一处正文**）。⚠ **「ring」在库内另有两义**（ring 拓扑 / ring attention）⇒ 一律写全称。（正文在 `110-communication/collectives/`） |
+| tree allreduce | 树形全规约 | allreduce 的另一族：**步数是 `⌈lg p⌉` 级**、但**带宽项差一个 `lg p` 因子**（recursive doubling 的 `n lg p β`）⇒ ★ **它换的是步数，不是搬运量**。⚠ 与 `60-compilers` 的「AST / 计算图的 tree」**同名不同指** ⇒ 一律写全称。（正文在 `110-communication/collectives/01-algorithm-family.md`） |
+| halving-doubling | 折半倍增（Rabenseifner） | ★★ **长消息的默认选择**：`T = 2 lg p α + 2(p−1)/p · nβ + (p−1)/p · nγ` —— **把带宽项从 `n lg p β` 降到 `2nβ`**。★ 前提是 **「长消息 + 预定义归约」**（用户自定义归约时**所有长度都用递归倍增**）。（正文在 `110-communication/collectives/02-stages-and-costs.md`） |
+| NCCL_ALGO / NCCL_PROTO | — | NCCL 的两个环境变量：**算法**（`Ring` / `Tree` / `Collnet` / `NVLS` / `PAT` …）与**协议**（`Simple` / `LL` / `LL128`）。★ **取值【不】大小写敏感**（官方逐字 `(not case sensitive)`）；★★ **默认 `unset` ⇒ 自动选**，而**官方【未公开】选择的规则**（两个阈值变量已 `removed`）⇒ ★ **不得写阈值表**。（正文在 `110-communication/nccl/`） |
+| PFC | 基于优先级的流控 | IEEE 802.1Qbb：**按 VLAN 优先级逐类暂停**链路。★ 官方给的**存在理由**：上层协议**假定近似无丢包**、**不含对拥塞丢包的响应**（无 back-off / slow restart）。⚠ **不是流控的万能解**。（正文在 `110-communication/network-topology/03-roce-and-infiniband.md`） |
+| ECN | 显式拥塞通知 | 在 IP 头**标记拥塞**（IPv4 TOS 的 **bit 6–7**）而**不是靠丢包告诉端点**。★ **它不消除丢包**（路由器在无其他选择时**仍然丢**）。（正文在 `110-communication/network-topology/03-roce-and-infiniband.md`） |
+| fat-tree | 胖树 | ★ **k-ary fat-tree 的规模式**：`k` 个 pod、**`(k/2)²` 台核心交换机**、**支持 `k³/4` 台主机**；★ **rearrangeably non-blocking**（`k=48` 时任意跨 pod 主机对之间有 **576** 条等价路径）。⚠ 与 `60-compilers` 的 tree 无关。（正文在 `110-communication/network-topology/01-fat-tree-and-clos.md`） |
+| rail-optimized | 按轨优化 | ★ 把每个 GPU 的网卡放到**不同的第一层（LEAF）交换机**上 ⇒ **同轨的卡只隔一跳**（官方逐字 `just one switch hop away`）⇒ **同轨便宜、跨轨贵**。（正文在 `110-communication/network-topology/02-rail-optimized.md`） |
+| 双缓冲 | double buffering | 通信-计算重叠的基本机制：**两块缓冲乒乓** ⇒ 第 `i` 块的通信可以与第 `i+1` 块的计算并行。★★ **可藏的上限是 `min(C,T)`**，且**第一块不可重叠** ⇒ 总时间 `≥ max(C,T)`。⚠ 与 `90-training` 的「**异步落盘**」**是同一件事的另一面**（**不是**同名不同指）。（正文在 `110-communication/overlap/01-mechanisms.md`） |
+| 通信分块 | chunking | 把一个大的通信**切成 `K` 块**逐块发起（DDP 的**梯度桶**就是一种通信分块）。★ 模型：`T(K) = (C+T)/K + (K−1)·max(C/K, T/K)`。⚠ **「桶 / bucket」在库内另有「形状分桶」（JAX）一义** ⇒ 本域一律写「**通信分块**」。（正文在 `110-communication/overlap/`） |
+| 气泡（流水线并行的） | — | 见「并行策略」节 —— ★ **与「GPU 硬件与执行模型」节 `TLP` 条的「流水线气泡」不是同一个量**（那条是 **SM 内部**的指令流水线气泡）。（正文在 `100-parallelism/pipeline-parallel/01`） |

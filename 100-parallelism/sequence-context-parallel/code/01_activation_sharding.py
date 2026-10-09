@@ -53,7 +53,7 @@ r"""01_activation_sharding.py —— SP 切的是**张量并行没切到的那�
   · **位置编码的外推**（PI / NTK / ALiBi、混叠周期）→
     `80-model-architectures/positional-encoding/02,03`。
   · **集合通信原语的算法与复杂度**（`V(N)`、reduce-scatter / all-gather 的阶段划分）→
-    `110-communication/collectives`（**未建成**）与 `10-foundations/performance-models/02:209`。
+    `110-communication/collectives`）与 `10-foundations/performance-models/02:209`。
   · **TP 每层 `2+2` 次 all-reduce** → `tensor-parallel/03` 与
     `10-foundations/performance-models/02:417`（★ **不是 `:223`** —— 那一行是**纯 TP 段**）。
   · **重算换显存**的机制 → `90-training/autograd-and-backward/02-gradient-checkpointing.md`。
@@ -474,7 +474,7 @@ def preflight():
           "`40-kernels/attention/03-flash-attention-backward.md`、`00-meta/glossary.md` 的 `flash attention` 条；")
     print("      · 位置编码的外推（PI / NTK / ALiBi、混叠周期）→ "
           "`80-model-architectures/positional-encoding/02,03`；")
-    print("      · 集合通信原语的算法与复杂度 → `110-communication/collectives`（未建成）"
+    print("      · 集合通信原语的算法与复杂度 → `110-communication/collectives`（"
           "与 `10-foundations/performance-models/02:209`；")
     print("      · TP 每层 `2+2` 次 all-reduce → `tensor-parallel/03` 与 "
           "`10-foundations/performance-models/02:417`（★ **不是 `:223`** —— 那一行是纯 TP 段）；")

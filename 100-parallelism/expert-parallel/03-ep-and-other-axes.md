@@ -114,7 +114,7 @@ updated: 2026-10-08
 > `NCCL-based All-to-All communication for token exchange`
 
 ★★ 它只给**机制名**，**不给次数、也不给尺寸** ⇒ ★ **不得从它推出通信量**
-（那是 `110-communication/collectives` 的正文 —— ★★ 该主题**未建成**）。
+（那是 `110-communication/collectives` 的正文 —— ★★ 该主题）。
 
 > ★★★ **另一条：本库在任何载体上【都没有取到】** ——
 > 「**专家数与 EP 度之间的大小关系**」这类规则。
@@ -194,7 +194,7 @@ updated: 2026-10-08
 | **负载账**（发出量 / 接收量） | [02-load-imbalance](02-load-imbalance.md) |
 | **TP 本身的切法与配对约束**、`2+2` 次 all-reduce | `tensor-parallel/01,02,03`、`10-foundations/performance-models/02:417` |
 | **DP 的梯度平均与副本一致性** | `data-parallel/01,02,03` |
-| **all-to-all 的通信量分析** | `110-communication/collectives`（未建成）、`20-gpu-architecture/interconnect/03` |
+| **all-to-all 的通信量分析** | `110-communication/collectives`（、`20-gpu-architecture/interconnect/03` |
 | **容量因子的定义与语义** | `80-model-architectures/moe/02-capacity-factor.md` |
 | **aux loss / 专家粒度** | `80-model-architectures/moe/01`、`03` |
 
@@ -276,7 +276,7 @@ updated: 2026-10-08
   · ★★ **TP 本身的切法与配对约束**（列/行的配对、`2+2` 次 all-reduce）→
     `tensor-parallel/01`、`02`、`03` 与
     `10-foundations/performance-models/02-amdahl-and-scaling.md:417`（★ **不是 `:223`**）；
-  · **all-to-all 的通信量分析** → `110-communication/collectives`（**未建成**）与
+  · **all-to-all 的通信量分析** → `110-communication/collectives`）与
     `20-gpu-architecture/interconnect/03`；★ `40-kernels/moe-kernels/01:243` 已**逐字让渡**；
   · **kernel 侧的 permute / unpermute / grouped GEMM** → `40-kernels/moe-kernels/02,03`、
     `00-meta/glossary.md` 的 `grouped GEMM` 条。
