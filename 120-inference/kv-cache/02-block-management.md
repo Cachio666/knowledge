@@ -257,7 +257,7 @@ updated: 2026-10-09
   `40-kernels/attention/05:130-179,283-290`（**正文在彼处，本文一行都不重写**）；
 - ★ **KDA（循环模型）下 vLLM 把「块 / 对齐 / 前缀匹配」三概念拆开 + copy-on-write** →
   `45-kernel-lifecycle/requirement-discovery/01:187`（**该处自标「经检索转述」，非逐字**）；
-- ★ **KV cache 量化** → `130-quantization/kv-cache-quantization/02,03`（**正文在彼处**）。
+- ★ **KV cache 量化** → `130-model-optimization/quantization/19-kivi-asymmetry,03`（**正文在彼处**）。
 
 ## 参考
 
@@ -275,7 +275,7 @@ updated: 2026-10-09
   **不是**任何引擎的字段名。
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
   · 块大小的 kernel 侧权衡 → `40-kernels/attention/05:130-179,283-290`；
-  · KV cache 的「账」 → `130-quantization/kv-cache-quantization/01`。
+  · KV cache 的「账」 → `130-model-optimization/quantization/18-kv-cache-basics`。
 
 ## 编译与运行
 

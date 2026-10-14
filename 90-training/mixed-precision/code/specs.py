@@ -44,7 +44,7 @@
 #       ★ 引用的是**标准**（A 级），不是某个实现的 `finfo` —— 所以「按定义算」与
 #         「读 `numpy.finfo`」是**两条独立的路**（`01_types.py` 的 `A.2` 拿它们对拍）。
 #       ★★ fp8 的两个变体**不在本节**：它们的位分配与四个变体是
-#         `130-quantization/numerical-formats/01-fp8-family.md` §0 的**正文**，
+#         `130-model-optimization/quantization/01-fp8-family.md` §0 的**正文**，
 #         本主题只在 §5 里按「格式参数」取用并回链（见该节抬头）。
 # 抓取：本模块 2026-09-23 打开过 `https://arxiv.org/abs/1710.03740` 与
 #       `https://arxiv.org/abs/2209.05433` 的 abs 页，`<title>` 逐字分别 =
@@ -70,10 +70,10 @@ BF16_EXP_BITS = 8
 BF16_MAN_BITS = 7
 BF16_BIAS = 127
 # 来源：[A] 惯例 —— bf16 不是 IEEE 交换格式，它的**指数位与 fp32 相同**是
-#       Google 的 bfloat16 定义（本库先例：`130-quantization/numerical-formats/03-bf16-fp16-tf32.md`）。
+#       Google 的 bfloat16 定义（本库先例：`130-model-optimization/quantization/03-bf16-fp16-tf32.md`）。
 #       ★ 标 [A] 的理由：它是一个**格式定义**，不是一个产品的默认值；但它**不是** IEEE 标准里的格式。
 # 消费者：`01_types.py` 的 `A.4`（判据⑤：bf16 的动态范围与 fp32 几乎相同）。
-# 同值位置：`130-quantization/numerical-formats/03-bf16-fp16-tf32.md` 的正文（散文形态，不是常量）。
+# 同值位置：`130-model-optimization/quantization/03-bf16-fp16-tf32.md` 的正文（散文形态，不是常量）。
 
 F16_MAX_FINITE = 65504.0
 # 来源：[A] IEEE 754-2019 `binary16` 的最大有限数 = `(2 − 2^-10)·2^15`。
@@ -95,7 +95,7 @@ F16_MIN_SUBNORMAL = 5.960464477539063e-08
 F16_MIN_NORMAL = 6.103515625e-05
 # 来源：[A] IEEE 754-2019 `binary16` 的最小**正规**数 = `2^-14`。
 # 口径：★ 与 `F16_MIN_SUBNORMAL`（`2^-24`）**不是同一个量** —— 两者相差 10 个二进幂。
-#       库内先例已经逐字警告过这件事：`130-quantization/numerical-formats/03-bf16-fp16-tf32.md:154`
+#       库内先例已经逐字警告过这件事：`130-model-optimization/quantization/03-bf16-fp16-tf32.md:154`
 #       （`2^-126` vs `2^-14`「**两个数不是同一个量，不要混用**」）。
 # 消费者：`01_types.py` 的 `A.3`（判据④：fp16 **正规区间**的上/下限）。
 # 同值位置：无。
@@ -297,7 +297,7 @@ TORCH_CLIP_COEF_DENOM_EPS = 1e-6
 # ===========================================================================
 #
 # ★★ 本节是**收窄原则的落点**：`03-fp8-training.md` **只写训练循环里怎么用 fp8**，
-#    **位域与 scale 粒度一律回链** `130-quantization/numerical-formats/01-fp8-family.md` §0
+#    **位域与 scale 粒度一律回链** `130-model-optimization/quantization/01-fp8-family.md` §0
 #    与 `02-e8m0-and-mx.md`（计划 §2 的边界表，结构层审查 **M1**）。
 #    ⇒ 本节**没有**「四个变体」「±448 vs ±57344」「按 torch 版本的溢出差异」这类常量；
 #      只有**训练循环要用到的三样**：分工、scaling 是不是格式的一部分、格式参数。
@@ -323,10 +323,10 @@ FP8_FORMATS = {
 #         而 `raw.count("57,344")` = 1。本常量写的是**数值**，函数段里不写引文。
 # 口径：★ 这只是**格式的三个可表示性参数**（最大有限数 / 最小正规 / eps），
 #       **不是位分配** —— 「这 8 位怎么分、四个变体差在哪」的正文在
-#       `130-quantization/numerical-formats/01-fp8-family.md` §0，**此处回链**。
+#       `130-model-optimization/quantization/01-fp8-family.md` §0，**此处回链**。
 #       ★ 本库已核对同一组值（内部对照，不作外部来源）：`01-fp8-family.md` §0/§1。
 # 消费者：`03_fp8.py` 的 `A.4`（量化器的最大相对误差 ≤ `eps/2`）、`B.1`、`C.2`。
-# 同值位置：`130-quantization/numerical-formats/01-fp8-family.md` §0 的正文（散文形态）。
+# 同值位置：`130-model-optimization/quantization/01-fp8-family.md` §0 的正文（散文形态）。
 
 FP8_DIVISION_QUOTE = "E4M3 for weight and activation tensors, and E5M2 for gradient tensors"
 # 来源：[C] 2209.05433，§3。逐字（原始字节 1 次，同一行内）：
@@ -397,12 +397,12 @@ FP8_SCALE_BITS = 32
 # 来源：作用域取自 [C] 2209.05433 的 `per-tensor scaling`（原始字节 6 次，本模块用其中一致的含义）；
 #       **bit 开销是本程序的记账**（不是引文）：per-tensor scale 在软件层是**每张量 1 个 fp32**，
 #       即 **32 bit / 张量**，**与张量元素数无关**。
-# 口径：★★ **库内硬要求**（`130-quantization/numerical-formats/02-e8m0-and-mx.md:276` 逐字）：
+# 口径：★★ **库内硬要求**（`130-model-optimization/quantization/02-e8m0-and-mx.md:276` 逐字）：
 #       「**凡是写「scale」这个词的地方，同时写出它的作用域（每张量 / 每通道 / 每 token /
 #       每 32 个元素的块）与它的 bit 开销**」。
 #       ⇒ 本主题**凡写到 scale 处一律带「per-tensor + 32 bit/张量」**；
 #       **其它粒度（每通道 / 每 token / 每 32 元素的块）的正文在**
-#       `130-quantization/theory/02-granularity.md` 与 `02-e8m0-and-mx.md`，**本主题回链、不展开**。
+#       `130-model-optimization/quantization/06-granularity.md` 与 `02-e8m0-and-mx.md`，**本主题回链、不展开**。
 # 消费者：`03_fp8.py` 的 `A.3`（断言开销与元素数无关）。
 # 同值位置：无。
 
@@ -503,7 +503,7 @@ UNSOURCED = (
                                                 # **本主题不把这个比值写成常量**（它是推导值）。
     "torch_e4m3fn_overflow_rule_version_span",  # `float8_e4m3fn` 的溢出语义（NaN / 饱和）**随 torch 版本变**
                                                 # （2.6.0/2.7.1/2.8.0/2.11.0 → NaN；2.13.0 → 448）。
-                                                # 正文在 `130-quantization/numerical-formats/01-fp8-family.md`
+                                                # 正文在 `130-model-optimization/quantization/01-fp8-family.md`
                                                 # §0/§3 ⇒ **本主题不写、也不断言**（它属位分配那一层）。
     "fp8_scaling_growth_rule_concrete_values",  # `delayed scaling` 的**具体**历史长度、增长/回退规则
                                                 # **没有**可引的一手来源（fp8 论文逐字说 beyond the scope；

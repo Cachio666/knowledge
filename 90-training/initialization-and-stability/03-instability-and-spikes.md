@@ -53,7 +53,7 @@ updated: 2026-09-23
   `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`；
 - **残差流的范数随深度增长**（`small sub-layers and large shortcut` 里的 `shortcut` 那一半，
   它的**结构侧**账）→ `80-model-architectures/transformer/01-block-and-residual-stream.md:191,232-233,263`；
-- **误差沿深度的传播** → `130-quantization/theory/03-outliers-and-propagation.md:124,205`。
+- **误差沿深度的传播** → `130-model-optimization/quantization/07-outliers-and-propagation.md:124,205`。
 
 ★★ **本文因此不写「为什么 sub-layer 小就好」** —— 那需要 Jacobian 谱范数的账，
 而那条账的**结构侧正文在 `80`**。本文只把**可测的那一半**（Adam 的更新量在 spike 前后怎么变）量出来。
@@ -293,7 +293,7 @@ N 步   Σ_t ‖Δw_t‖ = N·lr·max_norm = 20000 · 0.01 · 1 = 200      ← �
 - **溢出的处置（跳步）** ⇒ `90-training/mixed-precision/02-amp-execution.md`。
 - **`LR warmup` 的机制解释** ⇒ `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`（**正文在彼**）。
 - **残差流/深度的账** ⇒ `80-model-architectures/transformer/01-block-and-residual-stream.md:191,232-233,263`（**正文在彼**）。
-- **误差沿深度的传播** ⇒ `130-quantization/theory/03-outliers-and-propagation.md:124,205`（**正文在彼**）。
+- **误差沿深度的传播** ⇒ `130-model-optimization/quantization/07-outliers-and-propagation.md:124,205`（**正文在彼**）。
 - **优化器状态的分片与通信量** ⇒ `100-parallelism/zero-fsdp/`—— 本文**一行都不写**。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU**、不训练任何真模型）⇒
@@ -368,5 +368,5 @@ python3 03_spikes.py         # 只跑本程序
   `spike_mechanism_one_source_conclusion`。
 - **禁区**：`LR warmup` 的机制解释 → `80-…/normalization/02:83-100`；
   残差流/深度的账（`small sub-layers and large shortcut` 的结构侧）→ `80-…/transformer/01`；
-  误差传播 → `130-…/theory/03:124,205`；状态分片与通信量 → `100-parallelism/zero-fsdp/`。
+  误差传播 → `130-…/07-outliers-and-propagation:124,205`；状态分片与通信量 → `100-parallelism/zero-fsdp/`。
   本文**一行都不重推**。

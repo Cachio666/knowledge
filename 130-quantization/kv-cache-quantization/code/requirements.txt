@@ -1,9 +1,0 @@
-# 130-quantization/kv-cache-quantization 的编号程序依赖。
-#
-# 只用 torch 的 ATen 与 torch.quantize_per_channel，**不用 numpy、不用 scipy**——
-# 本主题没有 KL 校准器那一类需要 scipy 的东西（对照：ptq/01_calibration.py 用 scipy）。
-# 本仓库已在五个解释器上跑过全部三个程序：
-#   torch 2.6.0 / 2.7.1 / 2.8.0 / 2.11.0 / 2.13.0   （全部 Python 3.9–3.13，全部 CPU-only）
-#
-# ⚠ Makefile 里的下限 (2, 8) 是**对齐选择**，不是依赖——见 Makefile 与 specs.py 的长注释。
-torch>=2.6

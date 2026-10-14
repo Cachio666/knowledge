@@ -10,7 +10,7 @@ prerequisites:
 tags: [rope, rotary, positional-encoding, relative-position, rotate-half, coordinate-permutation, weight-compatibility, qk-projection]
 related:
   - 80-model-architectures/attention-variants/02-mla-low-rank
-  - 130-quantization/kv-cache-quantization/02-kivi-asymmetry
+  - 130-model-optimization/quantization/19-kivi-asymmetry
   - 40-kernels/attention/04-warp-specialization-and-variants
 code:
   - code/01_rope_definition.py
@@ -213,7 +213,7 @@ A（论文那套，未置换权重）              vs  B（rotate_half，权重�
 
 ★ **本文不算**位置编码的 FLOPs / 访存账（那是 kernel 侧，正文在
 `40-kernels/attention`），也不算它对 KV cache 的影响（正文在
-`130-quantization/kv-cache-quantization/01`）。
+`130-model-optimization/quantization/18-kv-cache-basics`）。
 
 ## 3. 实现与演进
 
@@ -296,8 +296,8 @@ Llama `2430cee764b6530f`（654 B）、Qwen3 `2850ddb3bf7aecad`（963 B））。
 | 相对位置取 `m−n` 还是 `n−m` | 两支在同一批数据上差 `0.219`，**各自内部自洽** ⇒ 抄错是**静默的**（X3） |
 | 引用 RoPE 的频率公式 | 论文有**两版**（`10000^{-2(i-1)/d}` 与 `10000^{-2i/d}`，集合相同、下标起点不同）⇒ **必须说明用哪一版**（X2） |
 | 引用式 (16) | 原文末项首因子缺下标 `m`（**笔误**）；且那里的相对位置是 `n−m`（X3/X4）—— 本域用**一对**常量钉住 |
-| 想知道「成对通道旋转」这句结构陈述的逐字 | 在 `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184`（那里讲 pre-RoPE 量化）；**定义在本文**，那边的量化结论不在本域 |
-| 想知道 RoPE 的 FLOPs / 访存账 / 对 KV cache 的影响 | **不在本文**：`40-kernels/attention`、`130-quantization/kv-cache-quantization/01` |
+| 想知道「成对通道旋转」这句结构陈述的逐字 | 在 `130-model-optimization/quantization/19-kivi-asymmetry.md:184`（那里讲 pre-RoPE 量化）；**定义在本文**，那边的量化结论不在本域 |
+| 想知道 RoPE 的 FLOPs / 访存账 / 对 KV cache 的影响 | **不在本文**：`40-kernels/attention`、`130-model-optimization/quantization/18-kv-cache-basics` |
 | 想知道「哪套约定更快」 | **本域给不出**（无 GPU）；且那是 kernel 侧的事（正文在 `40-kernels/attention/04`） |
 
 > ★ **表 A 的数值判据**（计划 §3 Chunk 5）：① 尺度无关的绝对判据 `< 1e-12`
@@ -325,7 +325,7 @@ RoPE 把「位置」做成**一次旋转**，于是内积只依赖 `n−m`；
   ★ 本文只钉住 `θ₁ = base⁰ = 1` 这个**定义上的事实**，`02` 才展开它的后果。
 - **第三篇**：[`03-extrapolation.md`](03-extrapolation.md) —— PI / NTK-aware /
   NTK-by-parts / YaRN / ALiBi，用 `02` 的频率框架统一解释。
-- **跨域回链**：`130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184`
+- **跨域回链**：`130-model-optimization/quantization/19-kivi-asymmetry.md:184`
   逐字写了 RoPE 的「成对通道旋转」（`jointly rotates pairs of channels by different
   angles depending on the position`）—— **那是本文的定义在量化语境里的应用**，
   那边的结论（先量化再套 RoPE）**不在本域**。
@@ -406,7 +406,7 @@ improves over the sinusoidal one, it still does not achieve satisfying results.`
 **上游契约**
 
 - `transformer/01-block-and-residual-stream.md` —— `q`/`k` 与残差流（前置）。
-- `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184` —— 「成对通道旋转」
+- `130-model-optimization/quantization/19-kivi-asymmetry.md:184` —— 「成对通道旋转」
   这句结构陈述的**逐字在此**（**正文在彼，此处回链**）；本文给的是**定义**。
 - `40-kernels/attention/04-warp-specialization-and-variants.md:130-134` —— 变体「改什么」
   的一行表（**定义与出处**正是本域要补的；那一行在彼，此处回链）。

@@ -6,7 +6,7 @@ r"""03_prefix_and_eviction.py —— **前缀共享与淘汰的机制**：`hash 
 
 ★ 三类断言**全部在本程序内部**，失败时以**非零退出码**结束；**没有 `verify.py`**。
 
-★★★ **本主题不写**「KV cache 量化」「paged KV 的 kernel 侧」（那是 `130-quantization/.../02,03` 与
+★★★ **本主题不写**「KV cache 量化」「paged KV 的 kernel 侧」（那是 `130-model-optimization/.../02,03` 与
   `40-kernels/attention/05:130-179,283-290` 的正文，本主题**只回链**）。
   本程序只写 **前缀共享的系统侧机制**：**`hash → 块` / 命中率的定义 / LRU 驱逐**。
 

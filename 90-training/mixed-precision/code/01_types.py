@@ -198,7 +198,7 @@ def boundary_from_definition(exp_bits, man_bits, bias):
     ★ 本函数**不处理** fp8，而且**不是**「忘了」：它的关键前提是
       「**全 1 指数域留给 inf/NaN**」，而 `e4m3fn` **没有 inf**、全 1 指数域仍是有效指数
       ⇒ 「按 IEEE 通式算」在 fp8 上**就是错的**。那是位分配，正文在
-      `130-quantization/numerical-formats/01-fp8-family.md` §0，**本程序回链、不算**。
+      `130-model-optimization/quantization/01-fp8-family.md` §0，**本程序回链、不算**。
     """
     field_max = (1 << exp_bits) - 1
     emax = field_max - 1 - bias

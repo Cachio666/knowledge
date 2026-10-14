@@ -23,9 +23,9 @@
 #   ★★ 本主题的边界（★ **机制细节一律回链**）：
 #     · **分页** → `120-inference/kv-cache/02`；**前缀树** → `120-inference/kv-cache/03`；
 #     · **调度器** → `120-inference/batching-and-scheduling/01`；
-#     · ★★ **PagedAttention 的算式** → `130-quantization/kv-cache-quantization/01:68-84`；
+#     · ★★ **PagedAttention 的算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`；
 #     · **vLLM 的模型接入与算子注册** → `45-kernel-lifecycle/requirement-discovery/01:158-214`；
-#     · **各家引擎把量化 scale 放哪一维** → `130-quantization/kv-cache-quantization/03` §2。
+#     · **各家引擎把量化 scale 放哪一维** → `130-model-optimization/quantization/20-low-bit-and-engines` §2。
 #   ★★★ **判据纪律（本主题最容易写错的一条）**：**「没有 A 类」只适用于「引擎的【行为/性能】」** ——
 #       ★★ `RadixAttention` 的前缀树、块池 / LRU 都是**可写独立参照实现**的数据结构 ⇒
 #       ★ `02-sglang-and-radix` **有真 A 类**；★ 只有「真实引擎的行为」不可验（那才用 `nccl` 的 `D` 类处置：

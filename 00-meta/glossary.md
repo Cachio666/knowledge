@@ -271,9 +271,9 @@
 
 | 英文 | 中文 | 说明 |
 |---|---|---|
-| KV cache | 键值缓存 | 自回归解码时缓存历史 token 的 K/V，避免重复计算。★ **它的【账】与 decode 的 memory-bound** 的正文在 `130-quantization/kv-cache-quantization/01`；**系统侧的容量规划与块管理**在 `120-inference/kv-cache/`。 |
+| KV cache | 键值缓存 | 自回归解码时缓存历史 token 的 K/V，避免重复计算。★ **它的【账】与 decode 的 memory-bound** 的正文在 `130-model-optimization/quantization/18-kv-cache-basics`；**系统侧的容量规划与块管理**在 `120-inference/kv-cache/`。 |
 | continuous batching | 连续批处理 | 在请求级别动态进出批次，而非等待整批完成。★ **机制与收益来源**的正文在 `120-inference/batching-and-scheduling/01`（★★ **收益来自请求长度的【方差】，不来自到达过程**）。 |
-| PagedAttention | 分页注意力 | 将 KV cache 按页管理。★★ **它消掉的是「按最大长度【预留】」的浪费，不是「碎片」** —— ★ **碎片只占 `0.049%`，按字节算不值一提**（`40-kernels/attention/05:145`），★ **页大小的真正约束是查表次数**（同篇 `:290`）。★ **定义与算式**的正文在 `130-quantization/kv-cache-quantization/01:68-84`；**系统侧的块管理**在 `120-inference/kv-cache/02`。 |
+| PagedAttention | 分页注意力 | 将 KV cache 按页管理。★★ **它消掉的是「按最大长度【预留】」的浪费，不是「碎片」** —— ★ **碎片只占 `0.049%`，按字节算不值一提**（`40-kernels/attention/05:145`），★ **页大小的真正约束是查表次数**（同篇 `:290`）。★ **定义与算式**的正文在 `130-model-optimization/quantization/18-kv-cache-basics:68-84`；**系统侧的块管理**在 `120-inference/kv-cache/02`。 |
 | speculative decoding | 投机解码 | 用小模型草拟、大模型验证，减少解码步数。★ **它的加速比闭式与三条假设**（★ 含 `β` i.i.d.）的正文在 `120-inference/decoding-strategies/02`。 |
 | ZeRO | — | 将优化器状态、梯度、参数分片到各卡的显存优化方案。 |
 | FSDP (Fully Sharded Data Parallel) | 全分片数据并行 | ZeRO 思想在 PyTorch 中的实现。 |
@@ -314,3 +314,23 @@
 | rail-optimized | 按轨优化 | ★ 把每个 GPU 的网卡放到**不同的第一层（LEAF）交换机**上 ⇒ **同轨的卡只隔一跳**（官方逐字 `just one switch hop away`）⇒ **同轨便宜、跨轨贵**。（正文在 `110-communication/network-topology/02-rail-optimized.md`） |
 | 双缓冲 | double buffering | 通信-计算重叠的基本机制：**两块缓冲乒乓** ⇒ 第 `i` 块的通信可以与第 `i+1` 块的计算并行。★★ **可藏的上限是 `min(C,T)`**，且**第一块不可重叠** ⇒ 总时间 `≥ max(C,T)`。⚠ 与 `90-training` 的「**异步落盘**」**是同一件事的另一面**（**不是**同名不同指）。（正文在 `110-communication/overlap/01-mechanisms.md`） |
 | 通信分块 | chunking | 把一个大的通信**切成 `K` 块**逐块发起（DDP 的**梯度桶**就是一种通信分块）。★ 模型：`T(K) = (C+T)/K + (K−1)·max(C/K, T/K)`。⚠ **「桶 / bucket」在库内另有「形状分桶」（JAX）一义** ⇒ 本域一律写「**通信分块**」。（正文在 `110-communication/overlap/`） |
+
+## 大模型优化（130）
+
+> ★ **本节是 `130-model-optimization` 的归口**（★ **追加在文件末尾** —— 沿用本域纪律：
+> **不在中间插节**，因为中间插节会把下游的**行号锚点**整体下移）。
+> ★★ **本节不另立**已在别处的词条：「精度与量化」节已有 `2:4 structured sparsity` /
+> `metadata (稀疏)` / `GPTQ` / `AWQ` / `SmoothQuant` / `STE` / `LSQ`-`PACT` / `W8A8`-`W4A16` /
+> `反量化融合` / `KIVI` / `QJL` / `Wanda`-`SparseGPT` / `蒸馏温度与 T²` —— 本域已在那几条上**补了回链**。
+
+| 英文 | 中文 | 说明 |
+|---|---|---|
+| LLM optimization techniques | 大模型优化技术（六族） | 量化 / 剪枝 / 稀疏化 / 蒸馏 / 低秩分解 / 参数高效微调 = **四个自由度**（表示精度 / 参与计算的位置 / 表示的秩 / 可训练量）上的**六种**动作，**没有第七种**。★ **六族里没有一族同时动到五本账**。⚠ 两格反直觉：**量化不减少 FLOPs**（W4A16 的乘法次数不变）、**PEFT 不改善推理**。（正文在 `130-model-optimization/overview/01-optimization-taxonomy.md`） |
+| compression ratio ≠ speedup | 压缩率 ≠ 加速率 | decode 是 memory-bound ⇒ 加速比**就是**字节比 `1/((1−f_w)+f_w/k)`，其中 `f_w` 是权重字节占比。★ **带宽在比值里约掉** ⇒ 结论与 GPU 型号无关。`f_w<1` 时加速**严格小于**压缩率；长上下文 `f_w→0` 时 `→1`（**下界是 1，不是 0**）。⚠ **prefill 侧位宽不进算力账**：`FLOPs/token = 2Ψ` 与权重位宽无关。（正文在 `overview/01-optimization-taxonomy.md`） |
+| five accounts / three peaks | 五本账 / 三种峰值 | 权重 / 梯度 / 优化器状态 / 激活 / KV cache。★ **峰值 = 各阶段取 `max`，不是五账相加**（示例配置 `105.99` GiB vs 加总 `107.99` GiB）。★★ 两个「**恰好为 0**」：**量化不省优化器状态**、**PEFT 不省 decode 峰值**。训练峰值的大头是**优化器状态**（`12Ψ`，占 75%）。（正文在 `overview/02-compression-accounting.md`） |
+| pruning vs sparsification | 剪枝 vs 稀疏化 | **剪枝**回答「去掉哪些」（判据），**稀疏化**回答「剩下的怎么表示给硬件」（粒度 + metadata）。★ **dense 存储下剪枝一本账都不省**（字节不变）——「剪枝省显存」隐含「改成稀疏存储」这个前提。（正文在 `overview/02-compression-accounting.md`；判据在 `pruning/01-pruning-criteria.md`，粒度在 `sparsity/01-sparsity-granularity.md`） |
+| order of composition | 组合的顺序判据 | **逐张量** scale + **全局** top-k：两序同解 **⇔** top-k 边界**无并列**（3000 组随机配置零反例）。★ 理由：全局 top-k **从不只删掉组内最大值** ⇒ scale 不变 ⇒ 差异**只在支撑集**上（公共支撑数值差恒为 `0`）。★★ **逐组 scale 下判据失效**（同样前提 **89.5%** 反例率）⇒ 只能直接比较两次掩码。（正文在 `overview/03-composition-and-selection.md`） |
+| NF4 bits per parameter | NF4 的位宽口径 | **载荷**是 `4` bit/参数；double quantization 后常量是 `8/64 + 32/(64·256) = 0.127` ⇒ **整块宽度 `4.127`**，`16/4.127 = 3.877×`（**不是** `4×`）。⚠ 「4-bit 模型 = 4 bit/参数」把常量算漏了。（正文在 `overview/03-composition-and-selection.md`；来源 QLoRA arXiv:2305.14314v1 §3） |
+| PEFT (parameter-efficient fine-tuning) | 参数高效微调 | 动的是**可训练量**：梯度与优化器状态按 `ρ` 缩，**权重那一本不动**。`ρ = 0.002`（LoRA 常用的 0.2%）⇒ 训练峰值降 **82.7%**，**decode 峰值降 0.0%**。★ 与量化**正交**（一个动训练、一个动推理）。（正文在 `overview/02-compression-accounting.md`；实现档位 `peft/` 未开始） |
+| low-rank decomposition | 低秩分解 | 把 `d×d` 权重换成秩 `r` 的双因子：参数量 `r(d_in+d_out)` 对 `d_in·d_out`。它动账的方式与蒸馏同类——**权重 + 梯度 + 优化器状态三本一起动**（示例 `r=256` ⇒ 训练峰值降 82.1%）。⚠ 与 MLA 的「低秩」不同源：后者压的是 **KV 的潜向量**（正文在 `80-model-architectures/attention-variants/02-mla-low-rank.md`）。（正文在 `overview/02-compression-accounting.md`；本域 `low-rank/` 未开始） |
+| knowledge distillation | 知识蒸馏（KD） | 以**换一个更小的模型**来动账：六族里除 PEFT 外**唯一**能同时动**权重 / 梯度 / 优化器状态**三本的族（示例：学生 50% ⇒ 训练峰值降 47.4%）。★ 它**不通过剪枝**，与「比特三角」无关。⚠ `T²` 标度的口径见本文件「精度与量化」节的「蒸馏温度与 T²」条。（正文在 `distillation/01-distillation.md`） |

@@ -12,7 +12,7 @@ tags: [vllm, engine-loop, max-num-seqs, chunked-prefill, prefix-caching, paramet
 related:
   - 120-inference/engines/02-sglang-and-radix
   - 45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory
-  - 130-quantization/kv-cache-quantization/01-kv-cache-basics
+  - 130-model-optimization/quantization/18-kv-cache-basics
 code:
   - code/01_vllm.py
 status: stable
@@ -28,7 +28,7 @@ updated: 2026-10-09
 > **分页 / 块管理** → [02-block-management](../kv-cache/02-block-management.md)；
 > **前缀共享** → [03-prefix-and-eviction](../kv-cache/03-prefix-and-eviction.md)；
 > **请求调度器** → [01-iteration-level-scheduling](../batching-and-scheduling/01-iteration-level-scheduling.md)；
-> **PagedAttention 的定义与算式** → `130-quantization/kv-cache-quantization/01:68-84` +
+> **PagedAttention 的定义与算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84` +
 > `40-kernels/attention/05:130-179`。
 > ★★★ **本主题【没有 A 类】** —— 本机**无 GPU、无任何引擎**（vLLM / SGLang / TensorRT-LLM / llama.cpp 都没有）
 > ⇒ **vLLM 的【行为与性能】无处可验**。★★ 「不是任何真实引擎，也不是真机」。
@@ -242,7 +242,7 @@ iteration-level batching」，`[A]`级，见 [03-tensorrt-llm-and-llamacpp](03-t
 | 见到 `36:9×` 或 `23x` | ★★★ **是【引用值】**（ORCA 论文 / 一篇博客，两个不同来源）；基线各异，**不得当作本库的测量**（`D.5`，`F4`） |
 | 见到「引擎循环」 | ★ 用 vLLM 的措辞：**a busy loop that continuously schedules requests and dispatches work to the GPU workers**（`B.1`） |
 | 见到 `vllm.ir` / `@register_op` / `register_impl` / 优先级列表 | ★★★ **不在本文** —— 正文在 `45-kernel-lifecycle/requirement-discovery/01:205-214`，此处回链 |
-| 见到「PagedAttention 的算式 / 分页机制」 | ★★★ **不在本文** —— `130-quantization/kv-cache-quantization/01:68-84` + `40-kernels/attention/05:130-179` + 本域 `kv-cache/02` |
+| 见到「PagedAttention 的算式 / 分页机制」 | ★★★ **不在本文** —— `130-model-optimization/quantization/18-kv-cache-basics:68-84` + `40-kernels/attention/05:130-179` + 本域 `kv-cache/02` |
 | 见到「vLLM 的真实吞吐 / 延迟」 | ★★★ **本机测不了**（无 GPU、无 vLLM）⇒ 只能引 `[B]`/`[C]` 级值，**必须带条件** |
 
 ## 6. 小结与延伸
@@ -261,7 +261,7 @@ iteration-level batching」，`[A]`级，见 [03-tensorrt-llm-and-llamacpp](03-t
 - ★★ **SGLang 的 RadixAttention**（前缀树 / LRU / 两处口径差）→ [02-sglang-and-radix](02-sglang-and-radix.md)；
 - ★★ **TensorRT-LLM 的编译式路线**与 **llama.cpp 的边界** → [03-tensorrt-llm-and-llamacpp](03-tensorrt-llm-and-llamacpp.md)；
 - ★★★ **vLLM 的模型接入与算子注册（`vllm.ir`）** → `45-kernel-lifecycle/requirement-discovery/01:205-214`（**正文在彼处**）；
-- ★★★ **PagedAttention 的定义与算式** → `130-quantization/kv-cache-quantization/01:68-84`（**正文在彼处**）；
+- ★★★ **PagedAttention 的定义与算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`（**正文在彼处**）；
 - ★★ **块管理 / 分页的系统侧机制** → 本域 [02-block-management](../kv-cache/02-block-management.md)；
 - ★★ **前缀共享与淘汰（`hash → 块`）** → 本域 [03-prefix-and-eviction](../kv-cache/03-prefix-and-eviction.md)；
 - ★ **请求调度器的机制** → 本域 [01-iteration-level-scheduling](../batching-and-scheduling/01-iteration-level-scheduling.md)。
@@ -281,7 +281,7 @@ iteration-level batching」，`[A]`级，见 [03-tensorrt-llm-and-llamacpp](03-t
   ★ `block` / `page` 是**同名不同指**（见 [02](02-sglang-and-radix.md) 的 `C.1`）。
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
   · `vllm.ir` 与模型接入 → `45-kernel-lifecycle/requirement-discovery/01:205-214`；
-  · PagedAttention 的算式 → `130-quantization/kv-cache-quantization/01:68-84`；
+  · PagedAttention 的算式 → `130-model-optimization/quantization/18-kv-cache-basics:68-84`；
   · 分页的 kernel 侧 → `40-kernels/attention/05:130-179`。
 
 ## 编译与运行

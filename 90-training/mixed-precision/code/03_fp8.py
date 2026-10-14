@@ -11,14 +11,14 @@ r"""03_fp8.py —— **训练循环里怎么用 fp8**：分工、per-tensor scal
 
   具体地，下面这些**不在本程序、也不在本文**（计划 §2 的边界表，结构层审查 **M1**）：
    · **fp8 的位分配与四个变体**（`e4m3fn` / `e5m2` / `fnuz`、±448 vs ±57344、
-     **按 torch 版本的溢出差异**）→ `130-quantization/numerical-formats/01-fp8-family.md` **§0 全节**；
+     **按 torch 版本的溢出差异**）→ `130-model-optimization/quantization/01-fp8-family.md` **§0 全节**；
    · **scale 的作用域与 bit 开销的另一半**（每通道 / 每 token / 每 32 元素的块）→
-     `130-quantization/numerical-formats/02-e8m0-and-mx.md:276` + `130-quantization/theory/02-granularity.md`；
+     `130-model-optimization/quantization/02-e8m0-and-mx.md:276` + `130-model-optimization/quantization/06-granularity.md`；
    · **累加器宽度的误差界** → `10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md`。
   ⇒ 本程序**把格式参数当输入**（`(最大有限数, 最小正规数, eps)` 三个数，取自 `specs.py` 的 [C] 常量），
     **不解释它们是怎么从 8 位里分出来的**。
 
-★★ **库内硬要求**（`130-quantization/numerical-formats/02-e8m0-and-mx.md:276` 逐字）：
+★★ **库内硬要求**（`130-model-optimization/quantization/02-e8m0-and-mx.md:276` 逐字）：
 > 「**凡是写「scale」这个词的地方，同时写出它的作用域（每张量 / 每通道 / 每 token /
 >   每 32 个元素的块）与它的 bit 开销**」
   ⇒ 本程序**凡出现 scale 处一律写「**per-tensor（作用域 = 每张量）+ 32 bit/张量**」**，
@@ -127,7 +127,7 @@ def fmt_params(fmt):
     """`fmt` -> `(最大有限数, 最小正规数, eps)`。**值来自 `specs.py`（[C] 常量）**。
 
     ★ 本函数**不**解释位分配 —— 「这 8 位怎么分、四个变体差在哪」的正文在
-      `130-quantization/numerical-formats/01-fp8-family.md` §0，**此处回链**。
+      `130-model-optimization/quantization/01-fp8-family.md` §0，**此处回链**。
     ★ 本函数也**不**给出尾数位数：`eps` 是那个信息的**唯一**载体（`eps = 2^-M`），
       而 `M` 是位域的事。
     """
@@ -149,7 +149,7 @@ def fp8_round(x, fmt):
       `Values that overflow are then saturated to the maximum representable value.`
       ⇒ 本函数**只做饱和**，**不对任何「格式的溢出语义是什么」下结论** ——
         格式层面的溢出（NaN / `inf` / **按 torch 版本不同**）是位分配那一层的事，
-        正文在 `130-quantization/numerical-formats/01-fp8-family.md` §0/§3，**此处回链**。
+        正文在 `130-model-optimization/quantization/01-fp8-family.md` §0/§3，**此处回链**。
     ★ `min(..., 最大有限数)` **必须放在舍入之后**：不这样的话 `448` 附近的量会先被
       舍到 `480`（那个码字在 `e4m3fn` 里被 NaN 占掉，是位分配的内容）再被夹回来。
     """
@@ -510,7 +510,7 @@ def part_B(log):
           "★ 作用域（%s）与 bit 开销（%d）**逐位钉住** —— 库内硬要求：凡写 scale 必写这两项"
           % (SCALE_SCOPE, SCALE_BITS))
     print("     ★ 其它粒度（每通道 / 每 token / 每 32 元素的块）的正文在")
-    print("       `130-quantization/theory/02-granularity.md` 与 `02-e8m0-and-mx.md:276`，**此处回链**。")
+    print("       `130-model-optimization/quantization/06-granularity.md` 与 `02-e8m0-and-mx.md:276`，**此处回链**。")
 
     # ── B.2 delayed scaling 的**溢出率 = 1/(k+1)** ──────────────────────────
     print()
@@ -792,8 +792,8 @@ def main():
     print("    本机 macOS arm64 **无 GPU**：这些数不支撑任何关于真实模型的结论。")
     print("  ★ 失败标记 ASSERT_FAIL_MARK = %r（本主题自定义；不跨主题照抄）" % ASSERT_FAIL_MARK)
     print("  ★★ 收窄原则（写死）：**只写训练循环里怎么用 fp8，位域与 scale 粒度一律回链** ——")
-    print("     fp8 的位分配与四个变体在 `130-quantization/numerical-formats/01-fp8-family.md` §0；")
-    print("     scale 的其它粒度在 `130-quantization/theory/02-granularity.md`；")
+    print("     fp8 的位分配与四个变体在 `130-model-optimization/quantization/01-fp8-family.md` §0；")
+    print("     scale 的其它粒度在 `130-model-optimization/quantization/06-granularity.md`；")
     print("     累加器宽度的误差界在 `10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md`。")
     if not preflight():
         print()

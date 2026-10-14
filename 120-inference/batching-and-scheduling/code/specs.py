@@ -343,13 +343,13 @@ CHUNK_HUGE_K = 1000000
 # ===========================================================================
 
 PREEMPT_KV_BYTES_PER_TOKEN = 524288
-# 来源：**[E] 本库** —— `130-quantization/kv-cache-quantization/01`：Llama-2-7B（MHA）**每 token `512 KiB`**。
+# 来源：**[E] 本库** —— `130-model-optimization/quantization/18-kv-cache-basics`：Llama-2-7B（MHA）**每 token `512 KiB`**。
 # 口径：★★★ 本主题**取用**这个值，**不重推**它的六项乘积（那条正文在 130-01）——
 #       ★ 它是 `[E]` 级（本库推导值），**不是**任何引擎的规格、**也不是**任何真实硬件的测量。
 #       ★★ **口径 = KiB**（`512 × 1024`）。
 #       ★ 换成别的模型会改变「换出」的**绝对值**，但**不改公式的形状**（`s*` 的闭式）。
 # 消费者：`03` 的 `A.1` / `A.2` / `A.3` / `B.1`。
-# 同值位置：`130-quantization/kv-cache-quantization/01` 的表 1（**那是正文，这里是引用**）；
+# 同值位置：`130-model-optimization/quantization/18-kv-cache-basics` 的表 1（**那是正文，这里是引用**）；
 #           `120-inference/kv-cache/code/specs.py` 的 `LLAMA2_7B_KV_BYTES_PER_TOKEN`（**同值**，
 #           分属两个主题的 specs —— ★ **不是同一条事实**，各自只服务本主题）。
 

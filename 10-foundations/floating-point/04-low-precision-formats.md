@@ -10,7 +10,7 @@ prerequisites:
   - 10-foundations/floating-point/02-rounding-and-error-model
 tags: [bf16, fp16, fp8, tf32, mixed-precision, accumulator, loss-scaling]
 related:
-  - 130-quantization/numerical-formats
+  - 130-model-optimization/quantization
   - 90-training/mixed-precision
   - 20-gpu-architecture/tensor-core
 code:
@@ -306,7 +306,7 @@ tf32 矩阵乘模拟（输入截断到 tf32、累加仍在 fp32，每个 `K` 跑
 2. **`u` 是唯一的斜率参数。** fp16、bf16、fp32 三列形状完全相同，只差 `u` 的倍数——`u(fp16)/u(fp32) = 8192`，实测误差之比 `12342` 倍（§1 第四步、表 3）。所以「窄格式能不能用」等价于问「`√K·u` 是否还在可接受范围内」。
 3. **tf32 是输入端截断，与累加误差是两个独立来源。** 它的误差高约 3 个数量级，且**不随 `K` 变化**——这个「不随 K 变化」的指纹可以用来区分两类误差（§1 第五步、§4 第 1 条）。
 
-延伸方向有三条。**量化**方面：本文只处理了「格式选择」，把权重压到 int8/int4 之后的误差分析与这里同源但多了一层缩放因子（正文在 [130-quantization/numerical-formats](../../130-quantization/numerical-formats/)，此处回链该域）。**架构**方面：TMEM 把累加器搬出寄存器文件之后，「累加器宽度」与「寄存器预算」的耦合被解开，这会改变大 tile 矩阵乘的可行域（[20-gpu-architecture/execution-model/01-sm-internals.md](../../20-gpu-architecture/execution-model/01-sm-internals.md) §3）。**数值**方面：本文的 `√K` 结论建立在「乘积符号随机」这个前提上——如果数据有系统性偏移（例如全正权重、ReLU 后的激活），§1 第三步第 2 步的随机游走假设不再成立，部分和按 `K` 而不是 `√K` 增长，相对误差就退化到上界 `γ_K ≈ K·u` 那一侧（推导；本文的程序只跑随机符号数据，未覆盖这一情形）。这是本文结论唯一的失效条件。
+延伸方向有三条。**量化**方面：本文只处理了「格式选择」，把权重压到 int8/int4 之后的误差分析与这里同源但多了一层缩放因子（正文在 [130-model-optimization/quantization](../../130-model-optimization/quantization/)，此处回链该域）。**架构**方面：TMEM 把累加器搬出寄存器文件之后，「累加器宽度」与「寄存器预算」的耦合被解开，这会改变大 tile 矩阵乘的可行域（[20-gpu-architecture/execution-model/01-sm-internals.md](../../20-gpu-architecture/execution-model/01-sm-internals.md) §3）。**数值**方面：本文的 `√K` 结论建立在「乘积符号随机」这个前提上——如果数据有系统性偏移（例如全正权重、ReLU 后的激活），§1 第三步第 2 步的随机游走假设不再成立，部分和按 `K` 而不是 `√K` 增长，相对误差就退化到上界 `γ_K ≈ K·u` 那一侧（推导；本文的程序只跑随机符号数据，未覆盖这一情形）。这是本文结论唯一的失效条件。
 
 ## 参考
 

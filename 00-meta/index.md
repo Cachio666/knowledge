@@ -285,41 +285,57 @@
   - [02-inference-parallelism-and-pd](../120-inference/serving-infra/02-inference-parallelism-and-pd.md)
   - [03-scaling-and-observability](../120-inference/serving-infra/03-scaling-and-observability.md)
 
-## 130-quantization
+## 130-model-optimization
 
-- [numerical-formats](../130-quantization/numerical-formats/) —— fp16 / bf16 / tf32 / fp8 / int8 / int4 / nvfp4
-  - [01-fp8-family](../130-quantization/numerical-formats/01-fp8-family.md)
-  - [02-e8m0-and-mx](../130-quantization/numerical-formats/02-e8m0-and-mx.md)
-  - [03-bf16-fp16-tf32](../130-quantization/numerical-formats/03-bf16-fp16-tf32.md)
-  - [04-integer-formats](../130-quantization/numerical-formats/04-integer-formats.md)
-- [theory](../130-quantization/theory/) —— 量化误差分析 / scale 与 zero-point / outlier 问题
-  - [01-error-bounds](../130-quantization/theory/01-error-bounds.md)
-  - [02-granularity](../130-quantization/theory/02-granularity.md)
-  - [03-outliers-and-propagation](../130-quantization/theory/03-outliers-and-propagation.md)
-- [ptq](../130-quantization/ptq/) —— 训练后量化 / 校准方法 / GPTQ / AWQ / SmoothQuant
-  - [01-calibration](../130-quantization/ptq/01-calibration.md)
-  - [02-gptq](../130-quantization/ptq/02-gptq.md)
-  - [03-awq-and-smoothquant](../130-quantization/ptq/03-awq-and-smoothquant.md)
-  - [04-rounding](../130-quantization/ptq/04-rounding.md)
-- [qat](../130-quantization/qat/) —— 量化感知训练 / 伪量化 / 梯度近似
-  - [01-ste](../130-quantization/qat/01-ste.md)
-  - [02-fake-quant-and-lsq](../130-quantization/qat/02-fake-quant-and-lsq.md)
-  - [03-pact-and-comparison](../130-quantization/qat/03-pact-and-comparison.md)
-- [quantized-kernels](../130-quantization/quantized-kernels/) —— 量化算子实现（正文在本域，回链 40-kernels）
-  - [01-w8a8](../130-quantization/quantized-kernels/01-w8a8.md)
-  - [02-w4a16-packing](../130-quantization/quantized-kernels/02-w4a16-packing.md)
-  - [03-kernel-design](../130-quantization/quantized-kernels/03-kernel-design.md)
-- [kv-cache-quantization](../130-quantization/kv-cache-quantization/) —— KV cache 量化（正文在本域，回链 [120-inference/kv-cache](../120-inference/kv-cache/)）
-  - [01-kv-cache-basics](../130-quantization/kv-cache-quantization/01-kv-cache-basics.md)
-  - [02-kivi-asymmetry](../130-quantization/kv-cache-quantization/02-kivi-asymmetry.md)
-  - [03-low-bit-and-engines](../130-quantization/kv-cache-quantization/03-low-bit-and-engines.md)
-- [sparsity-and-distillation](../130-quantization/sparsity-and-distillation/) —— 结构化与非结构化稀疏 / 知识蒸馏
-  - [01-sparsity-granularity](../130-quantization/sparsity-and-distillation/01-sparsity-granularity.md)
-  - [02-pruning-criteria](../130-quantization/sparsity-and-distillation/02-pruning-criteria.md)
-  - [03-distillation](../130-quantization/sparsity-and-distillation/03-distillation.md)
+- [overview](../130-model-optimization/overview/) —— 六族优化的统一账 / 五本账与三种峰值 / 组合与选型
+  - [01-optimization-taxonomy](../130-model-optimization/overview/01-optimization-taxonomy.md)
+  - [02-compression-accounting](../130-model-optimization/overview/02-compression-accounting.md)
+  - [03-composition-and-selection](../130-model-optimization/overview/03-composition-and-selection.md)
+- [quantization](../130-model-optimization/quantization/) —— **量化（一族 20 篇）**：数值格式 01–04 / 误差理论 05–07 / PTQ 08–11 / QAT 12–14 / 量化算子 15–17 / KV cache 量化 18–20
+  - [01-fp8-family](../130-model-optimization/quantization/01-fp8-family.md) —— fp8 族（e4m3 / e5m2）
+  - [02-e8m0-and-mx](../130-model-optimization/quantization/02-e8m0-and-mx.md) —— e8m0 与 MX 块缩放
+  - [03-bf16-fp16-tf32](../130-model-optimization/quantization/03-bf16-fp16-tf32.md) —— bf16 / fp16 / tf32
+  - [04-integer-formats](../130-model-optimization/quantization/04-integer-formats.md) —— 整数格式与 scale/zero-point
+  - [05-error-bounds](../130-model-optimization/quantization/05-error-bounds.md) —— 量化误差界
+  - [06-granularity](../130-model-optimization/quantization/06-granularity.md) —— 粒度：per-tensor → per-group
+  - [07-outliers-and-propagation](../130-model-optimization/quantization/07-outliers-and-propagation.md) —— outlier 与误差传播
+  - [08-calibration](../130-model-optimization/quantization/08-calibration.md) —— 校准方法
+  - [09-gptq](../130-model-optimization/quantization/09-gptq.md) —— GPTQ
+  - [10-awq-and-smoothquant](../130-model-optimization/quantization/10-awq-and-smoothquant.md) —— AWQ 与 SmoothQuant
+  - [11-rounding](../130-model-optimization/quantization/11-rounding.md) —— 舍入（RTN / AdaRound）
+  - [12-ste](../130-model-optimization/quantization/12-ste.md) —— STE 与梯度近似
+  - [13-fake-quant-and-lsq](../130-model-optimization/quantization/13-fake-quant-and-lsq.md) —— 伪量化与 LSQ
+  - [14-pact-and-comparison](../130-model-optimization/quantization/14-pact-and-comparison.md) —— PACT 与对照
+  - [15-w8a8](../130-model-optimization/quantization/15-w8a8.md) —— W8A8 算子
+  - [16-w4a16-packing](../130-model-optimization/quantization/16-w4a16-packing.md) —— W4A16 打包
+  - [17-kernel-design](../130-model-optimization/quantization/17-kernel-design.md) —— 量化 kernel 设计
+  - [18-kv-cache-basics](../130-model-optimization/quantization/18-kv-cache-basics.md) —— KV cache 的账
+  - [19-kivi-asymmetry](../130-model-optimization/quantization/19-kivi-asymmetry.md) —— KIVI 的非对称粒度
+  - [20-low-bit-and-engines](../130-model-optimization/quantization/20-low-bit-and-engines.md) —— 低位宽与引擎
+- [sparsity](../130-model-optimization/sparsity/) —— 稀疏粒度：硬件只定义三种 N:M
+  - [01-sparsity-granularity](../130-model-optimization/sparsity/01-sparsity-granularity.md)
+- [pruning](../130-model-optimization/pruning/) —— 剪枝判据：magnitude / SparseGPT / Wanda
+  - [01-pruning-criteria](../130-model-optimization/pruning/01-pruning-criteria.md)
+- [distillation](../130-model-optimization/distillation/) —— 知识蒸馏：温度与 `T²`
+  - [01-distillation](../130-model-optimization/distillation/01-distillation.md)
+- [low-rank](../130-model-optimization/low-rank/) —— 低秩分解：定理的范数边界 / 谱决定收益 / 秩的盈亏平衡点
+  - [01-optimal-low-rank-approximation](../130-model-optimization/low-rank/01-optimal-low-rank-approximation.md)
+- `peft`（参数高效微调）—— 未开始，见 [roadmap.md](roadmap.md)
 
 ## 140-papers
 尚未开始。
 
 ## 150-playground
 尚未开始。
+
+## 160-model
+- [glm](../160-model/glm/) —— 智谱 GLM 家族（技术路线 / GLM-5 代骨架 / 部署账）
+  - [01-glm-technical-route](../160-model/glm/01-glm-technical-route.md)
+  - [02-glm5-architecture](../160-model/glm/02-glm5-architecture.md)
+  - [03-serving-efficiency-and-deployment](../160-model/glm/03-serving-efficiency-and-deployment.md)
+- [deepseek](../160-model/deepseek/) —— DeepSeek 家族（技术路线 / V4.1-Flash 实例）
+  - [01-technical-route](../160-model/deepseek/01-technical-route.md)
+  - [02-v4-1-flash-architecture](../160-model/deepseek/02-v4-1-flash-architecture.md)
+- [kimi](../160-model/kimi/) —— Kimi 家族（技术路线 / K3 实例）
+  - [01-technical-route](../160-model/kimi/01-technical-route.md)
+  - [02-k3-architecture](../160-model/kimi/02-k3-architecture.md)

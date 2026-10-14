@@ -105,7 +105,7 @@ r"""03_extrapolation.py —— **PI / NTK-aware / NTK-by-parts / YaRN / ALiBi**�
 
   * ★★ **不重讲频率谱与分辨窗口** —— 那是 `02`（本程序只**引用**它的 `turns`）。
   * **不写**「成对通道旋转」那句结构陈述的正文（在
-    `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184`）。
+    `130-model-optimization/quantization/19-kivi-asymmetry.md:184`）。
   * ★★ **不比较四种方法的「效果」**：那要训练与评测（本域**无 GPU、不训练模型**），
     且 YaRN 原文自己说 `perplexity may not be a great indicator`（E8）
     ⇒ 本域只做**结构对比**（每维的缩放因子是多少，**可手算**）。

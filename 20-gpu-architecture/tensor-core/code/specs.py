@@ -481,7 +481,7 @@ SPARSE_SPEEDUP_OBSERVED = (
 #         **端到端约 1.2x**，且**小 batch 可能低于 1x**（PyTorch 官方教程
 #         BERT-base/SQuAD bs=4 实测 0.71x，更慢）。
 #       把「层级/内核级」的区间说成「端到端」是**不同口径混称**——这是本条注释
-#       此前犯过的错（见 130-quantization/sparsity-and-distillation 的跨域订正）。
+#       此前犯过的错（见 130-model-optimization 的跨域订正）。
 
 SPARSE_WHITEPAPER_QUOTE = (
     "Speedups that 2:4 sparse matrix multiplications achieve over dense "

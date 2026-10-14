@@ -340,7 +340,7 @@ Adam+L2 与 AdamW 的第 1 步（`A.7`，`g₁` 随机、`λ = 0.1`、`w₀ = 1`
 - **现象**：把论文的 `update RMS = 0.2~0.4` 与本机量到的 `RMS(m̂/(√v̂+ε)) = 0.317` 放在一起比。
 - **成因**：两个数**不是同一个量**（一个含不含 `lr` 未写明，一个只到归一化那一层）。
 - **规避**：凡写「更新量」处，**同时写出它是哪一层**（`lr·m̂/(√v̂+ε)`？还是 `m̂/(√v̂+ε)`？）
-  —— 与 `130-quantization/numerical-formats/02-e8m0-and-mx.md:276` 那条
+  —— 与 `130-model-optimization/quantization/02-e8m0-and-mx.md:276` 那条
   「凡写 scale 必写作用域与 bit 开销」是同一个纪律。
 
 ## 5. 判据表
@@ -467,7 +467,7 @@ python3 02_adam_adamw.py        # 只跑本程序
 - **本库**：`90-training/mixed-precision/01-type-selection.md` §1.2 与 §2.2
   （`ULP/2` 的判据、以及「优化器状态 8 字节/参数」那一行 —— **本文只消费**）；
   `90-training/optimizers/01-sgd-and-momentum.md`（SGD 侧的 `Δw = lr·g`）；
-  `130-quantization/numerical-formats/02-e8m0-and-mx.md:276`（「凡写 scale 必写作用域与 bit 开销」
+  `130-model-optimization/quantization/02-e8m0-and-mx.md:276`（「凡写 scale 必写作用域与 bit 开销」
   —— 本文 §2.3 的「凡写更新量必写是哪一层」与它同源）。
 
 **上游契约**

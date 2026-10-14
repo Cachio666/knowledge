@@ -52,21 +52,21 @@
 | `autograd-and-backward` | 反向图结构、`is_leaf`、`saved_tensors` 逐算子表、`no_grad` vs `inference_mode`、`retain_graph` 默认值、`backward()` vs `autograd.grad()` | `70-frameworks/pytorch/02-autograd.md`（**全篇 256 行**）；术语五条在 `00-meta/glossary.md:203-211` |
 | `autograd-and-backward` | 自定义反向的**实现**（`log1pexp` 的 NaN 例子） | `70-frameworks/tensorflow/03-custom-ops-and-export.md:106-150,217` |
 | `autograd-and-backward` | 控制流与反向模式的可微性 | `70-frameworks/jax/03-sharding-and-differences.md:110-112,379-381` |
-| `autograd-and-backward` | 不可微算子（STE）的反向 | `130-quantization/qat/01-ste.md:28,181`、`02-fake-quant-and-lsq.md:204-212` |
-| `mixed-precision` | 「**为什么 fp16 要 loss scaling、bf16 为什么不用**」**整块** | `10-foundations/floating-point/04-low-precision-formats.md:24,28,41,65,189,195-201,211,219-231,303`；★ `130-quantization/numerical-formats/03-bf16-fp16-tf32.md:154` 已明写正文在那里 |
+| `autograd-and-backward` | 不可微算子（STE）的反向 | `130-model-optimization/quantization/12-ste.md:28,181`、`02-fake-quant-and-lsq.md:204-212` |
+| `mixed-precision` | 「**为什么 fp16 要 loss scaling、bf16 为什么不用**」**整块** | `10-foundations/floating-point/04-low-precision-formats.md:24,28,41,65,189,195-201,211,219-231,303`；★ `130-model-optimization/quantization/03-bf16-fp16-tf32.md:154` 已明写正文在那里 |
 | `mixed-precision` | 三个后果的分解（范围 / 精度 / 累加宽度）；格式的位分配 | `10-foundations/floating-point/04-low-precision-formats.md:24,303`、`01-ieee754-format.md:189-226` |
-| `mixed-precision` | **fp8 的位分配与四个变体**（`e4m3fn` / `e5m2` / `fnuz`、`±448` vs `±57344`） | `130-quantization/numerical-formats/01-fp8-family.md`（**§0 全节就是那张表**） |
-| `mixed-precision` | **scale 的作用域与 bit 开销**（每张量 / 每通道 / 每 token / 每 32 元素的块） | `130-quantization/numerical-formats/02-e8m0-and-mx.md:276`（逐字要求「凡写 scale 必写作用域与 bit 开销」）+ `130-quantization/theory/02-granularity.md` |
+| `mixed-precision` | **fp8 的位分配与四个变体**（`e4m3fn` / `e5m2` / `fnuz`、`±448` vs `±57344`） | `130-model-optimization/quantization/01-fp8-family.md`（**§0 全节就是那张表**） |
+| `mixed-precision` | **scale 的作用域与 bit 开销**（每张量 / 每通道 / 每 token / 每 32 元素的块） | `130-model-optimization/quantization/02-e8m0-and-mx.md:276`（逐字要求「凡写 scale 必写作用域与 bit 开销」）+ `130-model-optimization/quantization/06-granularity.md` |
 | `mixed-precision` | **累加器宽度的误差界**（fp32 → fp16 使绝对误差界放大 **8192 倍**、split-K 的顺序不确定性） | `10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md:118-126,304-306,326` |
 | `mixed-precision` | 主权重「**为什么必须 fp32**」的**数值理由** | `10-foundations/numerical-linear-algebra/04-iterative-methods.md:229-266`（尤其 `:245,259-262`） |
-| `mixed-precision` | QAT 侧的「优化器更新的是谁」；STE / 伪量化 / LSQ / PACT 全主题 | `130-quantization/qat/02-fake-quant-and-lsq.md:69,420`、`01-ste.md:202` |
+| `mixed-precision` | QAT 侧的「优化器更新的是谁」；STE / 伪量化 / LSQ / PACT 全主题 | `130-model-optimization/quantization/13-fake-quant-and-lsq.md:69,420`、`01-ste.md:202` |
 | `optimizers` | ★★ **优化器状态的分片策略与通信量**（ZeRO 三阶段、FSDP、`4x/8x`、`16Ψ` 的账） | `100-parallelism/zero-fsdp/`；`10-foundations/performance-models/02-amdahl-and-scaling.md:219,221,417` 已逐字列为那边的正文。★ 本域只留**接口** |
 | `optimizers` | 数据并行 / DDP / 梯度规约 | `100-parallelism/data-parallel/`、`110-communication/` |
 | `optimizers` | `lr` 被编译 guard 固化 | `60-compilers/inductor/04-dynamic-shapes.md:42,163`（**编译角度，不是优化器角度**） |
 | `optimizers` | 推理口径的「权重文件含优化器状态」 | `45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md:234,301`（那一行逐字：「权重文件里含优化器状态 ⇒ 那是**训练**侧的字节；**不得**计入推理的访存」） |
 | `initialization-and-stability` | ★ **warmup 的机制解释**（post-LN 的平均场理由） | `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`；`transformer/01:49,252`。★ 本域只写**工程判据与设定** |
 | `initialization-and-stability` | 残差流的范数随深度增长（**结构**侧的账） | `80-model-architectures/transformer/01:191,232-233,263` |
-| `initialization-and-stability` | 误差沿深度的传播 | `130-quantization/theory/03-outliers-and-propagation.md:124,205` |
+| `initialization-and-stability` | 误差沿深度的传播 | `130-model-optimization/quantization/07-outliers-and-propagation.md:124,205` |
 | `initialization-and-stability` | MoE 的 aux loss 尺度（`×N` 漏项） | `80-model-architectures/moe/03-balance-and-granularity.md:260`；`00-meta/glossary.md:241` |
 | `checkpointing` | 导出 / 推理格式的选择（`.keras` vs SavedModel） | `70-frameworks/tensorflow/03-custom-ops-and-export.md:180,188`；`00-meta/glossary.md:221` |
 | **全主题** | 框架的**精度 API 语义**（`autocast` 的算子白名单 / 黑名单） | `70-frameworks/`（**各框架互不相同**，属框架 API 语义）。★ 本域写的是**工程约定**，不是某个框架的 API 行为 |
@@ -184,7 +184,7 @@ C 边界与反例）放在编号程序内部**，失败时以**非零退出码**
   `110-communication`（分布式训练的通信开销；异步落盘/重叠的正文也在那里）。
 - **与 `80-model-architectures` 的分工**：那边是**结构**的账（每个选择在别处付账），
   本域是**过程**的账（每个「省」在别处记账）。
-- **与 `130-quantization/qat` 的分工**：那边是**定点**（int8/int4、STE、伪量化），
+- **与 `130-model-optimization/quantization` 的分工**：那边是**定点**（int8/int4、STE、伪量化），
   本域是**浮点**（fp16/bf16/fp8/tf32）；**本域不改反向公式**。
 - **横切**：优化器**未**独立成一级域，因为它与训练循环、混合精度、
   **与分布式优化器状态的接口**强耦合（那一侧的正文在 `100-parallelism`，此处回链）。

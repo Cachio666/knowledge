@@ -94,7 +94,7 @@ ZERO_PARAM_FP16_MULTIPLE = 2.0
 #       （原文里这一项与 `2Ψ` 的梯度并列，`2 Ψ + 2 Ψ + K Ψ = 16 Ψ`；★ 公式段含标记，不取原文片段，
 #        只取它的**项**）。★ 另见 `ZERO_TOTAL_QUOTE` 的两个片段。
 # 口径：★ 这个 `2` 是**fp16 的字节数**（`2` 字节/参数），与 `10-foundations/floating-point/01`
-#       的位分配一致；本主题**不重推**格式（禁区在 `130-quantization/numerical-formats/01`）。
+#       的位分配一致；本主题**不重推**格式（禁区在 `130-model-optimization/quantization/01-fp8-family`）。
 # 消费者：`01_state_bytes.py` 的 `A.2`/`A.3`。
 # 同值位置：`mixed-precision/code/specs.py`（那一篇的 `2` 是 fp16 的**字节数**，同源同值）。
 

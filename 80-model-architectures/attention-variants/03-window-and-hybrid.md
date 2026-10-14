@@ -10,7 +10,7 @@ prerequisites:
 tags: [sliding-window, receptive-field, rolling-buffer-cache, hybrid, mistral-7b, masking]
 related:
   - 40-kernels/attention/04-warp-specialization-and-variants
-  - 130-quantization/kv-cache-quantization/01-kv-cache-basics
+  - 130-model-optimization/quantization/18-kv-cache-basics
   - 80-model-architectures/attention-variants/02-mla-low-rank
 code:
   - code/03_window_hybrid.py
@@ -287,7 +287,7 @@ Mistral 7B 论文摘要逐字：
 | 与 GQA 的关系 | **叠加**（两条轴相乘：位置维 `min(S,W)/S` × 头维 `h_kv/h_q`），不是二选一 |
 | 想在本域核实某模型是否开着滑窗 | 只能核实 `45/…/code/specs.py` 里那两个 config：**两个都没开**（Qwen3 是 `false` + `null`；Llama-3-8B 是**没有这两个字段**）。Mistral 7B 的 `W`/`L` 只能引论文 [C] |
 | 想知道滑窗对 **kernel** 的影响 | 不在本文：正文在 `40-kernels/attention/04-warp-specialization-and-variants.md:126-156` |
-| 想知道 KV 的**字节**账 | 不在本文：正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76` |
+| 想知道 KV 的**字节**账 | 不在本文：正文在 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76` |
 
 > ★ **表 A 的数值判据**（计划 §3 Chunk 2）：⑥ `W × L` 精确 `4096 × 32 = 131072`（可手算）；
 > ⑦ 滑窗的 cache 大小**不随 `S` 增长**。两条都在 `code/03_window_hybrid.py` 的 `A.1` / `B.1` 里。
@@ -308,7 +308,7 @@ Mistral 7B 论文摘要逐字：
 - **kernel 侧**：正文在 `40-kernels/attention/04-warp-specialization-and-variants.md:126-156`
   （正文在彼，此处回链）。★ 那处 `:128` 的「定义不重推」是一处**原为悬空让渡**，
   滑窗这一份由本文接住。
-- **KV 的字节账**：正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`
+- **KV 的字节账**：正文在 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`
   （正文在彼，此处回链）。
 
 ## 编译与运行

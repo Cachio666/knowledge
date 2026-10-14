@@ -16,7 +16,7 @@ r"""01_vllm.py —— **vLLM 的架构选择**：引擎循环（step）· `vllm.
 
 ★★★ **本程序只写「vLLM 的选择与差异」** —— ★ **机制一律回链**（`P37`）：
   分页 → `120-inference/kv-cache/02`；前缀树 → `kv-cache/03`；请求调度器 → `batching-and-scheduling/01`；
-  PagedAttention 的算式 → `130-quantization/kv-cache-quantization/01:68-84`；
+  PagedAttention 的算式 → `130-model-optimization/quantization/18-kv-cache-basics:68-84`；
   ★★ **vLLM 的模型接入与算子注册（`vllm.ir`）** → `45-kernel-lifecycle/requirement-discovery/01:205-214`。
 
 ★★★ **本程序的禁写清单（计划 `§0.7 C.5`）**：
@@ -518,7 +518,7 @@ def part_D():
               "It no longer describes the code used in vLLM today."),
           "★★ **PagedAttention 的两条载体逐字钉住**：定义来自 **论文**（`[C]`，arXiv:2309.06180）；"
           "★★★ 而 vLLM 的 `design/paged_attention` 页**自标为历史文档** ⇒ **不得拿它当 vLLM 现状**（`F7`）\n"
-          "        ★★ 机制正文（分页 / 算式）在 `kv-cache/02` 与 `130-quantization/kv-cache-quantization/01:68-84`",
+          "        ★★ 机制正文（分页 / 算式）在 `kv-cache/02` 与 `130-model-optimization/quantization/18-kv-cache-basics:68-84`",
           "**PagedAttention 的载体被动过** —— ★ 先查 `PAGEDATTENTION_DEFINITION_QUOTE` 与历史文档引文")
 
     # ── D.7 ★★★ 逐元素钉住 ──────────────────────────────────────────────

@@ -142,7 +142,7 @@ ULP(w) = 2^⌊log2|w|⌋ · 2^-10        ⇒  ULP/2 = 2^⌊log2|w|⌋ · 2^-11
 
 ★★ **这三个数不能两两相减。** fp16 那一行有**两种口径**，fp32 那一行是**正规**口径 ——
 `76.46 − 12.04 = 64.42` 与 `76.46 − 9.03 = 67.43` 是两个不同的量。
-库内先例已经逐字警告过：`130-quantization/numerical-formats/03-bf16-fp16-tf32.md:154`
+库内先例已经逐字警告过：`130-model-optimization/quantization/03-bf16-fp16-tf32.md:154`
 说 `2^-126` vs `2^-14`「**两个数不是同一个量，不要混用**」，它给的**同口径**说法是
 「bf16 的量程跨度宽 **67.5** 个数量级（`76.5 vs 9.0`）」。
 ★ 本文因此**只报同口径的那一组**，并把 fp16 的两种口径**并排**写出来（这本身就是那条区分的用处：
@@ -354,11 +354,11 @@ python3 01_types.py             # 只跑本程序
   **80840 B**，`sha256[:16] = f7493335335e7f4f`。
 - **[A]** IEEE Std 754-2019 的 `binary16` / `binary32` 位参数（`E` / `M` / `bias`）；
   bf16 的 `(8, 7, 127)` 来自 Google 的 bfloat16 定义（本库先例
-  `130-quantization/numerical-formats/03-bf16-fp16-tf32.md`）。
+  `130-model-optimization/quantization/03-bf16-fp16-tf32.md`）。
 - **本库**：`10-foundations/floating-point/04-low-precision-formats.md`（三个后果的分解、
   累加误差的 `√K·u` 界、「为什么 fp16 要 loss scaling」整块）；
   `10-foundations/numerical-linear-algebra/04-iterative-methods.md:229-266`（主权重必须 fp32 的数值理由）；
-  `:386`（把本文指名让渡出来的那一行）；`130-quantization/numerical-formats/03-bf16-fp16-tf32.md:154`
+  `:386`（把本文指名让渡出来的那一行）；`130-model-optimization/quantization/03-bf16-fp16-tf32.md:154`
   （`2^-126` vs `2^-14` 的口径警告）。
 
 **上游契约**

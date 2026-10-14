@@ -17,7 +17,7 @@
 #   specs.py          本主题的外部事实常量源，**每条带 `# 来源：` 与来源等级（A–E）**
 #   Makefile / requirements.txt   构建入口
 #
-# ── 为什么不用环境探测（对照 `130-quantization/*` 的第三种形态）───────────────
+# ── 为什么不用环境探测（对照 `130-model-optimization/*` 的第三种形态）───────────────
 # 本主题的三个程序**不 import torch**（域 README：本域无 GPU，不碰框架），
 # 只 import `specs` 与标准库。所以 CONTRIBUTING 那套「探测一个装了框架的解释器」
 # 的机器在这里**没有对象**，写了就是给读者增加一条永远不会触发的分支。

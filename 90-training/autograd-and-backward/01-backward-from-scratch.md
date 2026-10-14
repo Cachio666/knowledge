@@ -158,7 +158,7 @@ macOS arm64，**无 GPU**；这是 `P = 54` 的玩具规模真跑，**推导值*
 | **显式 tape** | 每个 op 登记一条局部 vjp，反向扫一遍（本文的路径 2） | 换模型不用改反向代码；代价是**要存 tape**（图本身与中间结果） |
 | **框架的 autograd** | 由框架建图、按 `grad_fn` 反向、按需 `saved_tensors` | 正文在 `70-frameworks/pytorch/02-autograd.md`（此处回链）；本域**不重讲** |
 | **重算换显存** | 反向时按段**重算**前面的前向，把 `saved_tensors` 换成时间 | 正文在本域 `02-gradient-checkpointing`（正文在本域，回链该处） |
-| 不可微算子 | 人为指定反向（STE 等） | 正文在 `130-quantization/qat/01-ste.md:28,181`（此处回链）；**本文不写** |
+| 不可微算子 | 人为指定反向（STE 等） | 正文在 `130-model-optimization/quantization/12-ste.md:28,181`（此处回链）；**本文不写** |
 
 ## 4. 踩坑与失败模式
 
@@ -241,7 +241,7 @@ macOS arm64，**无 GPU**；这是 `P = 54` 的玩具规模真跑，**推导值*
   `90-training/autograd-and-backward/03-gradient-lifecycle`（正文在本域，回链该处）。
 - **去掉一部分 `saved_tensors` 换时间** ⇒ 见 `02-gradient-checkpointing`（同一主题的下一个编号）。
 - **训练循环里梯度还要经历什么**（累积 / 清零 / 裁剪 / 二阶）⇒ 见 `03-gradient-lifecycle`。
-- **不可微算子的反向**（STE / 伪量化）⇒ `130-quantization/qat/01-ste.md:28,181`
+- **不可微算子的反向**（STE / 伪量化）⇒ `130-model-optimization/quantization/12-ste.md:28,181`
   （正文在彼，此处回链）；本文**不写**。
 - **上游**：`10-foundations/numerical-linear-algebra/04-iterative-methods` 处理的是
   「用迭代改进把解再修一遍」，本文的「伴随扫描」与它是同一个动作在不同对象上的两副面孔；
@@ -291,5 +291,5 @@ python3 01_backward.py          # 只跑本程序
   `retain_graph` / `backward()` vs `autograd.grad()` 的正文都在那里）；
   `70-frameworks/tensorflow/03-custom-ops-and-export.md:106-150,217`
   （自定义反向的**实现**）；`70-frameworks/jax/03-sharding-and-differences.md:110-112,379-381`
-  （控制流与反向模式的可微性）；`130-quantization/qat/01-ste.md:28,181`
+  （控制流与反向模式的可微性）；`130-model-optimization/quantization/12-ste.md:28,181`
   （不可微算子的反向）。

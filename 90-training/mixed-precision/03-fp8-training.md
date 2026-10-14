@@ -36,8 +36,8 @@ updated: 2026-09-23
 
 | 问题 | 正文位置 |
 |---|---|
-| 这 8 位怎么分给指数与尾数、四个变体（`e4m3fn` / `e5m2` / `fnuz`）差在哪、±448 vs ±57344、**按 torch 版本的溢出差异** | ★ `130-quantization/numerical-formats/01-fp8-family.md` **§0 全节**，此处**回链** |
-| scale 的**其它**粒度（每通道 / 每 token / 每 32 元素的块） | ★ `130-quantization/theory/02-granularity.md` + `02-e8m0-and-mx.md:276`，此处**回链** |
+| 这 8 位怎么分给指数与尾数、四个变体（`e4m3fn` / `e5m2` / `fnuz`）差在哪、±448 vs ±57344、**按 torch 版本的溢出差异** | ★ `130-model-optimization/quantization/01-fp8-family.md` **§0 全节**，此处**回链** |
+| scale 的**其它**粒度（每通道 / 每 token / 每 32 元素的块） | ★ `130-model-optimization/quantization/06-granularity.md` + `02-e8m0-and-mx.md:276`，此处**回链** |
 | **累加器宽度**的误差界（fp32 → fp16 放大 8192 倍） | ★ `10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md`，此处**回链** |
 
 **本文只管训练循环里的三件事**，而它们的代价是**具体**的：
@@ -110,7 +110,7 @@ updated: 2026-09-23
 ⇒ **「只能取 2 的幂」把表示范围浪费掉将近一半**（`1 − 16/31.99 = 49.98%`）。
 ★ 这就是原文那句「软件层更强」的**全部内容**，也是本文把 `C.1` 写成判据的理由。
 
-★★ **库内硬要求**（`130-quantization/numerical-formats/02-e8m0-and-mx.md:276` 逐字）：
+★★ **库内硬要求**（`130-model-optimization/quantization/02-e8m0-and-mx.md:276` 逐字）：
 「**凡是写「scale」这个词的地方，同时写出它的作用域（每张量 / 每通道 / 每 token /
 每 32 个元素的块）与它的 bit 开销**」。本文一律写：
 
@@ -198,7 +198,7 @@ representable value**`）。两者都是**近似**，只是一边丢信息、一
 
 ★ **一个口径区分**：本文的量化器只做**饱和**，**不对「格式的溢出语义是什么」下结论** ——
 格式层面的溢出（`NaN` / `inf` / **按 torch 版本不同**）是位分配那一层的事，正文在
-`130-quantization/numerical-formats/01-fp8-family.md` §0/§3，**此处回链**。
+`130-model-optimization/quantization/01-fp8-family.md` §0/§3，**此处回链**。
 
 ## 2. 执行映射
 
@@ -212,7 +212,7 @@ representable value**`）。两者都是**近似**，只是一边丢信息、一
 | 更新 | 解码回宽类型、在 fp32 主权重上更新 | ★ `01-type-selection` 的那四行 |
 
 ★ **两个具体组件**：`torch.float8_e4m3fn` / `torch.float8_e5m2` 这两个 **dtype**（它们的位布局与
-**四个变体**的正文在 `130-quantization/numerical-formats/01-fp8-family.md` §0，此处回链），
+**四个变体**的正文在 `130-model-optimization/quantization/01-fp8-family.md` §0，此处回链），
 以及**每张量一个 fp32 的 scale 标量**（本文 §1.2 把它算成 `32 bit/张量`）。
 
 ### 2.2 分工在数值上的后果（本机实测）
@@ -305,9 +305,9 @@ representable value**`）。两者都是**近似**，只是一边丢信息、一
 
 - **fp16 那一套（loss scaling / unscale 的时机）** ⇒ 见 `02-amp-execution`。
 - **位分配、四个变体与按 torch 版本的溢出差异** ⇒
-  `130-quantization/numerical-formats/01-fp8-family.md` §0（正文在彼，此处回链）。
+  `130-model-optimization/quantization/01-fp8-family.md` §0（正文在彼，此处回链）。
 - **scale 的其它粒度（每通道 / 每 token / 每 32 元素的块）** ⇒
-  `130-quantization/theory/02-granularity.md`、`130-quantization/numerical-formats/02-e8m0-and-mx.md:276`。
+  `130-model-optimization/quantization/06-granularity.md`、`130-model-optimization/quantization/02-e8m0-and-mx.md:276`。
 - **累加器宽度** ⇒ `10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md`。
 - **主权重 / 优化器状态为什么仍要 fp32** ⇒ `01-type-selection`（上游，正文在本域）。
 
@@ -359,16 +359,16 @@ python3 03_fp8.py               # 只跑本程序
   抓取（ar5iv）：**266806 B**，`sha256[:16] = a184329665e9ad2b`。
 - **[A]** / 本库：两个格式的三个参数（最大有限数 `448` / `57344`、最小正规数 `2^-6` / `2^-14`、
   `eps` `2^-3` / `2^-2`）—— 位分配与四个变体的完整说明在
-  `130-quantization/numerical-formats/01-fp8-family.md` §0，本文只**取用**这三个数。
-- **本库**：`130-quantization/numerical-formats/01-fp8-family.md` §0（位分配与四个变体）、
+  `130-model-optimization/quantization/01-fp8-family.md` §0，本文只**取用**这三个数。
+- **本库**：`130-model-optimization/quantization/01-fp8-family.md` §0（位分配与四个变体）、
   `02-e8m0-and-mx.md:276`（「凡写 scale 必写作用域与 bit 开销」）、
-  `130-quantization/theory/02-granularity.md`（其它粒度）、
+  `130-model-optimization/quantization/06-granularity.md`（其它粒度）、
   `10-foundations/numerical-linear-algebra/02-gemm-rounding-error.md`（累加器宽度）。
 
 **上游契约**
 
 - `01-type-selection` 是本文的 `prerequisites`：本文的每一个张量都落在它选定的那几行上。
 - **边界声明跟着知识点走**：凡本文涉及位分配 / 四个变体的地方，正文在
-  `130-quantization/numerical-formats/01-fp8-family.md` §0，本文**回链、不重写**；
-  凡涉及 scale 的其它粒度，正文在 `130-quantization/theory/02-granularity.md` 与
+  `130-model-optimization/quantization/01-fp8-family.md` §0，本文**回链、不重写**；
+  凡涉及 scale 的其它粒度，正文在 `130-model-optimization/quantization/06-granularity.md` 与
   `02-e8m0-and-mx.md:276`，同样回链。

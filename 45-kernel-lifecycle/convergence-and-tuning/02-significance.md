@@ -11,7 +11,7 @@ tags: [significance, minimum-detectable-effect, t-test, welch, false-positive, t
 related:
   - 45-kernel-lifecycle/convergence-and-tuning/03-convergence
   - 45-kernel-lifecycle/implementation/02-verification-matrix
-  - 130-quantization/quantized-kernels/03-kernel-design
+  - 130-model-optimization/quantization/17-kernel-design
   - 10-foundations/performance-models/03-measuring-roofline
 code:
   - code/02_significance.py
@@ -184,7 +184,7 @@ n = 2 · (2.801585218112968 · σ / δ)²
 
 | 来源 | 等级 | 内容 |
 |---|---|---|
-| 本库的 `130-quantization` 变异测试记录 | **[E]** | 第一轮跑出「**95/95 全捕获**」，**全是假的**（`verify.py` 里一个 `KeyError` 让每次变异都「被捕获」）；真实轨迹是 **66 捕获 / 29 漏网** → 逐条补强 → **95/95**。⇒ **「一上来就 100%」是最可疑的信号，不是最好的结果** |
+| 本库的 `130-model-optimization` 变异测试记录 | **[E]** | 第一轮跑出「**95/95 全捕获**」，**全是假的**（`verify.py` 里一个 `KeyError` 让每次变异都「被捕获」）；真实轨迹是 **66 捕获 / 29 漏网** → 逐条补强 → **95/95**。⇒ **「一上来就 100%」是最可疑的信号，不是最好的结果** |
 | 计时器分辨率 | **[C]**（HPEC / arXiv:1608.04295，已确认同行评审；NIST TN 1826） | 计时器**精度**会把方差压平 ⇒ 读数看起来「确定性」是**测量伪影**；最优重复次数受「准确率 / 精度」之比约束；动态频率特性破坏 i.i.d. |
 | 测量偏差的经典研究 | **[C]**（ASPLOS 2009，已确认同行评审） | 只改一个**未被使用**的环境变量大小，性能变化**约 33%、最多近 300%**；只改**链接顺序**就让 `-O3` 看起来比 `-O2` 快 **8%** 或慢 **7%**（**结论翻转**）；调查 **133 篇**论文，**0 篇**充分考虑了测量偏差 |
 

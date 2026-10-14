@@ -316,7 +316,7 @@ python3 03_grad_lifecycle.py        # 只跑本程序
 - `10-foundations/numerical-linear-algebra/04-iterative-methods:386` 把
   「**更新量 Δw 在什么精度下算**」让渡给 `90-training/optimizers`（正文在彼，此处回链）；
   本文只做**非精度相关**的那部分（累加、限幅、二阶）。
-- `130-quantization/qat/02-fake-quant-and-lsq.md:69,420` 与 `130-quantization/qat/01-ste.md:202`
+- `130-model-optimization/quantization/13-fake-quant-and-lsq.md:69,420` 与 `130-model-optimization/quantization/12-ste.md:202`
   （QAT 侧的「优化器更新的是谁」）正文在彼，此处回链；本文的 `clip` 与量化意义的
   「clipping / 学 clip 上界」**不是同一件事**（`00-meta/glossary.md:99,105`）。
 - `00-meta/glossary.md` **已有的**本域相关词条（`autograd` / `grad_fn` / `is_leaf` /

@@ -16,7 +16,7 @@ r"""01_init.py —— 初始化：He / Xavier / μP，以及三条**必须订正
     `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`；
   · **残差流的范数随深度增长**（**结构**侧的账）→
     `80-model-architectures/transformer/01-block-and-residual-stream.md:191,232-233,263`；
-  · ★★ **误差沿深度的传播** → `130-quantization/theory/03-outliers-and-propagation.md:124,205`；
+  · ★★ **误差沿深度的传播** → `130-model-optimization/quantization/07-outliers-and-propagation.md:124,205`；
   · MoE 的 aux loss 尺度 → `80-model-architectures/moe/03-balance-and-granularity.md:260`。
 
   ★★ **`B.1` 的落法（本程序最需要说清的一处边界）**：本程序的「**方差沿深度的乘性累积**」
@@ -853,7 +853,7 @@ def part_B():
     print("     ★★ **范围限制**：这里量的是**一条没有残差、没有归一化的前向链**")
     print("        （`Var[y_L] = Var[x]·Π_l (fan_in,l·Var[W_l])`）。")
     print("        **残差流的范数随深度增长**的正文在 `80-…/transformer/01:191,232-233,263`；")
-    print("        **误差沿深度的传播**的正文在 `130-…/theory/03:124,205` —— **本程序不重推**。")
+    print("        **误差沿深度的传播**的正文在 `130-…/07-outliers-and-propagation:124,205` —— **本程序不重推**。")
     prod = 1.0
     for _ in range(DEPTH_L):
         prod *= (1.0 + PER_LAYER_EPS)
@@ -1031,7 +1031,7 @@ def preflight():
           % (sys.version.split()[0], np.__version__))
     print("  ★★ **本主题的三条禁令**（回链，不重推）：warmup 的机制解释在 "
           "`80-…/normalization/02:83-100`；残差流/深度的账在 `80-…/transformer/01`；"
-          "误差沿深度的传播在 `130-…/theory/03`。")
+          "误差沿深度的传播在 `130-…/07-outliers-and-propagation`。")
     before = len(FAILS)
 
     hits = _mark_assignments_in(os.path.abspath(__file__))

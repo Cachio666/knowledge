@@ -13,10 +13,10 @@
 #
 # ★★ **本主题的禁区**（本主题**一行都不重写**，只回链 —— `P37` 现场）：
 #   **KV cache 的「账」**（六项乘积 / `512 KiB` / `2 GiB` / GQA 的坑）⇒
-#     `130-quantization/kv-cache-quantization/01`；
+#     `130-model-optimization/quantization/18-kv-cache-basics`；
 #   **paged KV 的 kernel 侧【全段】**（页表延迟 / 碎片 / 布局 / 块大小权衡及其结论）⇒
 #     `40-kernels/attention/05:130-179,283-290`；
-#   **KV cache 量化** ⇒ `130-quantization/kv-cache-quantization/02,03`。
+#   **KV cache 量化** ⇒ `130-model-optimization/quantization/19-kivi-asymmetry,03`。
 #
 # ★★ **四类数字纪律**（`CONTRIBUTING` §2）：
 #   · **规格值 / 引文** → `specs.py`（每条带 `# 来源：` + `[A-E]` 级 + 抓取日 + `# 同值位置：`）；

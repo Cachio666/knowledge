@@ -10,7 +10,7 @@ tags: [ieee754, floating-point, bf16, fp16, subnormal, dynamic-range]
 related:
   - 10-foundations/floating-point/02-rounding-and-error-model
   - 10-foundations/floating-point/04-low-precision-formats
-  - 130-quantization/numerical-formats
+  - 130-model-optimization/quantization
 code:
   - code/01_format_probe.py
 status: draft

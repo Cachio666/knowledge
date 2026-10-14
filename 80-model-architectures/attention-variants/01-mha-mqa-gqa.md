@@ -10,7 +10,7 @@ prerequisites:
 tags: [mha, mqa, gqa, kv-heads, group-size, uptraining, kv-budget]
 related:
   - 40-kernels/attention/05-decoding-attention
-  - 130-quantization/kv-cache-quantization/01-kv-cache-basics
+  - 130-model-optimization/quantization/18-kv-cache-basics
   - 80-model-architectures/attention-variants/02-mla-low-rank
 code:
   - code/01_mha_mqa_gqa.py
@@ -41,11 +41,11 @@ updated: 2026-09-22
 
 **为什么这个问题在架构层重要**：decode 阶段每生成一个 token 都要把**全部**历史的 K/V 读一遍，
 而这些字节被 `h_q` 个 query 头**复用**（正文在 `40-kernels/attention/05-decoding-attention.md`
-与 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`，此处回链）。
+与 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`，此处回链）。
 ⇒ **减少「份数」是唯一能同时动到那一侧的结构旋钮**，而它不需要改算法。
 
 ★ **本域的边界（计划 §2）**：KV 的**字节账**与「复制 KV 后与 MHA 逐位相同」的**实现与比较**
-都不是本域的正文（分别在 `130-quantization/kv-cache-quantization/01:48-76` 与
+都不是本域的正文（分别在 `130-model-optimization/quantization/18-kv-cache-basics:48-76` 与
 `40-kernels/attention/05-decoding-attention.md:60,66-94`、`…/code/verify.py` 的 A4/B8）。
 **本域讲的是「共享图景」与「uptraining」**——即：三种结构的 head 关系是什么、
 以及从一个结构走到另一个结构要付什么。
@@ -98,7 +98,7 @@ GQA 论文（arXiv 2305.13245 §2.2）逐字：
 ### 1.3 账：KV 的元素数按 `1/G` 走（推导 + 反解）
 
 口径必须先写死：这里数的是**元素数**（KV 头的条数之比），**不是字节**。
-（字节账的正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`；
+（字节账的正文在 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`；
 那边记着这条算式最容易犯的错——**`kv_heads ≠ attn_heads`**，见 §4 第 2 条。）
 
 **推导（两步）**。记每层要缓存的 KV 的**条数**与**每条宽度**两个因子。缓存的总量是它们的乘积：
@@ -246,7 +246,7 @@ Llama-3-8B 用 `G = 4`、Qwen3-30B-A3B 用 `G = 8`。两者都在 `1 < G < h_q =
 - **成因**：GQA 模型上 `kv_heads ≠ attn_heads`，这个等价关系**断了**。本机算例：
   Llama-3-8B 高估 **4 倍**、Qwen3-30B-A3B 高估 **8 倍**（恰好就是 `G`）。
 - **规避**：只从 config 的 `num_key_value_heads` 取值；**永远**不要用 `num_attention_heads` 顶替。
-  （同一处坑在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:76` 有正文，此处回链。）
+  （同一处坑在 `130-model-optimization/quantization/18-kv-cache-basics.md:76` 有正文，此处回链。）
 
 **③ 把 `G` 当成连续可调。**
 
@@ -257,7 +257,7 @@ Llama-3-8B 用 `G = 4`、Qwen3-30B-A3B 用 `G = 8`。两者都在 `1 < G < h_q =
 **④ 把「`1/r` 的字节账」当成本域的内容。**
 
 - **现象**：在本域文档里重推一遍 KV 字节公式。
-- **成因**：那是**别的域**的正文（`130-quantization/kv-cache-quantization/01:48-76` 的六项乘积与
+- **成因**：那是**别的域**的正文（`130-model-optimization/quantization/18-kv-cache-basics:48-76` 的六项乘积与
   `40-kernels/attention/05` 的 `1/r` 表）。本域重复它只会制造**两处会漂移的副本**。
 - **规避**：本域只写**共享图景与 uptraining**，字节账一律回链（本程序连输出里都不出现字节数）。
 
@@ -274,7 +274,7 @@ Llama-3-8B 用 `G = 4`、Qwen3-30B-A3B 用 `G = 8`。两者都在 `1 < G < h_q =
 | 参照实现的调用计数 | 必须**恰为 0**（本机：计数表整个为空）——否则上面那个「差」没有意义 |
 | 引用 `5%` 这个训练成本 | 它属于 **MHA→MQA 的 uptraining**，不是 GQA 的成本；GQA 的结论用词是 `quality close to`（接近），不是「持平」 |
 | 引用 MQA 的质量损失 | **必须带出处**：MQA 论文自述 `minor quality degradation`；**GQA 论文的措辞更强**（`quality degradation and training instability`）——两篇强度不同 |
-| 想知道 KV 的**字节**账 | 不在本文：正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76` 与 `40-kernels/attention/05-decoding-attention.md:60,66-94` |
+| 想知道 KV 的**字节**账 | 不在本文：正文在 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76` 与 `40-kernels/attention/05-decoding-attention.md:60,66-94` |
 
 > ★ **表 A 的数值判据**（计划 §3 Chunk 2）：① 两条独立路径的最大逐元素差 `< 1e-14`（**机器精度档**，
 > 不是 `== 0.0`）；② KV 元素数倍率精确 `1/G`。两条都在 `code/01_mha_mqa_gqa.py` 的
@@ -290,7 +290,7 @@ GQA 的全部机制就是**一张映射表**，它的账是 KV 元素数按 `1/G
 - **同主题的下一篇**：`02-mla-low-rank` —— 它换了一个方向：**不减少 KV 头的条数，而是把每条 KV 压小**。
   两者是同一笔账（KV 的预算）的两条路。
 - **`03-window-and-hybrid`** 讲**感受野**那一侧的取舍，并说明它与 GQA 是**叠加**的（不是二选一）。
-- **KV 的字节账与 decode 的算术强度**：正文在 `130-quantization/kv-cache-quantization/01:48-76`
+- **KV 的字节账与 decode 的算术强度**：正文在 `130-model-optimization/quantization/18-kv-cache-basics:48-76`
   与 `40-kernels/attention/05-decoding-attention.md`（正文在彼，此处回链）。
   ★ 那边有一条与本域这一轴直接相邻的结论（`r` 与 decode 侧那个量的关系）——
   **它是那一侧的正文，本域不重复也不改写**。

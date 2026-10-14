@@ -30,9 +30,10 @@
 | `100-parallelism` | DP、TP、PP、SP/CP、EP、ZeRO/FSDP |
 | `110-communication` | 集合通信、NCCL、网络拓扑、通信计算重叠 |
 | `120-inference` | KV cache、batching 调度、解码策略、推理引擎、部署 |
-| `130-quantization` | 数值格式、量化理论、PTQ、QAT、量化算子、KV cache 量化 |
+| `130-model-optimization` | 大模型优化技术六族：量化（数值格式 / 误差理论 / PTQ / QAT / 量化算子 / KV cache 量化）、剪枝、稀疏化、蒸馏、低秩分解、参数高效微调 |
 | `140-papers` | 论文精读 |
 | `150-playground` | 实验场 |
+| `160-model` | 主流模型档案：按家族归档已发布模型的架构规格、技术路线与部署账（GLM / DeepSeek / Kimi） |
 
 `00-meta/` 下有三个文件：[术语表](00-meta/glossary.md)、[索引](00-meta/index.md)、[进度表](00-meta/roadmap.md)。
 
@@ -62,6 +63,7 @@
 70-frameworks         PyTorch / TensorFlow / JAX
       │
       ├──────────────► 80-model-architectures   要优化的对象
+      ├──────────────► 160-model  主流模型档案：机制在 80 讲，这里讲某一家在某几代上怎么选
       │
       ▼
 90-training           反向传播 → 混合精度 → 优化器 → 训练稳定性
@@ -72,7 +74,8 @@
       ▼
 120-inference         KV cache → 调度 → 解码 → 推理引擎
       │
-      └──────────────► 130-quantization  量化与压缩（横切训练与推理）
+      └──────────────► 130-model-optimization  大模型优化技术（横切训练与推理）
+                          量化 · 剪枝 · 稀疏化 · 蒸馏 · 低秩分解 · 参数高效微调
 
 140-papers      论文精读（随时可读）
 150-playground  实验场（随时可写）

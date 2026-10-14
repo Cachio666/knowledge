@@ -22,7 +22,7 @@ r"""02_sglang_and_radix.py —— **RadixAttention 的数据结构**（radix tre
 ★★★ **本程序【只写数据结构与两处口径差】** —— ★ **机制一律回链**（`P37`）：
   · ★★ **前缀共享的系统侧机制**（`hash → 块` / 命中率 / 驱逐）→ `120-inference/kv-cache/03`；
   · **分页 / 块管理** → `120-inference/kv-cache/02`；
-  · **PagedAttention 的算式** → `130-quantization/kv-cache-quantization/01:68-84`。
+  · **PagedAttention 的算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`。
   ★★★ 本程序**不重算** `kv-cache/03` 的「命中块数 / 命中率」—— 那是**块粒度（16）**的世界；
     本程序的对象是**token 粒度（1）的 radix tree**，两者是**同一个知识对象的两个不同数据结构**。
 

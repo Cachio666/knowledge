@@ -12,7 +12,7 @@ related:
   - 120-inference/kv-cache/01-capacity-planning
   - 40-kernels/attention/05-decoding-attention
   - 45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory
-  - 130-quantization/kv-cache-quantization/03-low-bit-and-engines
+  - 130-model-optimization/quantization/20-low-bit-and-engines
 code:
   - code/03_prefix_and_eviction.py
 status: stable
@@ -26,7 +26,7 @@ updated: 2026-10-09
 > 它需要一套「**按内容找块**」的机制：**把块（连同它前面的前缀）哈希成一个键，去缓存里查**。
 > 命中就 `ref += 1` 复用，未命中就新建；缓存满了就**按 LRU 逐出 `ref == 0` 的块**。
 >
-> ★★★ **本文不写**「KV cache 量化」（正文在 `130-quantization/kv-cache-quantization/02,03`）、
+> ★★★ **本文不写**「KV cache 量化」（正文在 `130-model-optimization/quantization/19-kivi-asymmetry,03`）、
 > 也不写「paged KV 的 kernel 侧」（正文在 `40-kernels/attention/05:130-179,283-290`）
 > —— 两者都**只回链**。
 > ★★★ **本层是【系统侧（前缀共享与淘汰）】**。**「不是任何真实引擎，也不是真机」** ——
@@ -270,7 +270,7 @@ updated: 2026-10-09
 | 见到「LRU 比 FIFO 好吗」 | ★★ **两者【无普遍次序】**（`B.1`）：容量 `4/8` 上 LRU 占优（`266/350` vs `250/327`），★ 而 **`cap=2` 上 FIFO 反超**（`138` vs `136`）；容量 `≥` 去重键数（`16`）时二者同值（`384`，`B.2`） |
 | 见到「命中率的理论上限」 | ★★ 容量 `≥` 去重键数时，命中 `= 长度 − 去重键数`（**强制缺失**，`B.2`，**策略无关**） |
 | 见到「循环模型 / SSM / KDA 的前缀缓存」 | ★★★ **块 / 对齐 / 前缀匹配必须拆开**（`D.6`）；来源 `[B]` **经检索转述**，**不得**当逐字或 `[A]` |
-| 见到「fp8 下还能用前缀缓存吗」 | ★★ **不能** —— 量化后的 cache 不再与原始 token 一一对应；正文在 `130-quantization/kv-cache-quantization/01:138`，此处回链 |
+| 见到「fp8 下还能用前缀缓存吗」 | ★★ **不能** —— 量化后的 cache 不再与原始 token 一一对应；正文在 `130-model-optimization/quantization/18-kv-cache-basics:138`，此处回链 |
 
 ## 6. 小结与延伸
 
@@ -288,8 +288,8 @@ updated: 2026-10-09
 - ★ **块管理器**（`ref` / CoW / 块池）→ [02-block-management](02-block-management.md)；
 - ★ **容量规划**（块数从哪来）→ [01-capacity-planning](01-capacity-planning.md)；
 - ★★ **fp8 下前缀缓存不工作**（量化与 KV 一一对应性的冲突）→
-  `130-quantization/kv-cache-quantization/01:138`（**正文在彼处**）；
-- ★ **各家引擎把 scale 放哪一维** → `130-quantization/kv-cache-quantization/03` §2（**正文在彼处**）；
+  `130-model-optimization/quantization/18-kv-cache-basics:138`（**正文在彼处**）；
+- ★ **各家引擎把 scale 放哪一维** → `130-model-optimization/quantization/20-low-bit-and-engines` §2（**正文在彼处**）；
 - ★★ **KDA 的三概念拆分 + copy-on-write** → `45-kernel-lifecycle/requirement-discovery/01:187`
   （★ **该处自标「经检索转述」，非逐字**）；
 - ★★ **保留区间（`VLLM_PREFIX_CACHE_RETENTION_INTERVAL` 的区间化保留，驱逐的第二个维度）**
@@ -313,7 +313,7 @@ updated: 2026-10-09
 - ★ **一条术语纪律**：本文一律写「**前缀缓存**」（**不裸写 `cache`** —— 库内 `cache` 另有
   L1/L2 cache、kernel cache 两个含义）；★ 「**命中率**」在库内有多处口径，**本文每次出现都带分母**。
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
-  · KV cache 量化（含 fp8 下前缀缓存失效）→ `130-quantization/kv-cache-quantization/01,02,03`；
+  · KV cache 量化（含 fp8 下前缀缓存失效）→ `130-model-optimization/quantization/18-kv-cache-basics,02,03`；
   · paged KV 的 kernel 侧 → `40-kernels/attention/05:130-179,283-290`。
 
 ## 编译与运行

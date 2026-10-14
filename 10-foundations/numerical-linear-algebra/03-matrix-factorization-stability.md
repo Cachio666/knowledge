@@ -9,8 +9,8 @@ prerequisites:
   - 10-foundations/numerical-linear-algebra/01-norms-and-condition-number
 tags: [lu, cholesky, qr, pivoting, positive-definite, growth-factor]
 related:
-  - 130-quantization/ptq
-  - 130-quantization/theory
+  - 130-model-optimization/quantization
+  - 130-model-optimization/quantization
 code:
   - code/07_factorization.py
 status: draft
@@ -432,7 +432,7 @@ make 07_factorization
 2. **Cholesky 的正定性判定在 `λ_min ≈ u·λ_max` 上失效**。`λ_min = 1e-16` 时 Cholesky 0/200 通过而 `eigvalsh` 报出 `-1.76e-16`；改用 `λ_min > c·u·λ_max` 这类与分辨率匹配的判据。
 3. **flops 计数不能跨实现预测时间**，而且**计时结论必须按「范围是否包住预测值」来判**：`Cholesky/QR` 的范围离 0.5 有 66% ⇒ 模型与实测明显不符，结论成立（因为 numpy 的 QR 每 flop 贵约 3 倍）；`Cholesky/LU` 的范围离 0.5 只剩 10%~19% ⇒ 方向一致但数值对不上模型；`qr(mode='r') / qr(full)` 的范围**跨过 0.5** ⇒ **未证实**，既不能说成立也不能说被推翻。
 
-两条向外的延伸。**精度侧**：[04-iterative-methods](04-iterative-methods.md) 处理的正是本文留下的问题——当 κ 大到单次分解已经无法给出足够精度时，用高精度残差反复修正。**量化侧**：[130-quantization/ptq](../../130-quantization/ptq/) 与 [130-quantization/theory](../../130-quantization/theory/)（正文在该域，此处回链）把 §4.4 的阻尼取舍直接对应到 GPTQ / LDLᵀ 类方法的超参选择上——本文提供的是「阻尼的数值可行性门槛比统计有效性门槛低约 10 个数量级」这个定量判据。
+两条向外的延伸。**精度侧**：[04-iterative-methods](04-iterative-methods.md) 处理的正是本文留下的问题——当 κ 大到单次分解已经无法给出足够精度时，用高精度残差反复修正。**量化侧**：[130-model-optimization/quantization](../../130-model-optimization/quantization/) 与 [130-model-optimization/quantization](../../130-model-optimization/quantization/)（正文在该域，此处回链）把 §4.4 的阻尼取舍直接对应到 GPTQ / LDLᵀ 类方法的超参选择上——本文提供的是「阻尼的数值可行性门槛比统计有效性门槛低约 10 个数量级」这个定量判据。
 
 ## 参考
 

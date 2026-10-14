@@ -34,7 +34,7 @@ r"""03_window_hybrid.py —— 滑窗注意力的**架构侧**：堆叠层把感
     正文在 `40-kernels/attention/04:130-134`（那一行只给出「改什么」），
     而 ALiBi 的完整定义归 `positional-encoding/03-extrapolation`（正文在彼，此处回链）；
   * **不算 KV 的字节**：六项乘积的正文在
-    `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
+    `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
     本程序只算**槽位数**与**倍率**。
 
 用法：
@@ -210,7 +210,7 @@ def part_B():
     print("=" * 74)
     w_real = specs.MISTRAL7B_WINDOW_SIZE
     print("  ★ 口径：这里数的是**槽位数**（位置），**不是字节** —— 字节账的正文在")
-    print("    130-quantization/kv-cache-quantization/01:48-76（正文在彼，此处回链）。")
+    print("    130-model-optimization/quantization/18-kv-cache-basics:48-76（正文在彼，此处回链）。")
 
     slots = [(s, min(s, w_real)) for s in SEQ_LENS]
     print()
@@ -461,7 +461,7 @@ def main():
           % ASSERT_FAIL_MARK)
     print("  ★ 禁区（计划 §2 的边界表）：本程序**不**重讲「滑窗让每行只需 `ceil(w/Bc)` 个块」")
     print("    这类 kernel 后果（正文在 40-kernels/attention/04:126-156，此处回链）；")
-    print("    也**不**算 KV 的字节（六项乘积的正文在 130-quantization/kv-cache-quantization/01:48-76）。")
+    print("    也**不**算 KV 的字节（六项乘积的正文在 130-model-optimization/quantization/18-kv-cache-basics:48-76）。")
     pin_part()      # ★ D.1–D.4：先钉住前提（见 pin_part 的说明）
     part_A()
     part_B()

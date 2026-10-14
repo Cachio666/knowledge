@@ -15,11 +15,11 @@
 #
 #   ★★ 本主题的禁区（**一行都不重写**，只回链 —— 这是 `P37` 的现场）：
 #     · **KV cache 的「账」**（六项乘积 / `512 KiB` / `2 GiB` / GQA 的坑 / `AI = 2ST/(bpe(S+T))`）
-#       → `130-quantization/kv-cache-quantization/01`；
+#       → `130-model-optimization/quantization/18-kv-cache-basics`；
 #     · **paged KV 的 kernel 侧【全段】**（页表延迟 / 碎片 `16/2 → 0.049%` / 布局 /
 #       ★★ **块大小的双向权衡及其结论「真正约束是查表次数，不是碎片」**）
 #       → `40-kernels/attention/05:130-179,283-290`；
-#     · **KV cache 量化** → `130-quantization/kv-cache-quantization/02,03`；
+#     · **KV cache 量化** → `130-model-optimization/quantization/19-kivi-asymmetry,03`；
 #     · **vLLM 的模型接入与算子注册** → `45-kernel-lifecycle/requirement-discovery/01:158-214`。
 #   ★★ 判据纪律：本主题的 A 类钉在【**容量规划与块管理**】上（`§1.3.4` 第 2/3 行）。
 #   ★★ **同名不同指**：`block` 一律写「**KV 块**」全称 ——

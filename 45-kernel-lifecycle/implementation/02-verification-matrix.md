@@ -11,7 +11,7 @@ tags: [test-matrix, tolerance, coverage, boundary-shapes, fp16, bf16, calibratio
 related:
   - 45-kernel-lifecycle/implementation/03-debug-order
   - 45-kernel-lifecycle/operator-design/02-numerical-design
-  - 130-quantization/numerical-formats/03-bf16-fp16-tf32
+  - 130-model-optimization/quantization/03-bf16-fp16-tf32
   - 10-foundations/floating-point/04-low-precision-formats
 code:
   - code/02_verification_matrix.py
@@ -166,7 +166,7 @@ u(bf16) = 2^-8  = 3.906e-03     p = 1+8+7   = 8
 u(fp32) = 2^-24 = 5.960e-08     p = 1+8+23  = 24
 ```
 
-⚠ **与 `130-quantization` 的 `EPS` 不是同一个量，别混**：`130-quantization/numerical-formats/code/specs.py:441` 的 `BF16_EPS = 2^-7` 是 **1.0 处的间距**（`finfo.eps`），而 `u = 2^-8` 是**它的一半**。⇒ 引用「本库 130-quantization 的精度推导」时必须说清引的是哪一个；本主题的误差界用 **`u`**（与 `10-foundations/floating-point/04-low-precision-formats` 的 `γ_K = K·u/(1-K·u)` 同口径）。
+⚠ **与 `130-model-optimization` 的 `EPS` 不是同一个量，别混**：`130-model-optimization/quantization/code/specs.py:441` 的 `BF16_EPS = 2^-7` 是 **1.0 处的间距**（`finfo.eps`），而 `u = 2^-8` 是**它的一半**。⇒ 引用「本库 130-model-optimization 的精度推导」时必须说清引的是哪一个；本主题的误差界用 **`u`**（与 `10-foundations/floating-point/04-low-precision-formats` 的 `γ_K = K·u/(1-K·u)` 同口径）。
 
 **方向也要写对**：`u(bf16) / u(fp16) = 8` ⇒ **bf16 比 fp16 粗 8 倍**（3 位，十进制 0.90 个数量级）。
 > ★ 本主题的第一版把这个常量命名成 `U16_OVER_UBF16`（值为 `0.125`）——**比值方向反了**。`02_verification_matrix.py` 的 §A.2 当场把它抓了出来。这是 P9（同名不同指）在**常量命名**上的形态：一个反了的比值仍然「看起来是个数」。
@@ -289,8 +289,8 @@ vLLM 的 `get_tolerance(dtype)` 在表里查不到那个 dtype 时**直接抛 `V
 
 ⇒ **同一个数（`1e-2`）在两种累加口径下，一个太松一个太紧。** 所以「容差表」必须与「累加口径」**一起读**，单看容差无法判定。
 
-本库的既有事实（`130-quantization/quantized-kernels/code/specs.py:349` 的 `FP16_MM_CPU_ACCUM = "fp32"`，同一个文件里用 `[2048,1,1] @ ones → 4096.0` 的探针证明累加**不是** fp16）是本篇断言前提的依据。
-> ⚠ **不得外推到 GPU**（那是 `130-quantization` 的原话）：PTX 里 `.ctype` 与 `.dtype` 都是 `.f16` 的累加变体**确实存在**，只是本库的 CPU 路径不走它。
+本库的既有事实（`130-model-optimization/quantization/code/specs.py:349` 的 `FP16_MM_CPU_ACCUM = "fp32"`，同一个文件里用 `[2048,1,1] @ ones → 4096.0` 的探针证明累加**不是** fp16）是本篇断言前提的依据。
+> ⚠ **不得外推到 GPU**（那是 `130-model-optimization` 的原话）：PTX 里 `.ctype` 与 `.dtype` 都是 `.f16` 的累加变体**确实存在**，只是本库的 CPU 路径不走它。
 
 ### 4.5 把「按 dtype 定」当成终点
 
@@ -345,7 +345,7 @@ vLLM 的 `get_tolerance(dtype)` 在表里查不到那个 dtype 时**直接抛 `V
 **延伸**：
 
 - 为什么容差不是规范保证的（累加顺序未规定）：`45-kernel-lifecycle/operator-design/02-numerical-design`。
-- 误差界的推导（`u`、`γ_K`、`√K·u`）：`10-foundations/floating-point/04-low-precision-formats`、`130-quantization/numerical-formats/03-bf16-fp16-tf32`。
+- 误差界的推导（`u`、`γ_K`、`√K·u`）：`10-foundations/floating-point/04-low-precision-formats`、`130-model-optimization/quantization/03-bf16-fp16-tf32`。
 - 参考实现怎么选、独立性怎么判：`45-kernel-lifecycle/implementation/01-reference-first`。
 - 结果不对时按什么顺序查：`45-kernel-lifecycle/implementation/03-debug-order`。
 - 各算子的具体测试写法（本域**不讲**的边界）：`40-kernels/*`。
@@ -381,8 +381,8 @@ make 02_verification_matrix          # 或 make run，跑本主题全部三个�
 - `code/02_verification_matrix.py` —— 本篇的全部数值都出自它；`make 02_verification_matrix`。
 - `code/specs.py` §2 —— 容差表的三份版本（[B]/[C]/[D]）、三个 `u`、预印本的数字，每条带 `# 来源：` 与等级。
 - `code/specs.py` §4 —— `UNSOURCED` 元组：D 级表的出处页面、int8 那一行、bf16 的 `atol` 未决。
-- `130-quantization/numerical-formats/code/specs.py:441` —— `BF16_EPS = 2^-7`（**与 `u` 差 2 倍的那个量**）。
-- `130-quantization/quantized-kernels/code/specs.py:349` —— `FP16_MM_CPU_ACCUM = "fp32"`（累加口径的既有事实）。
+- `130-model-optimization/quantization/code/specs.py:441` —— `BF16_EPS = 2^-7`（**与 `u` 差 2 倍的那个量**）。
+- `130-model-optimization/quantization/code/specs.py:349` —— `FP16_MM_CPU_ACCUM = "fp32"`（累加口径的既有事实）。
 
 **外部来源（[B]：某一实现的官方规格；**经检索转述**）**
 

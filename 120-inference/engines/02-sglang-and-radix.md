@@ -31,7 +31,7 @@ updated: 2026-10-09
 > ★★★ **本主题的硬约束**：**「前缀共享的系统侧机制」一律回链** ——
 > **`hash → 块` / 命中率 / 驱逐** → [03-prefix-and-eviction](../kv-cache/03-prefix-and-eviction.md)；
 > **分页 / 块管理** → [02-block-management](../kv-cache/02-block-management.md)；
-> **PagedAttention 的算式** → `130-quantization/kv-cache-quantization/01:68-84`。
+> **PagedAttention 的算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`。
 > ★★ **「不是任何真实引擎，也不是真机」**。
 
 ## 0. 背景与动机
@@ -238,7 +238,7 @@ where **the size of each page is equivalent to one token**.」
 | 见到「最长前缀查找」的边界 | ★ 空查询 ⇒ `0`；恰好命中 ⇒ 全长；查询长于一切 ⇒ **停在已存的最长**（`C.3`） |
 | 见到「RadixAttention 与 continuous batching 的关系」 | ★ SGLang **把后者当【已有技术】**（官方博客逐字）—— 不要倒过来写 |
 | 见到「`hash → 块` / 命中率 / 遍历式驱逐」 | ★★★ **不在本文** —— 正文在**彼处** [03-prefix-and-eviction](../kv-cache/03-prefix-and-eviction.md)（★ `kv-cache` 是**兄弟主题目录**，不是本目录 ⇒ 用「**正文在彼处，此处回链**」，`D5` 订正） |
-| 见到「PagedAttention 的算式」 | ★★★ **不在本文** —— `130-quantization/kv-cache-quantization/01:68-84` |
+| 见到「PagedAttention 的算式」 | ★★★ **不在本文** —— `130-model-optimization/quantization/18-kv-cache-basics:68-84` |
 | 见到「SGLang 的真实吞吐 / 命中率」 | ★★★ **本机测不了**（无 GPU、无 SGLang）—— 本文的数只支撑**数据结构的不变量** |
 
 ## 6. 小结与延伸
@@ -261,7 +261,7 @@ where **the size of each page is equivalent to one token**.」
 - ★★★ **前缀共享的系统侧机制（`hash → 块` / 命中率 / 驱逐）** → 本域
   [03-prefix-and-eviction](../kv-cache/03-prefix-and-eviction.md)（**正文在彼处**）；
 - ★★ **分页 / 块管理（引用计数 / CoW）** → 本域 [02-block-management](../kv-cache/02-block-management.md)；
-- ★★★ **PagedAttention 的定义与算式** → `130-quantization/kv-cache-quantization/01:68-84`。
+- ★★★ **PagedAttention 的定义与算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`。
 
 ## 参考
 
@@ -277,7 +277,7 @@ where **the size of each page is equivalent to one token**.」
   本文一律写「**KV 缓存**」「**请求调度器**」全称。
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
   · 前缀共享与淘汰机制 → 本域 `kv-cache/03`；分页与块管理 → 本域 `kv-cache/02`；
-  · PagedAttention 的算式 → `130-quantization/kv-cache-quantization/01:68-84`。
+  · PagedAttention 的算式 → `130-model-optimization/quantization/18-kv-cache-basics:68-84`。
 
 ## 编译与运行
 

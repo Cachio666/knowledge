@@ -61,7 +61,7 @@ updated: 2026-09-23
 它**不是**下面这两条，本文**只回链、不重推**：
 
 - **残差流的范数随深度增长**（`80-model-architectures/transformer/01-block-and-residual-stream.md:191,232-233,263`）；
-- **误差沿深度的传播**（`130-quantization/theory/03-outliers-and-propagation.md:124,205`）。
+- **误差沿深度的传播**（`130-model-optimization/quantization/07-outliers-and-propagation.md:124,205`）。
 
 ★ **`LR warmup` 的机制解释**也在别处（`80-…/normalization/02-placement-and-qk-norm.md:83-100`）
 —— 它属 `optimizers/03` 的正文，本文只在这一句里回链。
@@ -189,7 +189,7 @@ Var[y_L] = Var[x] · Π_{l} (fan_in,l · Var[W_l])
 ⇒ **单层 1% 的偏差，100 层之后是 170%**；而每层恰好为 1 时乘积**逐位等于 1**（`B.1b`）。
 
 ★ **范围限制再说一次**：这是**没有残差、没有归一化**的链；残差流的账在
-`80-…/transformer/01`，误差沿深度的传播在 `130-…/theory/03`。
+`80-…/transformer/01`，误差沿深度的传播在 `130-…/07-outliers-and-propagation`。
 
 ## 2. 执行映射
 
@@ -341,7 +341,7 @@ Var[y_L] = Var[x] · Π_{l} (fan_in,l · Var[W_l])
 - **`LR warmup` 的机制解释**（post-LN 的平均场理由） ⇒
   `80-model-architectures/normalization/02-placement-and-qk-norm.md:83-100`（**正文在彼**）。
 - **残差流的范数随深度增长** ⇒ `80-model-architectures/transformer/01-block-and-residual-stream.md:191,232-233,263`（**正文在彼**）。
-- **误差沿深度的传播** ⇒ `130-quantization/theory/03-outliers-and-propagation.md:124,205`（**正文在彼**）。
+- **误差沿深度的传播** ⇒ `130-model-optimization/quantization/07-outliers-and-propagation.md:124,205`（**正文在彼**）。
 - ★★ **一处必须写明的让步**：本文的判据**全部**是「本机玩具规模的真跑」
   （`python3 3.13.5` + `numpy 2.4.4`、**无 GPU**、不训练任何真模型）⇒
   **不得支撑关于大规模训练的结论**。
@@ -430,5 +430,5 @@ python3 01_init.py          # 只跑本程序
 - ★★ **边界声明放在本文里，而不是只写在某处的抬头**：本文写「方差沿深度的乘性累积」时，
   **同时**写明它的范围（无残差、无归一化）并把两处真正的正文（残差流 / 误差传播）回链出去。
 - **禁区**：`warmup` 的机制解释 → `80-…/normalization/02:83-100`；
-  残差流/深度 → `80-…/transformer/01:191,232-233,263`；误差传播 → `130-…/theory/03:124,205`；
+  残差流/深度 → `80-…/transformer/01:191,232-233,263`；误差传播 → `130-…/07-outliers-and-propagation:124,205`；
   MoE 的 aux loss 尺度 → `80-…/moe/03:260`。

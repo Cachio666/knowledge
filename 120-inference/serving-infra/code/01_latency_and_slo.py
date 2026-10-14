@@ -18,7 +18,7 @@ r"""01_latency_and_slo.py —— **两个延迟**（TTFT 与 inter-token latency
 ★★★ **本程序只写【两个延迟与它们的冲突】** —— ★ **别处的正文一律回链**（`P37`）：
   · ★★ **chunked prefill 的分块数权衡 `k*`** → 本域 `batching-and-scheduling/02-chunked-prefill`；
   · ★★ **continuous batching 的收益来源（长度方差）** → 本域 `batching-and-scheduling/01-iteration-level-scheduling`；
-  · **KV 缓存的「账」** → `130-quantization/kv-cache-quantization/01`；
+  · **KV 缓存的「账」** → `130-model-optimization/quantization/18-kv-cache-basics`；
   · **prefill / decode 的 `AI` 差 120 倍** → `40-kernels/attention/05-decoding-attention`。
 
 ★★ **一条写明的简化（★ 必须连同结论一起写）**：本模型把 **prefill 记成一次独立的 prefill 步**

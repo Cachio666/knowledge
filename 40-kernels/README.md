@@ -92,7 +92,7 @@ make run        # 需远程 Linux：编译并运行全部 .cu 内核
 - **上游**：`20-gpu-architecture`（硬件行为）、`30-gpu-programming`（编程工具）、`10-foundations`（roofline 与数值）。
 - **下游**：`60-compilers`（编译器要生成的正是这些 kernel）、`120-inference`（引擎的算力上限由这些 kernel 决定）、
   `45-kernel-lifecycle`（**怎么决定做哪个算子、写完怎么判定收敛**的正文在该域，**本域只讲算子本体**）。
-- **横切**：量化算子实现（正文在 `130-quantization/quantized-kernels`，此处回链）；
+- **横切**：量化算子实现（正文在 `130-model-optimization/quantization`，此处回链）；
   MoE 的 all-to-all 通信量（正文在 `110-communication/collectives`，本域只讲 kernel 侧的本地重排）；
   softmax 的数值性质（正文在本域 `softmax-normalization`，`attention` 回链此处）；
   tensor core 的指令形状与 fragment 布局（正文在 `20-gpu-architecture/tensor-core`，本域只回链）。

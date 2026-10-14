@@ -104,7 +104,7 @@ updated: 2026-10-09
 
 - **它是【跨请求、持续存在】的状态**（不是一个 batch 的中间结果）；
 - **它随序列长度【增长】**（★★ 那笔「**KV 缓存的账**」的正文在
-  `130-quantization/kv-cache-quantization/01` —— ★★ **本文不重算它的式子，也不把它写出来**
+  `130-model-optimization/quantization/18-kv-cache-basics` —— ★★ **本文不重算它的式子，也不把它写出来**
   （本域 README 的硬边界明确把「六项乘积」划给那一篇））。
 
 ⇒ ★★★ **切分粒度有下限**：**一个 KV 头不可再分**。于是
@@ -284,7 +284,7 @@ PD 的 `P∈{16,64,256,1024}` × `n∈{1,2,4,8}`。
 | 见到 `n*` 与 `P` 的关系 | ★★★ **无一次性开销时 `n*` 与 `P` 无关**；★ 有开销时 `n*` **随 `P` 下降**（`A.3`） |
 | 见到「prefill 与 decode 的 `AI` 差多少」 | ★★★ **不在本文** —— 正文在 `40-kernels/attention/05:229-236`，此处回链（`D.3`） |
 | 见到「并行策略的六轴 / 集合通信原语 / NCCL / 拓扑」 | ★★★ **不在本文** —— 正文在 `100-parallelism` / `110-communication`，此处回链（`D.3`） |
-| 见到「KV 缓存的【账】（六项乘积 / `AI`）」 | ★★★ **不在本文** —— 正文在 `130-quantization/kv-cache-quantization/01`（`D.3`） |
+| 见到「KV 缓存的【账】（六项乘积 / `AI`）」 | ★★★ **不在本文** —— 正文在 `130-model-optimization/quantization/18-kv-cache-basics`（`D.3`） |
 | 见到「真实多机 PD 分离的开销」 | ★★★ **本机测不了**（无多机、无真网络）⇒ 只能用**规格带宽推导**，标为**推导值**（`T75`） |
 
 ## 6. 小结与延伸
@@ -308,7 +308,7 @@ PD 的 `P∈{16,64,256,1024}` × `n∈{1,2,4,8}`。
 - ★★★ **通信的机制** → `110-communication` 全域（**正文在彼处**）；
 - ★★ **chunked prefill 的分块数权衡（同一引擎里的折中）** → [02-chunked-prefill](../batching-and-scheduling/02-chunked-prefill.md)；
 - ★★★ **prefill / decode 的 `AI` 差 120 倍** → `40-kernels/attention/05-decoding-attention`（**正文在彼处**）；
-- ★★ **KV 的账与容量规划** → `130-quantization/kv-cache-quantization/01` + 本域 [01-capacity-planning](../kv-cache/01-capacity-planning.md)。
+- ★★ **KV 的账与容量规划** → `130-model-optimization/quantization/18-kv-cache-basics` + 本域 [01-capacity-planning](../kv-cache/01-capacity-planning.md)。
 
 ## 参考
 
@@ -316,7 +316,7 @@ PD 的 `P∈{16,64,256,1024}` × `n∈{1,2,4,8}`。
   [01-microbatches-and-bubbles](../../100-parallelism/pipeline-parallel/01-microbatches-and-bubbles.md)
   （`(m+p−1)(t_f+t_b)`；GPipe `1811.06965 §2.3` 与 Megatron `2104.04473 §2.2.1` 两个口径）。
 - **`[C]` prefill / decode 的 `AI` 差 120 倍** —— `40-kernels/attention/05-decoding-attention:229-236`。
-- **`[B]` KV 缓存的账** —— `130-quantization/kv-cache-quantization/01`。
+- **`[B]` KV 缓存的账** —— `130-model-optimization/quantization/18-kv-cache-basics`。
 - ★★ **一条口径**：本文的 PD 链路带宽是**推导用的规格值**（`PD_LINK_BYTES_PER_MS`），
   **不是本机 socket 的数字** —— 本机**单机、无真网络**。
 - ★ **一条术语纪律**：本文一律写「**KV 缓存**」「**请求调度器**」全称。

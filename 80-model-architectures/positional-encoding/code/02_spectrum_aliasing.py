@@ -90,7 +90,7 @@ r"""02_spectrum_aliasing.py —— `θ_i` 的**谱**、**混叠周期**、**分�
   * ★★ **不讲任何外推方法**：PI / NTK-aware / NTK-by-parts / YaRN / ALiBi 的**定义与对比
     全在 `03`**。本程序只给 `03` 要用的**定量框架**（谱、混叠、分辨窗口、`turns`）。
   * **不写**「成对通道旋转」那句结构陈述的正文（在
-    `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184`）。
+    `130-model-optimization/quantization/19-kivi-asymmetry.md:184`）。
   * **不算**位置编码的 FLOPs / 访存账（正文在 `40-kernels/attention`）。
   * ★ **不做**「谱的哪一段最重要」这类**没有判据**的排序 —— 本程序只给**可判定的计数**。
 

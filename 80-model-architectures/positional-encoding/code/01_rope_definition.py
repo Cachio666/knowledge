@@ -82,7 +82,7 @@ r"""01_rope_definition.py —— RoPE 的**旋转定义**、**相对位置性质
 ===============================================================================
 
   * ★★ **不写「成对通道旋转」那句结构陈述的正文** —— 它的逐字在
-    `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184`
+    `130-model-optimization/quantization/19-kivi-asymmetry.md:184`
     （那里讲 pre-RoPE 量化）。本程序给的是**定义**（哪两个分量配对、转多少角度）；
     **KIVI 的量化结论不在本域**。
   * **不算**位置编码的 FLOPs / 访存账（正文在 `40-kernels/attention`）。
@@ -693,7 +693,7 @@ def main():
     print("     「哪两个维度配对」（相邻对 vs 前后两半）是**实现的坐标摆放**。")
     print("     后者与前者的关系是**一次固定置换** —— `B.2` 是恒等式、`B.2b` 是它的实质内容。")
     print("  ★ 禁区（计划 §2）：不写「成对通道旋转」那句结构陈述的正文（在")
-    print("     `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184`）；")
+    print("     `130-model-optimization/quantization/19-kivi-asymmetry.md:184`）；")
     print("     不算位置编码的 FLOPs/访存账；不讲任何外推方法（那是 `03`）。")
     pin_part()
     th_main = freqs(D_MAIN, 10000.0)

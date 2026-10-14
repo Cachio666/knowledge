@@ -6,7 +6,7 @@ r"""01_capacity_planning.py —— **从「账」到「容量」**：可用显�
 
 ★ 三类断言**全部在本程序内部**，失败时以**非零退出码**结束；**没有 `verify.py`**。
 
-★★★ **本主题不写「账」**（那是 `130-quantization/kv-cache-quantization/01` 的正文，本主题**只回链**）——
+★★★ **本主题不写「账」**（那是 `130-model-optimization/quantization/18-kv-cache-basics` 的正文，本主题**只回链**）——
   本程序把「每 token 字节数」当**输入**（从 `specs` 取用，**不重推**六项乘积，`P37`），
   只算 130-01 **没算的那条链**：**可用显存 → KV 块数 → 最大并发 / 最大 batch**。
 
@@ -360,7 +360,7 @@ def part_B():
     print("  ★★★ **账的部分不在这里** ——「每 token %d B = %s KiB」取自 %s"
           % (specs.LLAMA2_7B_KV_BYTES_PER_TOKEN,
              specs.LLAMA2_7B_KV_BYTES_PER_TOKEN // 1024,
-             "`130-quantization/kv-cache-quantization/01`（本主题只取用，不重推）"))
+             "`130-model-optimization/quantization/18-kv-cache-basics`（本主题只取用，不重推）"))
 
     # ── B.1 ★ 预算 × 序列长度 ⇒ 并发（Llama-2-7B）─────────────────────────
     print()
@@ -684,7 +684,7 @@ def summary():
     print("★★ **A = %d/%d** —— ★★★ **本程序有 A 类**：**闭式除法** vs **模拟分配**（逐块填池 / 逐 token 取块）"
           % (_PASS["A"], _TOTAL["A"]))
     print("★ 判据来源：本主题的模型是 **`[E]` 级（本库推导 / 假设）**；「每 token 字节」取自 "
-          "`130-quantization/kv-cache-quantization/01`（**只取用，不重推**）。")
+          "`130-model-optimization/quantization/18-kv-cache-basics`（**只取用，不重推**）。")
     print("★ 本程序只核对「**容量规划的算术**」与「**极值时的退化**」——**不是**任何真实引擎的并发数。")
     return 1 if FAILS else 0
 

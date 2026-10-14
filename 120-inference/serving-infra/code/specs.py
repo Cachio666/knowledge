@@ -170,12 +170,12 @@ KV_HIT_RATE_REF = "120-inference/kv-cache/03-prefix-and-eviction"
 # 消费者：`03` 的 `D.3b`。
 # 同值位置：`120-inference/kv-cache/03-prefix-and-eviction`（**那是正文，这里是回链**）。
 
-KV_ACCOUNT_REF = "130-quantization/kv-cache-quantization/01"
+KV_ACCOUNT_REF = "130-model-optimization/quantization/18-kv-cache-basics"
 # 来源：[E] 本库的跨域回链 —— **KV 缓存的【账】**（六项乘积 / `AI` / GQA 的坑）的正文在彼处。
 # 口径：★★★ 本主题**不得重算**那笔账（`P37`）—— `02` 只把「每 token 的 KV 字节数」当作**给定的模型参数**
 #       （见 `PD_KV_BYTES_PER_TOKEN`），**不重推它的来源**。
 # 消费者：`02` 的 `D.3b`。
-# 同值位置：`130-quantization/kv-cache-quantization/01`（**那是正文，这里是回链**）。
+# 同值位置：`130-model-optimization/quantization/18-kv-cache-basics`（**那是正文，这里是回链**）。
 
 
 # ===========================================================================

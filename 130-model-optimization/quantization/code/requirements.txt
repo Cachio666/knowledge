@@ -1,0 +1,24 @@
+# 130-model-optimization/quantization 的编号程序依赖。
+#
+# 20 个编号程序要真实 torch（CPU-only 即可）；6 个 verify 模块只用**标准库**。
+#
+#   torch>=2.6   # ★ 真正的**依赖下限**是 2.6：20 个程序用到的 dtype / API
+#                #   （float8_e4m3fn / float8_e5m2 / _convert_weight_to_int4pack_for_cpu /
+#                #    _weight_int4pack_mm_for_cpu / _weight_int8pack_mm / torch.ao.quantization
+#                #    的 observer 与 FakeQuantize / torch.linalg.*）
+#                #   在 2.6.0 上全部存在（本仓库已在 2.6.0 / 2.7.1 / 2.8.0 / 2.11.0 /
+#                #   2.13.0 五个解释器上跑过全部程序）。
+#                # ⚠ 但 Makefile 的探测下限写的是 (2, 8) —— 那是**对齐选择**，不是依赖：
+#                #   02_e8m0_and_mx.py 需要 torch.float8_e8m0fnu，它在 < 2.8 里不存在。
+#                #   两者不要混：**规格下限写这里，探测下限写 Makefile**。
+#                # ⚠ torch **不靠 pip 装**：Makefile 探测的是本机某个已装 torch 的解释器。
+#
+#   numpy>=2.0   # 部分程序与 verify 模块的数值路径用；verify 模块本身只用标准库。
+#
+#   scipy>=1.10  # **可选**：仅 08_calibration.py 的 TensorRT entropy 校准器首选路径用
+#                #   （与 TensorRT 源码逐字对应：`from scipy.stats import entropy`）。
+#                #   没装 scipy 时会退到 numpy 向量化的 `Σ p·ln(p/q)` 兜底路径 ——
+#                #   两条路径都跑得通，装不装不影响任何一个程序的退出码。
+torch>=2.6
+numpy>=2.0
+scipy>=1.10

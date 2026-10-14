@@ -17,7 +17,7 @@
 #
 # ★★ **本主题的禁区（计划 §2 的四行）**：`warmup` 的**机制解释**
 #    （`80-model-architectures/normalization/02`）、**残差流的范数随深度增长**
-#    （`80-…/transformer/01`）、**误差沿深度的传播**（`130-…/theory/03`）、
+#    （`80-…/transformer/01`）、**误差沿深度的传播**（`130-…/07-outliers-and-propagation`）、
 #    **MoE 的 aux loss 尺度**（`80-…/moe/03`）—— 本主题只写**工程判据与设定**。
 #    ★★ 顺带：优化器状态的**分片与通信量**属 `100-parallelism/zero-fsdp/`。
 #

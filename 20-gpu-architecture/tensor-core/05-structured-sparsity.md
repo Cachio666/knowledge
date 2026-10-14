@@ -9,7 +9,7 @@ prerequisites:
   - 20-gpu-architecture/tensor-core/01-mma-primitive
 tags: [sparsity, 2-to-4, mma-sp, metadata, pruning]
 related:
-  - 130-quantization/sparsity-and-distillation
+  - 130-model-optimization
   - 10-foundations/performance-models/01-roofline-model
   - 40-kernels/gemm
 code:
@@ -273,7 +273,7 @@ row       = groupID + 8 × [行参数]
 
 **第二步：`mma.sp`（Ampere 起）。** 把「稀疏」变成指令能理解的操作数：一个压缩后的 A 加一个 metadata。**关键的设计选择是「结构化」三个字**——要求每组恰好 2 个非零，而不是「任意稀疏」。这个选择让硬件可以用一个 4-bit 字段描述位置信息，从而把「跳过零」变成「一条指令吃两倍的 K」，代价是**稀疏模式必须被重新排列成结构化形式**（§4.1）。
 
-**第三步：框架层的自动稀疏化。** 权重压缩、metadata 打包、layout 对齐、以及「剪枝后重训练恢复精度」这一整套流程，属于模型侧的方法论，正文位置在 [130-quantization/sparsity-and-distillation](../../130-quantization/README.md)（此处回链）。**本文只负责硬件侧的那笔账**：给定一个已经结构化好的稀疏权重，端到端能拿到多少（§1 第四步）。
+**第三步：框架层的自动稀疏化。** 权重压缩、metadata 打包、layout 对齐、以及「剪枝后重训练恢复精度」这一整套流程，属于模型侧的方法论，正文位置在 [130-model-optimization](../../130-model-optimization/README.md)（此处回链）。**本文只负责硬件侧的那笔账**：给定一个已经结构化好的稀疏权重，端到端能拿到多少（§1 第四步）。
 
 **第四步：稀疏与低精度的叠加。** FP8/FP4 的形状也有稀疏变体，但要注意 §1 第二步那条：**元素越窄，4 bit 的 metadata 越贵**。把两者叠在一起时，压缩率不是两个系数相乘——它们共享同一份 metadata 开销。另外 tf32 的变体用的是「1:2」的表述（每 2 个元素 1 个非零），数值上仍是每 4 个元素 2 个非零，但**这个变体的 metadata 尺寸本次采用的来源没有给出，本文不对它做压缩率算术**。
 
@@ -327,7 +327,7 @@ row       = groupID + 8 × [行参数]
 
 **成因**：**这是模型侧的事，与本文的硬件机制是两件独立的事。** 硬件只保证「按 metadata 取数、算、累加」；哪些元素被剪掉、剪掉之后精度掉多少，完全由稀疏化算法决定。**硬件不检查「你剪得对不对」，只检查「每组是不是 2 个非零」**——一个 2:4 结构化但数值全错的权重，硬件照样全速跑完。
 
-**规避**：把两件事分开评估——硬件加速比看 §1 第四步，精度损失看稀疏化算法本身（回链 [130-quantization/sparsity-and-distillation](../../130-quantization/README.md)）。**一个可以直接用的检查**：把稀疏化后的权重按稠密路径跑一遍，如果端到端精度掉得比预期多，那是算法的问题，不是内核的问题——两者不该混在一个性能实验里。
+**规避**：把两件事分开评估——硬件加速比看 §1 第四步，精度损失看稀疏化算法本身（回链 [130-model-optimization](../../130-model-optimization/README.md)）。**一个可以直接用的检查**：把稀疏化后的权重按稠密路径跑一遍，如果端到端精度掉得比预期多，那是算法的问题，不是内核的问题——两者不该混在一个性能实验里。
 
 ## 编译与运行
 
@@ -361,4 +361,4 @@ make 05_structured_sparsity  # 只跑本文对应的程序（省略 .py 后缀�
 - 本仓库 [20-gpu-architecture/tensor-core/01-mma-primitive.md](01-mma-primitive.md) —— 形状的固定时序摊销（本文 §2 用到）与每 lane 寄存器数。
 - 本仓库 [20-gpu-architecture/tensor-core/02-fragment-layout.md](02-fragment-layout.md) —— 穷举验证 fragment 双射的方法（本文 §1 第五步沿用）。
 - 本仓库 [10-foundations/performance-models/01-roofline-model.md](../../10-foundations/performance-models/01-roofline-model.md) —— roofline 拐点 `I*` 与 `max(计算, 访存)` 模型的定义（本文只代入，不重推）。
-- 本仓库 [130-quantization/sparsity-and-distillation](../../130-quantization/README.md) —— 剪枝算法与精度恢复（本文只做硬件侧的账，此处回链）。
+- 本仓库 [130-model-optimization](../../130-model-optimization/README.md) —— 剪枝算法与精度恢复（本文只做硬件侧的账，此处回链）。

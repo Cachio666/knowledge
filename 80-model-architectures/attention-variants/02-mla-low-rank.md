@@ -9,7 +9,7 @@ prerequisites:
   - 80-model-architectures/attention-variants/01-mha-mqa-gqa
 tags: [mla, low-rank-compression, matrix-absorption, decoupled-rope, kv-budget, deepseek-v2]
 related:
-  - 130-quantization/kv-cache-quantization/01-kv-cache-basics
+  - 130-model-optimization/quantization/18-kv-cache-basics
   - 80-model-architectures/attention-variants/01-mha-mqa-gqa
   - 80-model-architectures/positional-encoding/01-rope-definition
 code:
@@ -50,7 +50,7 @@ k = c · W_UK ,  v = c · W_UV
 答案是：**没有位置编码时可以，有位置编码时不行**。这就是本文的账。
 
 ★ **本域的边界**：KV 字节的六项乘积正文在
-`130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`（正文在彼，此处回链）；
+`130-model-optimization/quantization/18-kv-cache-basics.md:48-76`（正文在彼，此处回链）；
 RoPE 的旋转定义与两套实现约定的正文在 `80-model-architectures/positional-encoding/01-rope-definition`
 （已建成）。本域只算**元素数**，只用 RoPE，不解释它。
 
@@ -217,7 +217,7 @@ n_g = (d_c + d_h^R) / (2 d_h)                                    …… (4)
 
 `01` 的旋钮把 KV 的份数按 `1/G` 降；本文的旋钮把每份的宽度降到 `d_c`（+ 共享的 `d_h^R`）。
 两者**乘起来**才是 KV 的预算（本域不把它写成字节公式——那在
-`130-quantization/kv-cache-quantization/01:48-76`，正文在彼，此处回链）。
+`130-model-optimization/quantization/18-kv-cache-basics:48-76`，正文在彼，此处回链）。
 论文给的可比锚点是「**等于 GQA 的 2.25 组**」——用了 `01` 那张表的语言。
 
 ## 4. 踩坑与失败模式
@@ -284,7 +284,7 @@ n_g = (d_c + d_h^R) / (2 d_h)                                    …… (4)
 | 引用 `93.3%` 的减少 | 必须带上对比对象（**DeepSeek 67B**，一个具体 dense 模型）；论文自给的可比口径是「等于 GQA 的 **2.25 组**」；度量口径逐字 `number of elements, regardless of the storage precision` |
 | 见到论文里另一个 `93.3` | 那是 **ARC-Challenge 准确率**（同名不同指），不要与 KV 减少混为一谈 |
 | 要在本域引用 RoPE 的旋转定义 | 不在本文：正文在 `80-model-architectures/positional-encoding/01-rope-definition`（已建成）。本文只用它 |
-| 想知道 KV 的**字节**账 | 不在本文：正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76` |
+| 想知道 KV 的**字节**账 | 不在本文：正文在 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76` |
 
 > ★ **表 A 的数值判据**（计划 §3 Chunk 2）：③ 吸收 vs 显式的差 `< 1e-12`（机器精度档）；
 > ④ 把 RoPE 吸收进去后的差 `> 1.0`，且与 ③ 的差相差 `> 1e15` 倍；⑤ 元素数精确 `(d_c + d_h^R)·l`。
@@ -305,7 +305,7 @@ n_g = (d_c + d_h^R) / (2 d_h)                                    …… (4)
 - **前置**：`01-mha-mqa-gqa`（KV 份数那条轴）。**本文是那条轴之外的第二个因子**。
 - **RoPE 本身**：定义与「两套实现约定是同一操作被坐标置换共轭」的结论在
   `positional-encoding/01-rope-definition`（**前向声明**，正文在彼，此处回链）。
-- **KV 的字节账与显存**：正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`
+- **KV 的字节账与显存**：正文在 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`
   （正文在彼，此处回链）。★ 那边的「GQA 字节坑」与本主题 `01` 的 §4 第 2 条是同一处。
 - **同主题的下一篇**：`03-window-and-hybrid` 换到**感受野**那一侧的账，
   并说明为什么「叠加两个变体」不是二选一。
@@ -387,6 +387,6 @@ EOF
 
 - `40-kernels/attention/04-warp-specialization-and-variants.md:128`：「三个常见变体，本文只讲
   **它们对 kernel 结构的影响**，**定义不重推**」—— 本文是那处**原为悬空让渡**的三份正文之一。
-- `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184` 逐字含 RoPE 的
+- `130-model-optimization/quantization/19-kivi-asymmetry.md:184` 逐字含 RoPE 的
   「`jointly rotates pairs of channels by different angles depending on the position`」；
   本域建成后应回链到 `positional-encoding/01`（Chunk 6 的动作）。

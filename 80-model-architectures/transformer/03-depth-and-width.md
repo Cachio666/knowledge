@@ -10,7 +10,7 @@ prerequisites:
 tags: [depth, width, parameter-budget, embedding, head-dim, spec-table, tie-word-embeddings]
 related:
   - 45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory
-  - 130-quantization/kv-cache-quantization/01-kv-cache-basics
+  - 130-model-optimization/quantization/18-kv-cache-basics
   - 80-model-architectures/transformer/02-ffn-shapes
 code:
   - code/03_depth_width.py
@@ -324,7 +324,7 @@ L · d² = 常数     ⇒     d ∝ L^(−1/2)                    …… (1)
 - **MoE 那条路**（用参数换激活）正文在 `80-model-architectures/moe`（此处回链）；
   本文 §4 第 3 条只给出「别把 MoE 当 dense」这条反例。
 - **KV cache 的字节账**依赖本文的 `head_dim` / `num_key_value_heads` 口径，
-  正文在 `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
+  正文在 `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
 - **从 config 反算算子清单 / FLOPs**：正文在
   `45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md`（正文在彼，此处回链）。
 

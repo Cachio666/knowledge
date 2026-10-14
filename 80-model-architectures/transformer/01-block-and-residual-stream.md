@@ -258,7 +258,7 @@ pre-LN 栈里 `final_norm` 就是用来切断这个耦合的（post-LN 栈**不�
 - **从 config 反算算子清单 / FLOPs / 参数量**：正文在
   `45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md`（正文在彼，此处回链）；
   本域**不做**那件事，只在 `03` 里做**一次**参数量对照。
-- **向上游回链**：`130-quantization/theory/03-outliers-and-propagation.md:128-130` 里有一条
+- **向上游回链**：`130-model-optimization/quantization/07-outliers-and-propagation.md:128-130` 里有一条
   「残差连接把深度方向的误差松弛为加性」的结论，⚠ **它的作用域只到浮点舍入误差**——
   本文不做那条推广（本文的残差流结论是**范数**层面的，不是误差传播层面的）。
 

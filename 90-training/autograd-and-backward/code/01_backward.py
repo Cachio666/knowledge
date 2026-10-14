@@ -17,7 +17,7 @@ r"""01_backward.py —— 反向传播本身（链式法则 / vjp / 伴随），
   与 `00-meta/glossary.md:203-211`，本程序**一行都不写**。
   自定义反向的**实现**回链 `70-frameworks/tensorflow/03-custom-ops-and-export.md:106-150,217`；
   控制流与反向模式的可微性回链 `70-frameworks/jax/03-sharding-and-differences.md:110-112,379-381`；
-  不可微算子的反向回链 `130-quantization/qat/01-ste.md`。
+  不可微算子的反向回链 `130-model-optimization/quantization/12-ste.md`。
   ⇒ 本程序只做两件事：**从零写一遍反向传播**，以及**给它配一个能证伪的数值参照**。
 
 ★★ 可证伪断言（把下面任一条改错，本程序必须非零退出）：

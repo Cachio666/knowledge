@@ -18,11 +18,11 @@
 
 ★ **本主题的禁区**（本主题**一行都不重写**，只回链 —— 这是 `P37` 的现场）：
   · ★★★ **KV cache 的【账】**（六项乘积 / `512 KiB` / `2 GiB` / GQA 的坑 / `AI = 2ST/(bpe(S+T))`）
-    → `130-quantization/kv-cache-quantization/01`；
+    → `130-model-optimization/quantization/18-kv-cache-basics`；
   · ★★★ **paged KV 的 kernel 侧【全段】**（页表延迟 / 碎片 `16/2 → 0.049%` / 布局 /
     **块大小的双向权衡及其结论「真正约束是查表次数，不是碎片」**）
     → `40-kernels/attention/05:130-179,283-290`；
-  · **KV cache 量化** → `130-quantization/kv-cache-quantization/02,03`；
+  · **KV cache 量化** → `130-model-optimization/quantization/19-kivi-asymmetry,03`；
   · **vLLM 的模型接入与算子注册** → `45-kernel-lifecycle/requirement-discovery/01:158-214`。
 
 ★ **本主题的判据纪律**：
@@ -124,33 +124,33 @@ KV_FETCH_DAY = "2026-10-09"
 
 # ===========================================================================
 # 4. 「账」的取值 —— ★★★ **只【取用】，不【重推】**（`P37`）
-#    全部来自 `130-quantization/kv-cache-quantization/01`：那里已经推过六项乘积，
+#    全部来自 `130-model-optimization/quantization/18-kv-cache-basics`：那里已经推过六项乘积，
 #    ★ 本主题**一行都不重算**，只把**结果**取来当容量规划的输入。
 # ===========================================================================
 
 LLAMA2_7B_KV_BYTES_PER_TOKEN = 524288
-# 来源：**[E] 本库** —— `130-quantization/kv-cache-quantization/01-kv-cache-basics.md`（2026-09-18）
+# 来源：**[E] 本库** —— `130-model-optimization/quantization/18-kv-cache-basics.md`（2026-09-18）
 #       的表 1 与 §1 第一步：Llama-2-7B（MHA，32 层 / 32 KV 头 / head_dim 128 / fp16）**每 token 512 KiB**。
 # 口径：★★★ 本主题**取用**这个值，**不重推**它的六项乘积 —— 那条推导的正文在 130-01（本主题只回链）。
 #       ★ 它是 [E] 级（本库推导值），**不是**任何引擎的规格，**也不是**任何真实硬件的测量值。
 #       ★★ 它对应的**形状**（32/32/128）也一并留在 130-01，本主题**不重抄**。
 #       ★★ **口径 = KiB**（`512 × 1024`）—— 换十进制单位会差 2.4%（130-01 §4.2）。
 # 消费者：`01` 的 `B.1` / `B.2`（容量规划的「每 token 字节」因子）。
-# 同值位置：`130-quantization/kv-cache-quantization/01` 的表 1（**那是正文，这里是引用**）。
+# 同值位置：`130-model-optimization/quantization/18-kv-cache-basics` 的表 1（**那是正文，这里是引用**）。
 
 LLAMA2_7B_WEIGHTS_GIB = 13
 # 来源：**[E] 本库** —— 同上 `01-kv-cache-basics.md:37`：「Llama-2-7B 的 fp16 **权重**约 13 GiB」。
 # 口径：★ 原句带**「约」** ⇒ 它是**量级值**，本主题只把它当容量账的**减项**，
 #       ★★ **不得**据此声称「某引擎在这个模型上还剩多少显存」（本机无引擎）。
 # 消费者：`01` 的 `B.1`（可用显存 = 总显存 − 权重 − 预留）。
-# 同值位置：`130-quantization/kv-cache-quantization/01` §0。
+# 同值位置：`130-model-optimization/quantization/18-kv-cache-basics` §0。
 
 LLAMA2_7B_MISTRAL_CONTRAST_KIB = 128
 # 来源：**[E] 本库** —— 同上 `01-kv-cache-basics.md:152`：Mistral-7B（GQA，8 KV 头）每 token **128 KiB**。
 # 口径：★★ 它是**对照项**：与 Llama-2-7B 的 512 KiB 差 4 倍，**差别只在 KV 头数**（32 → 8）。
 #       ★ 本主题用它说明「容量规划的输入随模型变」，**不重推**它的形状。
 # 消费者：`01` 的 `B.3`（同一个块池、不同模型 ⇒ 并发差 4 倍）。
-# 同值位置：`130-quantization/kv-cache-quantization/01` 的表 1 与 §4.1 的规避条。
+# 同值位置：`130-model-optimization/quantization/18-kv-cache-basics` 的表 1 与 §4.1 的规避条。
 
 
 # ===========================================================================

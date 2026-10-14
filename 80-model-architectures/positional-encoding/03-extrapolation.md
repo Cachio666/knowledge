@@ -462,5 +462,5 @@ curl -sS -o /tmp/arx_2104.09864.html https://ar5iv.labs.arxiv.org/html/2104.0986
 - `40-kernels/attention/04:130-134` 那张「改什么」的一行表（ALiBi = 在 `S` 上**加一项**与
   `(i−j)` 成正比的偏置）是本文的**对接面**：那边给一行，本文给它完整的定义、那条脚注、
   以及那条脚注的**可判定后果**。
-- `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184` —— RoPE 的
+- `130-model-optimization/quantization/19-kivi-asymmetry.md:184` —— RoPE 的
   「成对通道旋转」的逐字（**正文在彼，此处回链**；定义在 `01`）。

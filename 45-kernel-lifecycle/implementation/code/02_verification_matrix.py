@@ -323,10 +323,10 @@ check("A.2 ★★ u 的定义与 IEEE 754 一致：数值上等于 `np.finfo(dty
       and abs(u32 - float(np.finfo(np.float32).eps) / 2) < 1e-24)
 check("A.2 ★ bf16 的 u 只能按位宽推（numpy **没有** bfloat16 这个 dtype）",
       ubf == 2.0 ** -8 and 1 + 8 + 7 == 16, f"{ubf:.6e}")
-print("    ★★ 与 `130-quantization` 的 `EPS` **不是同一个量，不能混**：")
-print(f"      `130-quantization/numerical-formats/code/specs.py:441` 的 BF16_EPS = 2^-7"
+print("    ★★ 与 `130-model-optimization` 的 `EPS` **不是同一个量，不能混**：")
+print(f"      `130-model-optimization/quantization/code/specs.py:441` 的 BF16_EPS = 2^-7"
       f" = {2.0 ** -7:.6e}，是 **1.0 处的间距**；u = 2^-8 是**它的一半**。")
-print("      ⇒ 引用「本库 130-quantization 的精度推导」时必须说清引的是哪一个；")
+print("      ⇒ 引用「本库 130-model-optimization 的精度推导」时必须说清引的是哪一个；")
 print("        本主题的误差界用 **u**（与 `10-foundations/floating-point/04` 的 γ_K 同口径）。")
 check("A.2 ★ 两者相差恰好 2 倍（误用会整体差一倍，A 类结论会变）",
       abs(SP.BF16_UNIT_ROUNDOFF_U * 2 - 2.0 ** -7) < 1e-19)

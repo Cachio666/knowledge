@@ -205,10 +205,10 @@ FP32_UNIT_ROUNDOFF_U = 2.0 ** -24
 #       （binary16 的 1+5+10 ⇒ p = 11；bfloat16 的 1+8+7 ⇒ p = 8；binary32 ⇒ p = 24）
 # 同值位置：45-kernel-lifecycle/operator-design/code/specs.py（**同域内的上一主题**，
 #           此处按「跨主题常量复制」纪律重抄，正文注明与该主题一致）
-# 口径：★★ **`u` 与 `130-quantization` 的 `EPS` 不是同一个量，别混**：
-#       `130-quantization/numerical-formats/code/specs.py:441` 的 `BF16_EPS = 2^-7` 是
+# 口径：★★ **`u` 与 `130-model-optimization` 的 `EPS` 不是同一个量，别混**：
+#       `130-model-optimization/quantization/code/specs.py:441` 的 `BF16_EPS = 2^-7` 是
 #       **1.0 处的间距**（`finfo.eps`），而 `u = 2^-8` 是**它的一半**。
-#       ⇒ 引「本库 130-quantization 的精度推导」时必须说清引的是哪一个：
+#       ⇒ 引「本库 130-model-optimization 的精度推导」时必须说清引的是哪一个：
 #         本主题的误差界用 **`u`**（与 `04-low-precision-formats` 的 `γ_K = K·u/(1-K·u)` 同口径），
 #         不是 `EPS`。
 
@@ -304,7 +304,7 @@ FP16_TO_BF16_CONSTANT_TOLERANCE_IS_WRONG = True
 #       ⇒ 「容差不能是一个常数」这句话在本主题里**有一个具体的数**。
 
 FP16_ACCUMULATOR_IS_FP32_IN_REPO = True
-# 来源：**本库既有事实 [E]**，与 `130-quantization/quantized-kernels/code/specs.py:349`
+# 来源：**本库既有事实 [E]**，与 `130-model-optimization/quantization/code/specs.py:349`
 #       的 `FP16_MM_CPU_ACCUM = "fp32"` **一致**（该处用一个 CPU fp16 矩阵乘的探针证明
 #       累加**不是** fp16：`[2048,1,1] @ ones → 4096.0`，纯 fp16 累加会得 2048）。
 # 口径：★★ **它决定了 fp16 那行容差该按哪个 `u` 推**——这是本篇 A 类能不能算对的分水岭：
@@ -315,7 +315,7 @@ FP16_ACCUMULATOR_IS_FP32_IN_REPO = True
 #         **超过 D 级表的 `1e-2`** ⇒ 那时是**表太紧、会漫天假失败**。
 #       ⚠ 同一个数（`1e-2`）在两种累加口径下**一个太松一个太紧**——
 #         所以「容差表」必须与「累加口径」一起读，单看容差无法判定。
-#       ⚠ **不得外推到 GPU**（`130-quantization` 的原话）：PTX 里 `.f16` 累加变体
+#       ⚠ **不得外推到 GPU**（`130-model-optimization` 的原话）：PTX 里 `.f16` 累加变体
 #         **确实存在**，只是本机 CPU 路径不走它。本主题断言的是**本库的口径**，
 #         不是「所有硬件都这样」。
 

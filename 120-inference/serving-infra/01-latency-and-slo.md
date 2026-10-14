@@ -32,7 +32,7 @@ updated: 2026-10-09
 > ★★ **本文只写这两个延迟的【算术与它们的关系】** —— 别处的正文一律回链：
 > **chunked prefill 的分块数权衡** → [02-chunked-prefill](../batching-and-scheduling/02-chunked-prefill.md)；
 > **continuous batching 的收益来源** → [01-iteration-level-scheduling](../batching-and-scheduling/01-iteration-level-scheduling.md)；
-> **KV 缓存的账** → `130-quantization/kv-cache-quantization/01`。
+> **KV 缓存的账** → `130-model-optimization/quantization/18-kv-cache-basics`。
 > ★★★ **限定语**：**不是任何真实引擎，也不是真机** —— 本机**无 GPU、无 vLLM / SGLang / TensorRT-LLM**。
 
 ## 0. 背景与动机

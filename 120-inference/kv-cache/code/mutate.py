@@ -27,7 +27,7 @@ r"""mutate.py —— **非编号诊断工具**：叶子级变异测试（`make m
 
 ★★★ **本主题的判据模型是 `[E]` 级（本库实现 / 假设）**：
   · `01`：**闭式除法 vs 模拟分配**（两条独立路径）；★「每 token 字节」**取自**
-    `130-quantization/kv-cache-quantization/01`（**只取用，不重推** —— `P37`）；
+    `130-model-optimization/quantization/18-kv-cache-basics`（**只取用，不重推** —— `P37`）；
   · `02`：**引用计数 + CoW vs 朴素深拷贝**（本域最强的 A 类）；
   · `03`：**`hash → 块` vs 逐 token 朴素比对**。
   ★★ 三个程序都**有真 A 类**；★★ 三篇的**外部常量**都很少（vLLM / SGLang 各一两条），

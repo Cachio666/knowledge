@@ -17,7 +17,7 @@ r"""03_tensorrt_and_llamacpp.py —— **TensorRT-LLM 的编译式路线**（`in
 
 ★★★ **本程序只写「各家的选择与差异」** —— ★ **机制一律回链**（`P37`）：**分页** → `kv-cache/02`；
   **前缀树** → `kv-cache/03`；**请求调度器** → `batching-and-scheduling/01`；
-  **PagedAttention 的算式** → `130-quantization/kv-cache-quantization/01:68-84`；
+  **PagedAttention 的算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`；
   ★★ **TensorRT-LLM 的 per-iteration 时间预算** → `45-kernel-lifecycle/requirement-discovery/03`。
 
 ★★★ **llama.cpp 的处置（★ 如实报告）**：★★★ **研究原始报告的 13 条里【没有】llama.cpp 的一手来源**

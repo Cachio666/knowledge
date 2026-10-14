@@ -6,7 +6,7 @@ topic: kv-cache
 level: 3
 difficulty: intermediate
 prerequisites:
-  - 130-quantization/kv-cache-quantization/01-kv-cache-basics
+  - 130-model-optimization/quantization/18-kv-cache-basics
 tags: [kv-cache, capacity-planning, memory-budget, max-concurrency, block-size]
 related:
   - 120-inference/kv-cache/02-block-management
@@ -26,9 +26,9 @@ updated: 2026-10-09
 > **块太小时「块表装不下」，块太大时「一个块就装不下」**。
 >
 > ★★★ **本文不写「账」本身**：六项乘积、`512 KiB`、`2 GiB`、GQA 的坑这些**正文在
-> `130-quantization/kv-cache-quantization/01`**，本文**只取用它算出的那个数**（`P37`）。
+> `130-model-optimization/quantization/18-kv-cache-basics`**，本文**只取用它算出的那个数**（`P37`）。
 > ★★★ **本文也不写「预留式 vs 分页式的浪费对比」**（含「浪费 90% 以上」的定量）——
-> 那条正文在 `130-quantization/kv-cache-quantization/01:124`，本文只回链。
+> 那条正文在 `130-model-optimization/quantization/18-kv-cache-basics:124`，本文只回链。
 > ★★★ **本层是【系统侧（容量规划）】。** **「不是任何真实引擎，也不是真机」** ——
 > 本机**无 GPU、无 vLLM / SGLang / TensorRT-LLM**（实测，见计划 `§0.7 A`）
 > ⇒ 本文的一切数字是 **`[E]` 级**：**闭式的推导值**与**本机跑模拟器得到的实测值**
@@ -48,7 +48,7 @@ updated: 2026-10-09
 `80` 与 `63` 差 `27%`——同一个模型、同一块卡，**并发差一截**。这就是本文的第一条纪律：
 **「可用显存」是一个必须写清算式的词**（§1 第一步）。
 
-**为什么本文值得单独写。** `130-quantization/kv-cache-quantization/01` 已经把「账」算到了极致
+**为什么本文值得单独写。** `130-model-optimization/quantization/18-kv-cache-basics` 已经把「账」算到了极致
 （每 token `512 KiB`、`4096` ctx 恰好 `2 GiB`），但它停在**账**上——它回答的是
 「**一个 token 占多少字节**」，不回答「**这块显存能开几条序列**」。
 ★ 后者才是引擎启动时必须先算出来的那个数（本文 §2）。两者是**同一条链的上下游**，
@@ -62,7 +62,7 @@ updated: 2026-10-09
 可用显存 = 总显存 − 权重 − 预留
 ```
 
-- **权重**：Llama-2-7B 的 fp16 权重约 **13 GiB**（取自 `130-quantization/kv-cache-quantization/01:37`）；
+- **权重**：Llama-2-7B 的 fp16 权重约 **13 GiB**（取自 `130-model-optimization/quantization/18-kv-cache-basics:37`）；
 - **预留**：激活 + 框架缓冲 —— ★ **本文用一个模型假设值 `4 GiB`**（`KV_RESERVE_GIB`）。
   ★★ **真实引擎的预留量随实现与配置变**，本机**无引擎**给不出真值 ⇒ 本文**逐处标注它是假设**。
 
@@ -261,7 +261,7 @@ KV 块数 = 63 × 2³⁰ // (16 × 524288) = 67645734912 // 8388608 = 8064
 | 可机械判定的条件 | 结论 |
 |---|---|
 | 见到「这块卡能开多少并发」 | ★★ 先问**「可用显存」的算式**：`总 − 权重 − 预留`（§1 第一步）；漏减项就偏大 |
-| 见到「KV 块数」 | ★ 本文的链是 `可用显存 // (块大小 × 每 token 字节)`（`B.1`）；**每 token 字节**的正文在 `130-quantization/kv-cache-quantization/01` |
+| 见到「KV 块数」 | ★ 本文的链是 `可用显存 // (块大小 × 每 token 字节)`（`B.1`）；**每 token 字节**的正文在 `130-model-optimization/quantization/18-kv-cache-basics` |
 | 见到「每序列几块」 | ★★ 是 **`⌈S / B⌉`**，**末尾不满一块也占一整块**（`D.9`）；写成 `S // B` 会偏大（`D.4`） |
 | 见到「块大小是 16」 | ★★ **那是 vLLM 的源码常量**（`[B]`，抓取日 2026-10-09）；★ **同名不同指**（另一家粒度不同）—— ★★ 正文在 [engines/02](../engines/02-sglang-and-radix.md)（`C.1`） |
 | 见到「块小一点没坏处」 | ★★★ **有**：块越小 ⇒ 条目越多 ⇒ **可能越出块表上界 ⇒ 计划不可实现**（`C.1`，而**并发看不出**） |
@@ -269,7 +269,7 @@ KV 块数 = 63 × 2³⁰ // (16 × 524288) = 67645734912 // 8388608 = 8064
 | 见到「并发与序列长度的关系」 | ★ 近似**反比**（`B.2`）；偏差全部来自**末尾不满块的取整** |
 | 见到「prefill 与 decode 能不能同时装下」 | ★★ 看 **`(池 − ⌈S_p/B⌉) // ⌈s_d/B⌉`**（`A.4`）—— ★ prefill 的块是**一次性扣走**的，不是逐块增长（§1 第六步） |
 | 见到「一条长 prompt 把并发挤没了」 | ★★ **临界**：`⌈S_p/B⌉ + ⌈s_d/B⌉ > 池` ⇒ **共存 `0`**（`A.5`）—— 要么让 prefill 等，要么把在飞的 decode 全部 KV 重算 / 换出（★ 代价账见 `batching-and-scheduling/03`，此处回链） |
-| 见到「预留式 vs 分页式的浪费」 | ★★★ **不在本文** —— 正文在 `130-quantization/kv-cache-quantization/01:124`（含「浪费 90% 以上」的定量），此处回链 |
+| 见到「预留式 vs 分页式的浪费」 | ★★★ **不在本文** —— 正文在 `130-model-optimization/quantization/18-kv-cache-basics:124`（含「浪费 90% 以上」的定量），此处回链 |
 | 见到「块大小的真正约束」 | ★★★ **不在本文** —— 页表延迟 / 碎片 / 布局那份正文在 `40-kernels/attention/05:130-179,283-290`，此处回链 |
 | 见到「本引擎能开 N 条」 | ★★★ **本主题给不出**（无 GPU / 无引擎）；本主题只给**账的算术与上界** |
 
@@ -291,20 +291,20 @@ KV 块数 = 63 × 2³⁰ // (16 × 524288) = 67645734912 // 8388608 = 8064
 **延伸**：
 
 - ★★★ **「账」本身**（六项乘积 / `512 KiB` / `2 GiB` / GQA 的坑 / `AI`）→
-  `130-quantization/kv-cache-quantization/01`（**正文在彼处，此处回链**）；
+  `130-model-optimization/quantization/18-kv-cache-basics`（**正文在彼处，此处回链**）；
 - ★★★ **「预留 vs 分页」的浪费定量**（「浪费 90% 以上」）→ 同上 `01:124`（**正文在彼处**）；
 - ★★★ **块大小的双向权衡 / 页表延迟 / 碎片 / 布局**（kernel 侧）→
   `40-kernels/attention/05:130-179,283-290`（**正文在彼处，本文一行都不重写**）；
 - ★★ **块管理器**（块池 / 引用计数 / copy-on-write / 共享）→ [02-block-management](02-block-management.md)；
 - ★ **前缀共享与淘汰** → [03-prefix-and-eviction](03-prefix-and-eviction.md)；
-- ★ **KV cache 量化** → `130-quantization/kv-cache-quantization/02,03`（**正文在彼处**）；
+- ★ **KV cache 量化** → `130-model-optimization/quantization/19-kivi-asymmetry,03`（**正文在彼处**）；
 - ★ **KV cache 的大小由架构决定**（架构 → 大小的接口）→ `80-model-architectures/README.md:101`；
 - ★ **引擎的算力上限由 kernel 决定** → `40-kernels/README.md:93`。
 
 ## 参考
 
 - **本主题的判据模型是 `[E]` 级（本库推导 / 假设）** —— 全库**没有**「容量规划」的一手公式；
-  ★★ 本文的「每 token 字节」**取自** `130-quantization/kv-cache-quantization/01`，
+  ★★ 本文的「每 token 字节」**取自** `130-model-optimization/quantization/18-kv-cache-basics`，
   **本文不重推它**（`P37`）。
 - **vLLM 的块大小** —— 源码 `vllm/config/cache.py` 的 `DEFAULT_BLOCK_SIZE`（`[B]`，
   main 分支，抓取日 **2026-10-09**）；★ **文档页不给数字**（只写 `Accepts None (meaning "use default")`）。
@@ -314,7 +314,7 @@ KV 块数 = 63 × 2³⁰ // (16 × 524288) = 67645734912 // 8388608 = 8064
 - ★ **一条术语纪律**：本文一律写「**KV 块**」全称，**不裸写 `block`**（库内 `block` 另有 CUDA block、
   MoE block 两个含义）；★★ 引块大小时**必须写明是哪一家**（★ 两家粒度不同 ⇒ 正文见 `engines/02`）。
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
-  · KV cache 的「账」与「预留 vs 分页」→ `130-quantization/kv-cache-quantization/01`；
+  · KV cache 的「账」与「预留 vs 分页」→ `130-model-optimization/quantization/18-kv-cache-basics`；
   · 块大小的 kernel 侧权衡（页表 / 碎片 / 布局）→ `40-kernels/attention/05:130-179,283-290`。
 
 ## 编译与运行

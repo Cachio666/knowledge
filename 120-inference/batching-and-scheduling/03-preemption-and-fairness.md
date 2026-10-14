@@ -87,7 +87,7 @@ updated: 2026-10-09
 KV 重算  recompute(s) = s · τ_lin + s² · τ_quad         (2)
 ```
 
-- `bpt` = 每 token 的 KV 字节（**取用** `130-quantization/kv-cache-quantization/01` 的 `512 KiB`，**不重推**）；
+- `bpt` = 每 token 的 KV 字节（**取用** `130-model-optimization/quantization/18-kv-cache-basics` 的 `512 KiB`，**不重推**）；
 - `BW` = **单向、载荷口径**的搬运带宽（★ 三种口径的正文在
   `20-gpu-architecture/interconnect/01-bandwidth-conventions.md`，**本文只回链**）；
 - ★★ **(1) 里的 `×2` 就是「搬出 + 搬回」两个方向** —— 这是本文最容易错的一处（§4.1）；
@@ -298,13 +298,13 @@ BW* = 2·bpt / (τ_lin + s·τ_quad)                        (4)
 - ★★ **KV 块的引用计数 / copy-on-write**（抢占时块的回收与复用）→
   [120-inference/kv-cache/02-block-management](../kv-cache/02-block-management.md)；
 - ★ **每 token 的 KV 字节**（`512 KiB`，本文**取用**不重推）→
-  `130-quantization/kv-cache-quantization/01`（**正文在彼处**）。
+  `130-model-optimization/quantization/18-kv-cache-basics`（**正文在彼处**）。
 
 ## 参考
 
 - **本主题的代价模型是 `[E]` 级（本库实现 / 假设）** —— 两个账本与两个闭式都是本文自己写的；
   ★★ 全库**没有**一手抢占实现可引（本机**无任何引擎**）。
-- **每 token 的 KV 字节** —— **取用** `130-quantization/kv-cache-quantization/01` 的 `512 KiB`
+- **每 token 的 KV 字节** —— **取用** `130-model-optimization/quantization/18-kv-cache-basics` 的 `512 KiB`
   （`[E]`，Llama-2-7B / MHA），★ **本文不重推它的六项乘积**。
 - **带宽口径** —— ★ 三种口径（线速率 / 载荷 / 双向合计）的正文在
   `20-gpu-architecture/interconnect/01-bandwidth-conventions.md`（`[A]`/`[E]`），
@@ -315,7 +315,7 @@ BW* = 2·bpt / (τ_lin + s·τ_quad)                        (4)
   （★ 只断言「含全称」是抓不住违例的 —— 那正是 `§5` v1.5 的 `H1` 形态）。
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
   · 带宽三口径 → `20-gpu-architecture/interconnect/01`；
-  · KV cache 的账 → `130-quantization/kv-cache-quantization/01`；
+  · KV cache 的账 → `130-model-optimization/quantization/18-kv-cache-basics`；
   · KV 块的引用计数 / CoW → `120-inference/kv-cache/02`。
 
 ## 编译与运行

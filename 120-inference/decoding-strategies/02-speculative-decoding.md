@@ -183,7 +183,7 @@ the value of `c` depends on the hardware configuration and software implementati
 
 **（4）★★ 这条链的产物是「机制与上界」，不是「真实性能」。**
 ★★★ **限定语**：「不是任何真实引擎，也不是真机」；
-★ **KV 缓存量化**（推理加速的另一条路）→ `130-quantization/kv-cache-quantization/02,03`（**只回链**）。
+★ **KV 缓存量化**（推理加速的另一条路）→ `130-model-optimization/quantization/19-kivi-asymmetry,03`（**只回链**）。
 
 ## 3. 实现与演进
 
@@ -274,7 +274,7 @@ the value of `c` depends on the hardware configuration and software implementati
 - ★ **采样与搜索**（greedy / beam / top-k / top-p）→ [01-sampling-and-search](01-sampling-and-search.md)；
 - ★ **自回归解码的 roofline 账**（`AI ≈ 1.0`）→
   `10-foundations/performance-models/01-roofline-model.md:147-155`（**正文在彼处**）；
-- ★★ **KV 缓存量化**（推理加速的另一条路）→ `130-quantization/kv-cache-quantization/02,03`（**正文在彼处**）；
+- ★★ **KV 缓存量化**（推理加速的另一条路）→ `130-model-optimization/quantization/19-kivi-asymmetry,03`（**正文在彼处**）；
 - ★ **一步里有几个在飞请求**（前提 ② 的「并行」在系统侧的另一半）→
   `120-inference/batching-and-scheduling/01-iteration-level-scheduling.md`。
 
@@ -293,7 +293,7 @@ the value of `c` depends on the hardware configuration and software implementati
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
   · 自回归解码的 roofline → `10-foundations/performance-models/01:147-155`；
   · `GQA`/`MQA`/`split-KV` → `40-kernels/attention/05` §1.1–1.2；
-  · KV 缓存量化 → `130-quantization/kv-cache-quantization/02,03`。
+  · KV 缓存量化 → `130-model-optimization/quantization/19-kivi-asymmetry,03`。
 
 ## 编译与运行
 

@@ -25,7 +25,7 @@
 
 ★ **本主题的禁区**（本主题**一行都不重写**，只回链；★ 机制细节一律回链）：
   · **分页** → `120-inference/kv-cache/02`；**前缀树** → `kv-cache/03`；**调度器** → `batching-and-scheduling/01`；
-  · ★★ **PagedAttention 的定义与算式** → `130-quantization/kv-cache-quantization/01:68-84`
+  · ★★ **PagedAttention 的定义与算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`
     + `40-kernels/attention/05:130-179`；
   · **vLLM 的模型接入与算子注册** → `45-kernel-lifecycle/requirement-discovery/01:158-214`。
 

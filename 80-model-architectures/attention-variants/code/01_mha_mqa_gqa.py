@@ -32,7 +32,7 @@ r"""01_mha_mqa_gqa.py —— MHA / MQA / GQA 的 head 关系与共享图景。
     `40-kernels/attention/05-decoding-attention.md:60,66-94` 与 `…/code/verify.py` 的
     A4（`:509-529`）/ B8（`:1008-1040`）（正文在彼，此处回链）。本程序只写**共享图景**；
   * **不算字节**：KV cache 的六项乘积与 GQA 的字节坑正文在
-    `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
+    `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
     本程序只算**元素数与倍率**；
   * **不讲**变体对 **kernel 结构**的影响（正文在 `40-kernels/attention/04:126-156`）。
 
@@ -197,7 +197,7 @@ def kv_elements_ratio(h_kv, h_q):
 
     ★★ **口径（写死在函数名里）**：只算**元素数**（KV 头的条数之比），
       **不算字节**。字节账（六项乘积）的正文在
-      `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`
+      `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`
       （正文在彼，此处回链）。本程序的输出里**不出现任何字节数**。
     """
     return Fraction(h_kv, h_q)
@@ -288,7 +288,7 @@ def part_B():
     print("B. KV 元素数随组数的倍率（**元素数**，不是字节）")
     print("=" * 74)
     print("  ★ 口径：只算元素数（KV 头的条数之比）。**字节**账的正文在")
-    print("    130-quantization/kv-cache-quantization/01:48-76（正文在彼，此处回链）。")
+    print("    130-model-optimization/quantization/18-kv-cache-basics:48-76（正文在彼，此处回链）。")
     print("  ★ 同一断言的**实现与比较**在 40-kernels/attention/05-decoding-attention.md:60,66-94")
     print("    与 …/code/verify.py 的 A4（:509-529）/ B8（:1008-1040）（正文在彼，此处回链）；")
     print("    本主题只写**共享图景**这一新增部分。")
@@ -324,7 +324,7 @@ def part_B():
 
     # ── B.3 ★ 那个坑：把 `heads_kv` 写成 `heads_q` ────────────────────────
     print()
-    print("    ★ 坑（130-quantization/01:76 记的那一类）：用 heads_q 当 KV 头数 ⇒")
+    print("    ★ 坑（130-model-optimization/01:76 记的那一类）：用 heads_q 当 KV 头数 ⇒")
     for name, h_q, h_kv, g in rows:
         wrong = kv_elements_ratio(h_q, h_q)
         print("      %-16s 真倍率 %s vs 错倍率 %s ⇒ 高估 %.0f 倍"
@@ -577,7 +577,7 @@ def main():
           % ASSERT_FAIL_MARK)
     print("  ★ 禁区（计划 §2 的边界表）：本程序**不**重讲「复制 KV 后与 MHA 逐位相同」的实现")
     print("    与比较（正文在 40-kernels/attention/05 与其 code/verify.py 的 A4/B8，此处回链）；")
-    print("    也**不**算 KV 的字节（六项乘积的正文在 130-quantization/kv-cache-quantization/01:48-76）。")
+    print("    也**不**算 KV 的字节（六项乘积的正文在 130-model-optimization/quantization/18-kv-cache-basics:48-76）。")
     pin_part()      # ★ D.1–D.4：先钉住前提（见 pin_part 的说明）
     part_A()
     part_B()

@@ -1,2 +1,0 @@
-numpy>=2.0
-scipy>=1.10   # 可选：仅 01_calibration.py 的 KL 首选路径用；缺了会退到 numpy 兜底

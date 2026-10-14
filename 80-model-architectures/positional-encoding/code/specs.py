@@ -439,7 +439,7 @@ UNSOURCED = (
 #         前两个是判据 ③ 的真实锚点，后两个是 `02`/`03` 的窗口 `L`，
 #         且四个都**被程序逐位钉住**（`01` 的 `D.3`、`02` 的 `D.3`、`03` 的 `D.3`）。
 #
-#   · ★★ **RoPE 的「成对通道旋转」这句结构陈述** → `130-quantization/kv-cache-quantization/
+#   · ★★ **RoPE 的「成对通道旋转」这句结构陈述** → `130-model-optimization/quantization/
 #     02-kivi-asymmetry.md:184`（**逐字**含 `jointly rotates pairs of channels by different
 #     angles depending on the position`，那里讲的是 pre-RoPE 量化）。
 #     ⇒ 本主题的 `01` 给出的是**定义**（哪两个通道配对、转多少），

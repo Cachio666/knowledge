@@ -20,7 +20,7 @@
 
 | 约束 | 它的账 | 本机可验性 | 正文位置 |
 |---|---|---|---|
-| **显存** | KV cache 是**动态增长**的 ⇒ 必须**按需分配** | ★ **可算**（容量 / 块数 / 并发） | ★ 本域 `kv-cache`；★★ **「账」本身在 `130-quantization/kv-cache-quantization/01`，本域只回链** |
+| **显存** | KV cache 是**动态增长**的 ⇒ 必须**按需分配** | ★ **可算**（容量 / 块数 / 并发） | ★ 本域 `kv-cache`；★★ **「账」本身在 `130-model-optimization/quantization/18-kv-cache-basics`，本域只回链** |
 | **吞吐** | 批越大吞吐越高 ⇒ 但受显存与延迟限制 | ★ **可模拟**（调度器） | ★ 本域 `batching-and-scheduling` |
 | **延迟** | ★ **有两个**：TTFT 与 inter-token latency；★★ **它们【何时】冲突取决于模型** —— ★ 见 `serving-infra/01` 的 §3（★ 本文模型里 `B` 越大 TTFT 反而越小，因为 prefill 记成独立一步） | ▲ 可推导 | ★ 本域 `serving-infra/01` |
 | **实现** | 各家引擎怎么选（分页 / 前缀树 / 调度器） | ✗ **不可验**（本机无 GPU、无引擎） | ★ 本域 `engines`（**只有 `[B]` 级**） |
@@ -35,9 +35,9 @@
 
 ## 与其他域的关系
 
-- **上游**：`80-model-architectures`（KV cache 的大小由架构决定）· `40-kernels`（引擎的算力上限由 kernel 决定）· `60-compilers`（引擎依赖编译期优化）· `70-frameworks` · `130-quantization`（量化是推理加速的主要手段）。
+- **上游**：`80-model-architectures`（KV cache 的大小由架构决定）· `40-kernels`（引擎的算力上限由 kernel 决定）· `60-compilers`（引擎依赖编译期优化）· `70-frameworks` · `130-model-optimization`（量化是推理加速的主要手段）。
 - **下游**：无。这是栈的最上层。
-- **横切**：KV cache 量化（正文在 `130-quantization/kv-cache-quantization`，此处回链）。
+- **横切**：KV cache 量化（正文在 `130-model-optimization/quantization`，此处回链）。
 
 ★★ **反向的契约（本域要主动去补的）**：`45-kernel-lifecycle` **全域 0 处**提到本域，
 ★ 但它的 `requirement-discovery/01:158-214` 写了 **vLLM 的模型接入三档、算子注册、缓存层重构** ——
@@ -50,10 +50,10 @@
 
 | 主题 | 本域**不写** | 那里的正文 |
 |---|---|---|
-| **全主题** | ★★★ **KV cache 的「账」**（六项乘积、`512 KiB` / `2 GiB`、GQA 的坑、`AI = 2·S·T/(bpe·(S+T))`）与 **「预留 vs 分页」的浪费对比** | `130-quantization/kv-cache-quantization/01:68-84,124` —— ★★ 本域**只写「从账到容量规划」与「系统侧的块管理」** |
+| **全主题** | ★★★ **KV cache 的「账」**（六项乘积、`512 KiB` / `2 GiB`、GQA 的坑、`AI = 2·S·T/(bpe·(S+T))`）与 **「预留 vs 分页」的浪费对比** | `130-model-optimization/quantization/18-kv-cache-basics:68-84,124` —— ★★ 本域**只写「从账到容量规划」与「系统侧的块管理」** |
 | **全主题** | ★★★ **paged KV 的 kernel 侧【全段】**：页表延迟（400–800 周期 vs tile 计算 504 周期）· 碎片（`16/2 → 0.049%`）· 布局必须「一行」连续 · **块大小的双向权衡及其结论**（「真正约束是查表次数，不是碎片」） | `40-kernels/attention/05:130-179,283-290` —— ★★ **全部只回链** |
 | **全主题** | ★ **decode 的 attention kernel**（GQA/MQA 按 `1/r` 砍字节 · split-KV · decode 的 `AI = r`） | `40-kernels/attention/05`（全篇）+ `10-foundations/performance-models/01:147-155` |
-| **全主题** | ★★ **KV cache 量化**（K/V 的轴、低比特、各家引擎把 scale 放哪一维） | `130-quantization/kv-cache-quantization/02,03` |
+| **全主题** | ★★ **KV cache 量化**（K/V 的轴、低比特、各家引擎把 scale 放哪一维） | `130-model-optimization/quantization/19-kivi-asymmetry,03` |
 | **全主题** | ★ **vLLM 的模型接入流程与算子注册**（三档分治 · `vllm.ir` · `@register_op` · KDA 的 prefill/decode 拆分） | `45-kernel-lifecycle/requirement-discovery/01:158-214`（+ `operator-design/01` / `implementation/01`） |
 | **全主题** | ★ **continuous batching / chunked prefill 的【定义】** | `10-foundations/performance-models/01:251` —— ★ 本域只写**它们的机制与收益来源** |
 | **`batching-and-scheduling`** | ★ **prefill/decode 的【kernel】差异**（两者的 `AI` 差 120 倍） | `40-kernels/attention/05:229-236` |

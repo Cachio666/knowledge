@@ -105,7 +105,7 @@ ZERO_PARAM_FP16_MULTIPLE = 2.0
 # 来源：[C] ZeRO（同上），§5.1：模型状态里「参数」按 **16 位**存的字节数 = `2Ψ`
 #       （原文的求和式 `2 Ψ + 2 Ψ + K Ψ = 16 Ψ` 含公式标记，按上游的口径**不取整句**，只取它的**项**）。
 # 口径：★ 这个 `2` 是 **fp16 的字节数**（2 字节/参数）；本主题**不重推**数值格式
-#       （正文在 `130-quantization/numerical-formats/01`）。
+#       （正文在 `130-model-optimization/quantization/01-fp8-family`）。
 # 消费者：`03_redundancy.py` 的 `A.2`（每卡状态 `16Ψ` 的**参数项**）。
 # 同值位置：`90-training/checkpointing/code/specs.py` 的 `ZERO_PARAM_FP16_MULTIPLE`（同值）。
 

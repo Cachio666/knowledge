@@ -28,7 +28,7 @@ updated: 2026-10-09
 > ★★★ **本主题的硬约束**：**「引擎的机制」一律回链** ——
 > **请求调度器** → [01-iteration-level-scheduling](../batching-and-scheduling/01-iteration-level-scheduling.md)；
 > **分页 / 前缀树** → 本域 `kv-cache/02,03`；**PagedAttention 的算式** →
-> `130-quantization/kv-cache-quantization/01:68-84`；
+> `130-model-optimization/quantization/18-kv-cache-basics:68-84`；
 > ★★ **TensorRT-LLM 的 per-iteration 时间预算** → `45-kernel-lifecycle/requirement-discovery/03`。
 > ★★★ **本文【没有 A 类】** —— 本机**无 GPU、无任何引擎** ⇒
 > TensorRT-LLM 的**【行为与性能】无处可验**。★★ 「不是任何真实引擎，也不是真机」。
@@ -234,7 +234,7 @@ TensorRT-LLM 的 **per-iteration 时间预算**（`45-kernel-lifecycle/requireme
 - ★ **请求调度器的机制** → 本域
   [01-iteration-level-scheduling](../batching-and-scheduling/01-iteration-level-scheduling.md)；
 - ★★ **TensorRT-LLM 的 per-iteration 时间预算** → `45-kernel-lifecycle/requirement-discovery/03`；
-- ★★★ **PagedAttention 的定义与算式** → `130-quantization/kv-cache-quantization/01:68-84`。
+- ★★★ **PagedAttention 的定义与算式** → `130-model-optimization/quantization/18-kv-cache-basics:68-84`。
 
 ## 参考
 

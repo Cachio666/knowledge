@@ -23,7 +23,7 @@ r"""02_inference_parallelism_and_pd.py —— ★★★ **承接两处让渡**�
     正文 → `100-parallelism/expert-parallel` + `110-communication/collectives`；★★ **不是默认省略**；
   · **训练侧的气泡推导**（`(m+p−1)(t_f+t_b)` / 两个口径）→ `100-parallelism/pipeline-parallel/01`；
   · **chunked prefill 的分块数权衡** → 本域 `batching-and-scheduling/02`；
-  · **KV 缓存的「账」** → `130-quantization/kv-cache-quantization/01`；
+  · **KV 缓存的「账」** → `130-model-optimization/quantization/18-kv-cache-basics`；
   · **prefill / decode 的 `AI` 差 120 倍** → `40-kernels/attention/05`。
 
 ★★★ **本程序【有真 A 类】**（三条，各自两条独立路径）：
@@ -515,7 +515,7 @@ def preflight():
           and specs.PARALLELISM_LETDOWN_REF == "100-parallelism/README.md:90"
           and specs.COMMUNICATION_LETDOWN_REF == "110-communication/README.md:61"
           and specs.BATCHING_CHUNKED_REF == "120-inference/batching-and-scheduling/02-chunked-prefill"
-          and specs.KV_ACCOUNT_REF == "130-quantization/kv-cache-quantization/01"
+          and specs.KV_ACCOUNT_REF == "130-model-optimization/quantization/18-kv-cache-basics"
           and specs.KERNEL_AI_REF == "40-kernels/attention/05"
           and specs.SERVING_INFRA_FETCH_DAY == "2026-10-09",
           "★★★ **回链锚点逐字钉住**（★ **正文在彼处，本文一行都不重写**）：训练侧气泡 `%s` · "

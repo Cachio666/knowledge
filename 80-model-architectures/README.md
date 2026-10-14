@@ -35,12 +35,12 @@
 | `transformer` | 算子清单、每 token FLOPs、`2ND` vs `6ND`、参数量的**反算核对** | `45-kernel-lifecycle/requirement-discovery/01-model-to-operator-inventory.md`（全篇）；逐位断言在 **`…/code/01_operator_inventory.py:549`**（⚠ 是 `code/` 下的程序，**不是**那篇同名文档） |
 | `transformer` | `head_dim` **不得**用 `hidden_size ÷ num_attention_heads` 代替 | `45-…/requirement-discovery/01-model-to-operator-inventory.md:71-93` 与 `:270-276`（判据在 `:288`）。★ 本域只做**「逐字段标注 config 原生 / 推导」**这一新增部分，**不重推那个例子** |
 | `transformer` | FFN 的**投影数**（系数 4 vs 6，即两层 vs SwiGLU） | `40-kernels/moe-kernels/01-moe-compute-pattern.md:72,278`；`40-kernels/moe-kernels/code/verify.py:443` |
-| `transformer` | 「残差连接把深度方向的误差松弛为加性」——⚠ 那条结论的作用域**只到浮点舍入误差** | `130-quantization/theory/03-outliers-and-propagation.md:128-130,298,314` |
+| `transformer` | 「残差连接把深度方向的误差松弛为加性」——⚠ 那条结论的作用域**只到浮点舍入误差** | `130-model-optimization/quantization/07-outliers-and-propagation.md:128-130,298,314` |
 | `attention-variants` | `4S²d` 的来源、算术强度、decode 的访存账、split-KV、paged KV | `40-kernels/attention/01`、`40-kernels/attention/05` |
 | `attention-variants` | 「复制 KV 后与 MHA 逐位相同」与「KV 元素倍率 `1/r`」的**实现与比较** | `40-kernels/attention/05-decoding-attention.md:60,66-94`；`40-kernels/attention/code/verify.py` 的 A4（`:509-529`）与 B8（`:1008-1040`）。★ 本域只写**共享图景与 uptraining** 这一新增部分 |
-| `attention-variants` | KV cache 的六项乘积与 GQA 的字节坑 | `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76` |
+| `attention-variants` | KV cache 的六项乘积与 GQA 的字节坑 | `130-model-optimization/quantization/18-kv-cache-basics.md:48-76` |
 | `attention-variants` | 变体对 **kernel 结构**的影响（滑窗改循环范围、ALiBi/softcap 改 `exp` 的输入） | `40-kernels/attention/04-warp-specialization-and-variants.md:126-156`。★ 那边讲**每行只需 `ceil(w/Bc)` 个块**，本域讲**堆叠层把感受野从 `W` 扩到 ~`W×L`**——同一条让渡的两端 |
-| `attention-variants` | RoPE 的「**成对通道旋转**」这句结构陈述 | `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184`（该行**逐字**含 `jointly rotates pairs of channels by different angles depending on the position`；`03-low-bit-and-engines.md:163` 是同一主题的邻近段落，但**不含**这条逐字引文）。★ 本域建成后应回链到 `positional-encoding/01` |
+| `attention-variants` | RoPE 的「**成对通道旋转**」这句结构陈述 | `130-model-optimization/quantization/19-kivi-asymmetry.md:184`（该行**逐字**含 `jointly rotates pairs of channels by different angles depending on the position`；`03-low-bit-and-engines.md:163` 是同一主题的邻近段落，但**不含**这条逐字引文）。★ 本域建成后应回链到 `positional-encoding/01` |
 | `moe` | MoE 的 FLOPs/权重流量/算术强度、routing 的两步形态、permute、grouped GEMM、slot mask | `40-kernels/moe-kernels/01-moe-compute-pattern.md`、`02-grouped-gemm.md`、`03-permute-and-unpermute.md` |
 | `moe` | 三种 gating 归一化口径（甲/乙/丙）的**实现与比较** | `40-kernels/moe-kernels/code/verify.py` 的 A1（`:273-300`）。★ 本域只写「**哪些真实模型用哪种口径**」这一架构层新增部分 |
 | `normalization` | LayerNorm / RMSNorm 的**公式**、Welford 递推、`Σx²−nμ²` 灾难、`eps` 位置带来的数值差异 | `40-kernels/softmax-normalization/03-normalization-fusion.md:53-345`（公式在 `:55-71`）。★ 本域只写**位置之争、QK-norm、不变性的精确形态** |

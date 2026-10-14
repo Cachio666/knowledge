@@ -51,11 +51,11 @@
 
   > 规范：ONNX 对 `FLOAT8E8M0` 的负值输入写明 "Casting negative values … gives **undefined behavior**"；
   > 实现：本机的 torch 给出**确定行为**（取绝对值），实测 `-1.0 → 1.0`、`-1.5 → 2.0`
-  > （`130-quantization` 的编号程序实测，见其 `verify.py`）。
+  > （`130-model-optimization` 的编号程序实测，见其 `verify.py`）。
 
   **⚠ 但不要在不构成冲突的地方硬造冲突。**
   **核查某条规定是不是「规范」，去读规范的「不做什么」一节，比读「做什么」一节更能定案**——
-  `130-quantization` 的 `numerical-formats` 主题里，OCP MX **规范的 out-of-scope 清单逐字包含
+  `130-model-optimization/quantization` 的 `02-e8m0-and-mx` 里，OCP MX **规范的 out-of-scope 清单逐字包含
   「块 scale 的具体计算算法」**，那条 Floor 规则实际是 MX **论文** Algorithm 1 的做法。
   **把论文当规范，与把规范当实现，是同一个错误的两个方向。**
   **本条是新增约定，既有域未按此标注，不追溯。**
@@ -208,7 +208,7 @@
   - **⚠ 当编号程序依赖某个版本才有的特性时，探测必须加版本下限。**
     `find_spec("torch")` 只回答「模块**可见**」，**不回答「版本够不够」**；只查前者会选中一个
     装得下但版本太旧的解释器——**而程序会崩在「找不到某个 dtype」上，错误信息指向错误的方向**。
-    `130-quantization` 是首个撞上这条的域：`torch.float8_e8m0fnu` 需要 **≥ 2.8**，
+    `130-model-optimization` 是首个撞上这条的域：`torch.float8_e8m0fnu` 需要 **≥ 2.8**，
     而本机同时装着 2.6.0 与 2.7.1 两个旧版本，且在候选顺序上排在前面。
     做法是紧随 `find_spec` 之后加一次版本检查：
 

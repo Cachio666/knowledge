@@ -785,7 +785,7 @@ def summary():
     print("★★ **A = %d/%d** —— ★★★ **本程序有两条 A 类**：代价账（账本 vs 闭式）+ SJF（贪心 vs 穷举）。"
           % (_PASS["A"], _TOTAL["A"]))
     print("★ 判据来源：本主题的代价模型是 **`[E]` 级（本库实现 / 假设）**；"
-          "每 token 的 KV 字节取用 `130-quantization/kv-cache-quantization/01`。")
+          "每 token 的 KV 字节取用 `130-model-optimization/quantization/18-kv-cache-basics`。")
     print("★ 本程序只核对「**代价的算术与不变量**」——**不是**任何真实引擎的抢占行为。")
     return 1 if FAILS else 0
 

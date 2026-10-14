@@ -12,7 +12,7 @@
 #
 # ★★ **本主题的边界**（**机制细节一律回链**）：
 #   **分页** ⇒ `120-inference/kv-cache/02`；**前缀树** ⇒ `kv-cache/03`；
-#   **调度器** ⇒ `batching-and-scheduling/01`；**PagedAttention 的算式** ⇒ `130-quantization/kv-cache-quantization/01:68-84`；
+#   **调度器** ⇒ `batching-and-scheduling/01`；**PagedAttention 的算式** ⇒ `130-model-optimization/quantization/18-kv-cache-basics:68-84`；
 #   **vLLM 的模型接入与算子注册** ⇒ `45-kernel-lifecycle/requirement-discovery/01:158-214`。
 #
 # ★★★ **判据纪律**：★★ **「没有 A 类」只适用于「引擎的【行为/性能】」** ——

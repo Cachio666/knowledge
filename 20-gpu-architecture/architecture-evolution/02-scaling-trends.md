@@ -12,7 +12,7 @@ tags: [scaling-trend, roofline, ridge-point, arithmetic-intensity, dense-vs-spar
 related:
   - 20-gpu-architecture/architecture-evolution/03-invariants
   - 20-gpu-architecture/memory-system/01-hierarchy-overview
-  - 130-quantization/numerical-formats
+  - 130-model-optimization/quantization
 code:
   - code/02_scaling_trends.py
 status: stable

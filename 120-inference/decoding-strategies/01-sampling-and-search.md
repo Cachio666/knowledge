@@ -254,7 +254,7 @@ top-p:  按概率降序累加，保留【累积刚 ≥ p 的最小集合】 ⇒ 
   `40-kernels/attention/05-decoding-attention.md` §1.1–1.2（**正文在彼处，本文只回链**）；
 - ★ **自回归解码的 roofline 账**（`AI ≈ 1.0`）→
   `10-foundations/performance-models/01-roofline-model.md:147-155`（**正文在彼处**）；
-- ★ **KV 缓存量化** → `130-quantization/kv-cache-quantization/02,03`（**正文在彼处**）；
+- ★ **KV 缓存量化** → `130-model-optimization/quantization/19-kivi-asymmetry,03`（**正文在彼处**）；
 - ★ **采样参数在某框架里的名字与默认值** —— ★★ **不在本域，且本库无此正文**（**边界声明**，
   **不是**「正文在别处」）；
 - ★ **一步里有多少在飞请求**（调度器）→
@@ -270,7 +270,7 @@ top-p:  按概率降序累加，保留【累积刚 ≥ p 的最小集合】 ⇒ 
 - ★ **跨域回链**（**正文在彼处，本文只回链**）：
   · `GQA`/`MQA`/`split-KV` → `40-kernels/attention/05` §1.1–1.2；
   · 自回归解码的 roofline → `10-foundations/performance-models/01:147-155`；
-  · KV 缓存量化 → `130-quantization/kv-cache-quantization/02,03`。
+  · KV 缓存量化 → `130-model-optimization/quantization/19-kivi-asymmetry,03`。
 - ★ **边界声明**（★ **不是**回链）：**框架侧的采样 API（参数名与默认值）不在本域** ——
   本库**没有任何正文**写它（`70-frameworks` 的三个主题是 dispatch / autograd / 内存，**不涉采样**）。
 

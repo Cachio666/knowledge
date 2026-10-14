@@ -14,7 +14,7 @@ r"""03_spikes.py —— loss spike：现象 · **已被证伪的归因** · **�
 ★★ **本主题的禁区**（`CONTRIBUTING` §7 + 域 README 的边界表）—— 本程序**一行都不写**：
   · ★★ **warmup 的机制解释** → `80-model-architectures/normalization/02-…:83,93-97,100,278`；
   · **残差流的范数随深度增长** → `80-…/transformer/01:191,232-233,263`；
-  · ★★ **误差沿深度的传播** → `130-quantization/theory/03-outliers-and-propagation.md:124,205`；
+  · ★★ **误差沿深度的传播** → `130-model-optimization/quantization/07-outliers-and-propagation.md:124,205`；
   · **优化器状态的分片与通信量** → `100-parallelism/zero-fsdp/`。
 
 ★★★ **本程序最要紧的一条纪律（P20）**：
@@ -637,7 +637,7 @@ def preflight():
           % (sys.version.split()[0], np.__version__))
     print("  ★★ **禁区回链**：`LR warmup` 的机制解释在 `80-…/normalization/02:83-100`；"
           "残差流/深度的账在 `80-…/transformer/01`；**误差沿深度的传播**在 "
-          "`130-…/theory/03:124,205`；状态分片在 `100-parallelism/zero-fsdp/`。")
+          "`130-…/07-outliers-and-propagation:124,205`；状态分片在 `100-parallelism/zero-fsdp/`。")
     before = len(FAILS)
 
     hits = _mark_assignments_in(os.path.abspath(__file__))

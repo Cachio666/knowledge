@@ -185,7 +185,7 @@ UNSOURCED = (
 #   · `num_experts` / `num_experts_per_tok` /
 #     `moe_intermediate_size` / `router_aux_loss_coef` → `moe/code/specs.py`
 #   · KV cache 的**字节**公式（`2 × layers × kv_heads × head_dim × bytes`）
-#                                                 → `130-quantization/kv-cache-quantization/01:48-76`
+#                                                 → `130-model-optimization/quantization/18-kv-cache-basics:48-76`
 #       ★★ 本主题只算**元素数**与**倍率**，**不算字节** —— 那是**禁区**（计划 §2 的边界表）。
 #
 #   （★ R3 的裁定：**每主题一份，每份只放本主题用得到的常量**，跨主题同值的常量各写一份、

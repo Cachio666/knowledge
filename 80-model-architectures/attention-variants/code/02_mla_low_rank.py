@@ -33,7 +33,7 @@ r"""02_mla_low_rank.py —— MLA：低秩压缩、矩阵吸收、以及与 RoPE
   * **不重推 RoPE 的定义与两套实现约定** —— 正文在 `positional-encoding/01-rope-definition`
     （正文在彼，此处回链）。本程序只**用它**，不解释它；
   * **不算 KV 的字节**：六项乘积的正文在
-    `130-quantization/kv-cache-quantization/01-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
+    `130-model-optimization/quantization/18-kv-cache-basics.md:48-76`（正文在彼，此处回链）。
     本程序只算**元素数**，且度量口径照抄论文的逐字
     （`measured by the number of elements, regardless of the storage precision`）；
   * **不讲** MLA 对 **kernel 结构**的影响（正文在 `40-kernels/attention/04:126-156`）。
@@ -228,7 +228,7 @@ def mha_kv_elements(n_h, d_h, layers):
 
     ★ 放在这里**只为对照**（`C.1` 要说明 MLA 的式子里没有 head 数因子）。
       本域**不重讲** KV cache 的字节公式（正文在
-      `130-quantization/kv-cache-quantization/01:48-76`，正文在彼，此处回链）。
+      `130-model-optimization/quantization/18-kv-cache-basics:48-76`，正文在彼，此处回链）。
     """
     return 2 * n_h * d_h * layers
 
@@ -658,7 +658,7 @@ def main():
           % ASSERT_FAIL_MARK)
     print("  ★ 禁区（计划 §2 的边界表）：本程序**不**重推 RoPE 的定义")
     print("    （正文在 positional-encoding/01，此处回链）；**不**算 KV 的字节")
-    print("    （六项乘积的正文在 130-quantization/kv-cache-quantization/01:48-76）。")
+    print("    （六项乘积的正文在 130-model-optimization/quantization/18-kv-cache-basics:48-76）。")
     pin_part()      # ★ D.1–D.4：先钉住前提（见 pin_part 的说明）
     part_A()
     part_B()

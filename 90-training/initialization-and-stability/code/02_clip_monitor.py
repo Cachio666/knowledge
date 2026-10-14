@@ -15,7 +15,7 @@ r"""02_clip_monitor.py —— 梯度裁剪，以及**范数监控的判据**。
   · ★★ **warmup 的机制解释**（post-LN 的平均场理由、`hypothesize` 的措辞纪律）→
     `80-model-architectures/normalization/02-placement-and-qk-norm.md:83,93-97,100,278`；
   · **残差流的范数随深度增长** → `80-…/transformer/01:191,232-233,263`；
-  · **误差沿深度的传播** → `130-quantization/theory/03-outliers-and-propagation.md:124,205`；
+  · **误差沿深度的传播** → `130-model-optimization/quantization/07-outliers-and-propagation.md:124,205`；
   · **优化器状态的分片与通信量** → `100-parallelism/zero-fsdp/`。
   ★ 本程序只写**单卡口径的范数与监控**；`B.1` 里那句「监控只需要每层一个标量」
     **是纯代数的**（`√Σ ‖g_l‖²` 与拼接/顺序无关），**不是**分布式的通信方案（那在 `100-parallelism`）。

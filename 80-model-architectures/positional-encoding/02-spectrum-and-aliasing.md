@@ -383,5 +383,5 @@ curl -sSL -o /tmp/llama3cfg.json https://hf-mirror.com/NousResearch/Meta-Llama-3
 
 - `40-kernels/attention/04-warp-specialization-and-variants.md:130-134` —— 变体「改什么」的一行表；
   **位置编码的定义与出处**正是本域要补的（**那一行在彼，此处回链**）。
-- `130-quantization/kv-cache-quantization/02-kivi-asymmetry.md:184` —— RoPE 的
+- `130-model-optimization/quantization/19-kivi-asymmetry.md:184` —— RoPE 的
   「成对通道旋转」那句结构陈述的逐字（**正文在彼，此处回链**；定义在 `01`）。
